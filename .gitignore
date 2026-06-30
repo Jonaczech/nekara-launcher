@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Frontend build outputs
+dist/
+build/
+
+# Local demo binaries and reference screenshots
+demo/
+launcher-exe*.png
+
+# Tauri and Rust build outputs
+target/
+src-tauri/target/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local Codex environment metadata
+.codex/

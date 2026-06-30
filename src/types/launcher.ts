@@ -1,0 +1,154 @@
+export type LauncherPhase = "foundation";
+
+export type CheckState = "ready" | "pending" | "blocked";
+
+export interface LauncherCheck {
+  id: string;
+  label: string;
+  state: CheckState;
+}
+
+export interface LauncherStatus {
+  productName: string;
+  gameConfigurationId: string;
+  minecraftVersion: string;
+  phase: LauncherPhase;
+  checks: LauncherCheck[];
+}
+
+export type MetadataCheckState = "ready" | "blocked";
+
+export interface MinecraftMetadataCheck {
+  state: MetadataCheckState;
+  targetVersion: string;
+  manifestUrl: string;
+  latestRelease: string | null;
+  latestSnapshot: string | null;
+  versionType: string | null;
+  versionUrl: string | null;
+  requiredJavaMajor: number | null;
+  clientDownloadUrl: string | null;
+  clientDownloadSha1: string | null;
+  assetIndexId: string | null;
+  assetIndexUrl: string | null;
+  assetIndexTotalSize: number | null;
+  libraryCount: number | null;
+  available: boolean;
+  message: string;
+}
+
+export interface GameDirectoryInfo {
+  launcherDataDir: string;
+  nekaraGameDir: string;
+  minecraftDir: string;
+  exists: boolean;
+  created: boolean;
+  message: string;
+}
+
+export type JavaRuntimeState = "ready" | "blocked";
+
+export interface JavaRuntimeCheck {
+  state: JavaRuntimeState;
+  detected: boolean;
+  source: string;
+  executablePath: string | null;
+  versionLine: string | null;
+  javaVersion: string | null;
+  majorVersion: number | null;
+  message: string;
+}
+
+export type MinecraftInstallationPlanState = "ready" | "blocked";
+
+export interface MinecraftInstallationPlan {
+  state: MinecraftInstallationPlanState;
+  targetVersion: string;
+  minecraftDir: string;
+  versionJsonPath: string;
+  clientJarPath: string;
+  versionType: string | null;
+  versionUrl: string | null;
+  requiredJavaMajor: number | null;
+  clientDownloadUrl: string | null;
+  clientDownloadSha1: string | null;
+  message: string;
+}
+
+export type MinecraftInstallationState = "ready" | "pending" | "blocked";
+
+export interface MinecraftInstallationStatus {
+  state: MinecraftInstallationState;
+  targetVersion: string;
+  manifestUrl: string;
+  latestRelease: string | null;
+  latestSnapshot: string | null;
+  versionType: string | null;
+  versionUrl: string | null;
+  minecraftDir: string;
+  versionJsonPath: string;
+  clientJarPath: string;
+  librariesDir: string;
+  assetsDir: string;
+  assetIndexPath: string;
+  versionJsonReady: boolean;
+  clientJarReady: boolean;
+  assetIndexReady: boolean;
+  libraryCountTotal: number;
+  libraryCountReady: number;
+  assetCountTotal: number;
+  assetCountReady: number;
+  requiredJavaMajor: number | null;
+  clientDownloadUrl: string | null;
+  clientDownloadSha1: string | null;
+  assetIndexId: string | null;
+  assetIndexUrl: string | null;
+  assetIndexTotalSize: number | null;
+  message: string;
+}
+
+export type OfflinePlayerState = "missing" | "ready";
+
+export interface OfflinePlayerStatus {
+  state: OfflinePlayerState;
+  playerName: string | null;
+  message: string;
+}
+
+export type GameLaunchState =
+  | "idle"
+  | "launching"
+  | "running"
+  | "exited"
+  | "failed";
+
+export interface GameLaunchStatus {
+  state: GameLaunchState;
+  targetVersion: string;
+  playerName: string | null;
+  javaExecutable: string | null;
+  javaMajorVersion: number | null;
+  requiredJavaMajor: number | null;
+  mainClass: string | null;
+  workingDirectory: string | null;
+  logPath: string | null;
+  pid: number | null;
+  classpathEntryCount: number;
+  startedAtUnixMs: number | null;
+  finishedAtUnixMs: number | null;
+  exitCode: number | null;
+  configuredMaxRamMb: number | null;
+  diagnosticSummary: string | null;
+  suggestedFix: string | null;
+  logExcerpt: string | null;
+  message: string;
+}
+
+export interface LauncherSettings {
+  maxRamMb: number;
+  javaExecutablePath: string | null;
+  minRamMb: number;
+  maxAllowedRamMb: number;
+  ramStepMb: number;
+  message: string;
+}
