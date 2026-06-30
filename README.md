@@ -109,6 +109,10 @@ captured log excerpt available after unsuccessful starts. It also accepts an
 optional custom Java executable path so the runtime can be pinned instead of
 relying only on the system `PATH`.
 
+Launcher-side diagnostic logs are written under the user profile inside the
+Nekara launcher data directory, in a dedicated `logs` folder, so update and
+launch failures can be reviewed after the fact.
+
 Launcher self-updates are wired to signed GitHub Releases. The updater checks a
 release endpoint at startup and can install a newer build from the settings
 drawer once release assets are published.

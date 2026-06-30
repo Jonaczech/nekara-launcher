@@ -4,6 +4,7 @@ mod filesystem;
 mod game;
 mod java;
 mod launcher;
+mod logging;
 mod manifests;
 mod minecraft;
 mod settings;
@@ -27,6 +28,8 @@ pub fn run() {
             settings::get_launcher_settings,
             settings::save_launcher_settings,
             filesystem::ensure_nekara_game_directory,
+            logging::append_launcher_log,
+            logging::get_launcher_log_info,
             java::check_java_runtime
         ])
         .run(tauri::generate_context!())

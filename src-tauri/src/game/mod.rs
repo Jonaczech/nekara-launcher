@@ -11,7 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use md5::{Digest, Md5};
 use serde::{Deserialize, Serialize};
 
-use crate::{auth, config, filesystem, java, manifests, settings};
+use crate::{auth, config, filesystem, java, logging, manifests, settings};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -705,7 +705,7 @@ fn start_game_monitor(mut child: std::process::Child, mut status: GameLaunchStat
                             .to_string(),
                     );
                     status.suggested_fix = Some(
-                        "Open the game log in settings, check the latest lines, and confirm Java compatibility plus prepared client files."
+                    "Open the game log in settings, check the latest lines, and confirm Java compatibility plus prepared client files."
                             .to_string(),
                     );
                     format!(
@@ -716,6 +716,14 @@ fn start_game_monitor(mut child: std::process::Child, mut status: GameLaunchStat
                             .unwrap_or_else(|| "unknown".to_string())
                     )
                 };
+                let _ = logging::append_launcher_log_entry(
+                    "game",
+                    &format!(
+                        "Minecraft process finished with exit code {:?}. Log file: {}",
+                        status.exit_code,
+                        status.log_path.as_deref().unwrap_or("unavailable")
+                    ),
+                );
             }
             Err(error) => {
                 status.state = GameLaunchState::Failed;
@@ -729,6 +737,10 @@ fn start_game_monitor(mut child: std::process::Child, mut status: GameLaunchStat
                         .to_string(),
                 );
                 status.message = format!("Minecraft process monitoring failed: {error}");
+                let _ = logging::append_launcher_log_entry(
+                    "game",
+                    &format!("Minecraft process monitoring failed: {error}"),
+                );
             }
         }
 
@@ -756,10 +768,21 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         .player_name
         .ok_or_else(|| "Choose an offline player name before launching.".to_string())?;
     let launcher_settings = settings::resolve_launcher_settings()?;
+    let _ = logging::append_launcher_log_entry(
+        "game",
+        &format!(
+            "Launch requested for player {player_name} with configured RAM {} MB.",
+            launcher_settings.max_ram_mb
+        ),
+    );
 
     let paths = launch_paths()?;
     let details = manifests::fetch_official_minecraft_version_details().await?;
     if let Err(error) = ensure_launch_requirements(&paths, &details) {
+        let _ = logging::append_launcher_log_entry(
+            "game",
+            &format!("Launch prerequisites failed: {error}"),
+        );
         let failed_status = build_launch_failure_status(LaunchFailureContext {
             player_name: Some(player_name.clone()),
             java_executable: None,
@@ -793,6 +816,10 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
                     "Install a compatible Java runtime and make sure the `java` command is available in PATH."
                         .to_string(),
             });
+            let _ = logging::append_launcher_log_entry(
+                "game",
+                "Java executable was not detected in PATH.",
+            );
             let _ = write_game_status(failed_status.clone());
             return Ok(failed_status);
         }
@@ -825,6 +852,10 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
                     diagnostic_summary,
                     suggested_fix,
                 });
+                let _ = logging::append_launcher_log_entry(
+                    "game",
+                    "Detected Java version could not be resolved.",
+                );
                 let _ = write_game_status(failed_status.clone());
                 return Ok(failed_status);
             }
@@ -850,6 +881,15 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
                     required_java_major
                 ),
             });
+            let _ = logging::append_launcher_log_entry(
+                "game",
+                &format!(
+                    "Java {} is too old for Minecraft {}; required {}.",
+                    detected_major,
+                    config::MINECRAFT_VERSION,
+                    required_java_major
+                ),
+            );
             let _ = write_game_status(failed_status.clone());
             return Ok(failed_status);
         }
@@ -927,6 +967,15 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         message: "Launching Minecraft.".to_string(),
     };
     write_game_status(launching_status)?;
+    let _ = logging::append_launcher_log_entry(
+        "game",
+        &format!(
+            "Launching Minecraft {} from {} with Java {}.",
+            config::MINECRAFT_VERSION,
+            paths.minecraft_dir.display(),
+            java_executable
+        ),
+    );
 
     let log_file = OpenOptions::new()
         .create(true)
@@ -957,6 +1006,10 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
     let child = match command.spawn() {
         Ok(child) => child,
         Err(error) => {
+            let _ = logging::append_launcher_log_entry(
+                "game",
+                &format!("Unable to start Minecraft process: {error}"),
+            );
             let failed_status = build_launch_failure_status(LaunchFailureContext {
                 player_name: Some(player_name.clone()),
                 java_executable: Some(java_executable.clone()),
@@ -998,6 +1051,10 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
     };
 
     write_game_status(running_status.clone())?;
+    let _ = logging::append_launcher_log_entry(
+        "game",
+        &format!("Minecraft process started with PID {}.", child.id()),
+    );
     start_game_monitor(child, running_status.clone());
 
     Ok(running_status)

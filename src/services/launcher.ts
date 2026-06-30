@@ -4,6 +4,7 @@ import type {
   GameDirectoryInfo,
   JavaRuntimeCheck,
   LauncherSettings,
+  LauncherLogInfo,
   LauncherStatus,
   MinecraftInstallationPlan,
   MinecraftInstallationStatus,
@@ -178,6 +179,11 @@ const browserPreviewLauncherSettings: LauncherSettings = {
   message: "Browser preview fallback uses 4096 MB as the RAM limit.",
 };
 
+const browserPreviewLauncherLogInfo: LauncherLogInfo = {
+  logDir: "Browser preview fallback",
+  logFile: "Browser preview fallback",
+};
+
 export function getLauncherStatus() {
   if (!isTauriRuntime()) {
     return Promise.resolve(browserPreviewLauncherStatus);
@@ -315,4 +321,23 @@ export function clearOfflinePlayerProfile() {
   }
 
   return invoke<OfflinePlayerStatus>("clear_offline_player_profile");
+}
+
+export function getLauncherLogInfo() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve(browserPreviewLauncherLogInfo);
+  }
+
+  return invoke<LauncherLogInfo>("get_launcher_log_info");
+}
+
+export function appendLauncherLogEntry(scope: string, message: string) {
+  if (!isTauriRuntime()) {
+    return Promise.resolve();
+  }
+
+  return invoke<void>("append_launcher_log", {
+    scope,
+    message,
+  });
 }

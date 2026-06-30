@@ -160,3 +160,8 @@ export interface LauncherUpdateStatus {
   body: string | null;
   message: string;
 }
+
+export interface LauncherLogInfo {
+  logDir: string;
+  logFile: string;
+}

@@ -17,6 +17,7 @@ import "./App.css";
 import {
   checkJavaRuntime,
   clearOfflinePlayerProfile,
+  getLauncherLogInfo,
   getGameLaunchStatus,
   getLauncherSettings,
   getMinecraftInstallationStatus,
@@ -36,6 +37,7 @@ import type {
   GameLaunchStatus,
   GameDirectoryInfo,
   JavaRuntimeCheck,
+  LauncherLogInfo,
   LauncherCheck,
   LauncherSettings,
   LauncherStatus,
@@ -75,6 +77,9 @@ function App() {
   >({ kind: "loading" });
   const [launcherSettingsState, setLauncherSettingsState] = useState<
     LoadState<LauncherSettings>
+  >({ kind: "loading" });
+  const [launcherLogState, setLauncherLogState] = useState<
+    LoadState<LauncherLogInfo>
   >({ kind: "loading" });
   const [launcherUpdateState, setLauncherUpdateState] = useState<
     LoadState<LauncherUpdateStatus>
@@ -332,6 +337,24 @@ function App() {
         }
       });
 
+    getLauncherLogInfo()
+      .then((info) => {
+        if (isMounted) {
+          setLauncherLogState({ kind: "ready", value: info });
+        }
+      })
+      .catch((error: unknown) => {
+        if (isMounted) {
+          setLauncherLogState({
+            kind: "error",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Launcher log location is not available.",
+          });
+        }
+      });
+
     checkLauncherUpdate()
       .then((update) => {
         if (isMounted) {
@@ -392,6 +415,8 @@ function App() {
     gameLaunchState.kind === "ready" ? gameLaunchState.value : null;
   const launcherSettings =
     launcherSettingsState.kind === "ready" ? launcherSettingsState.value : null;
+  const launcherLog =
+    launcherLogState.kind === "ready" ? launcherLogState.value : null;
   const offlinePlayer = playerState.kind === "ready" ? playerState.value : null;
   const offlinePlayerReady = offlinePlayer?.state === "ready";
   const installationReady = installationStatus?.state === "ready";
@@ -591,6 +616,14 @@ function App() {
     {
       label: "Launcher data",
       value: gameDirectory?.launcherDataDir ?? "Unavailable",
+    },
+    {
+      label: "Launcher log dir",
+      value: launcherLog?.logDir ?? "Unavailable",
+    },
+    {
+      label: "Launcher log file",
+      value: launcherLog?.logFile ?? "Unavailable",
     },
     {
       label: "Nekara game dir",

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use sha1::{Digest, Sha1};
 
-use crate::{config, filesystem, manifests};
+use crate::{config, filesystem, logging, manifests};
 
 const ASSET_OBJECTS_BASE_URL: &str = "https://resources.download.minecraft.net";
 
@@ -588,6 +588,10 @@ pub async fn get_minecraft_installation_status() -> Result<MinecraftInstallation
 
 #[tauri::command]
 pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationStatus, String> {
+    let _ = logging::append_launcher_log_entry(
+        "minecraft",
+        "Preparing official Minecraft files for the Nekara launcher.",
+    );
     let _installation_lock = acquire_installation_lock()?;
     let paths = installation_paths()?;
     let details = manifests::fetch_official_minecraft_version_details().await?;
@@ -680,6 +684,11 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
             )
         }
     };
+
+    let _ = logging::append_launcher_log_entry(
+        "minecraft",
+        &format!("Minecraft preparation finished: {message}"),
+    );
 
     Ok(build_installation_status(
         &paths, &details, snapshot, message,
