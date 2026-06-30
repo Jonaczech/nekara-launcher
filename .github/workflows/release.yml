@@ -43,3 +43,4 @@ jobs:
           releaseBody: Signed Windows build and updater metadata for Nekara Launcher.
           releaseDraft: false
           prerelease: false
+          updaterJsonPreferNsis: true

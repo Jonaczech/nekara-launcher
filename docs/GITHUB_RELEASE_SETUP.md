@@ -64,6 +64,8 @@ The launcher should:
 - The signing private key and its password must be provided to GitHub Actions
   through the `TAURI_SIGNING_PRIVATE_KEY` and
   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets.
+- On Windows, the updater JSON should prefer NSIS because the launcher is
+  distributed to players through the `setup.exe` installer.
 - The release workflow currently targets Windows only, which matches the
   supported launcher platform for now.
 
