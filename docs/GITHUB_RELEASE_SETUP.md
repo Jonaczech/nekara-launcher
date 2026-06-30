@@ -3,6 +3,10 @@
 This file captures the minimum setup required to move Nekara Launcher toward
 automatic self-updates through GitHub Releases.
 
+The repository is now connected to GitHub and includes the updater plugin plus
+an initial release workflow. The remaining steps below are the production setup
+that must exist before clients can receive updates automatically.
+
 ## Goal
 
 After the one-time setup is complete, a release should be publishable from CI
@@ -16,6 +20,7 @@ and the launcher should be able to discover newer signed versions automatically.
 3. Generate and safely store the updater signing key pair.
 4. Store the private signing key in GitHub Actions secrets.
 5. Decide where the updater metadata JSON will be hosted:
+   - GitHub Releases
    - GitHub Pages
    - a dedicated static bucket
    - another static HTTPS endpoint
@@ -50,6 +55,16 @@ The launcher should:
 3. Offer manual update control in settings.
 4. Download verified update artifacts.
 5. Apply the update on restart or user confirmation.
+
+## Current Implementation Notes
+
+- The updater endpoint currently points to the GitHub Releases `latest`
+  download for `latest.json`.
+- The release workflow is triggered by tags that match `app-v*`.
+- The signing private key must be provided to GitHub Actions through the
+  `TAURI_SIGNING_PRIVATE_KEY` secret.
+- The release workflow currently targets Windows only, which matches the
+  supported launcher platform for now.
 
 ## Relationship To Client Installation
 

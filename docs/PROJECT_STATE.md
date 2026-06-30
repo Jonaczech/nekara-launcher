@@ -85,6 +85,8 @@ offline player profile flow in place.
   suggested fix, and runtime summary after failed starts.
 - The launcher now prefers the configured Java executable path before falling
   back to system `PATH` resolution.
+- The launcher now includes a signed GitHub Releases updater plugin and a
+  release workflow that publishes Windows artifacts from tagged builds.
 - ADR 0003 defines GitHub Releases as the intended first launcher self-update
   path and formalizes the no-duplicate-install strategy.
 - The launcher now stores a local offline player name in launcher data.

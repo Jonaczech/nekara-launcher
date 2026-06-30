@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import packageInfo from "../package.json";
 import "./App.css";
 import {
   checkJavaRuntime,
@@ -27,6 +28,10 @@ import {
   saveLauncherSettings,
   saveOfflinePlayerProfile,
 } from "./services/launcher";
+import {
+  checkLauncherUpdate,
+  installLauncherUpdate,
+} from "./services/updater";
 import type {
   GameLaunchStatus,
   GameDirectoryInfo,
@@ -34,6 +39,7 @@ import type {
   LauncherCheck,
   LauncherSettings,
   LauncherStatus,
+  LauncherUpdateStatus,
   MinecraftInstallationStatus,
   OfflinePlayerStatus,
 } from "./types/launcher";
@@ -48,6 +54,8 @@ const checkStateLabel: Record<LauncherCheck["state"], string> = {
   pending: "Pending",
   blocked: "Blocked",
 };
+
+const appVersion = packageInfo.version;
 
 function App() {
   const [launcherState, setLauncherState] = useState<LoadState<LauncherStatus>>({
@@ -68,6 +76,9 @@ function App() {
   const [launcherSettingsState, setLauncherSettingsState] = useState<
     LoadState<LauncherSettings>
   >({ kind: "loading" });
+  const [launcherUpdateState, setLauncherUpdateState] = useState<
+    LoadState<LauncherUpdateStatus>
+  >({ kind: "loading" });
   const [playerState, setPlayerState] = useState<LoadState<OfflinePlayerStatus>>({
     kind: "loading",
   });
@@ -76,6 +87,8 @@ function App() {
   const [javaPathInput, setJavaPathInput] = useState("");
   const [savingPlayer, setSavingPlayer] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [installingUpdate, setInstallingUpdate] = useState(false);
   const [preparingInstallation, setPreparingInstallation] = useState(false);
   const [launchingGame, setLaunchingGame] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -167,6 +180,23 @@ function App() {
             ? error.message
             : "Launcher settings are not available.",
       });
+    }
+  }
+
+  async function refreshLauncherUpdateStatus() {
+    try {
+      const update = await checkLauncherUpdate();
+      setLauncherUpdateState({ kind: "ready", value: update });
+      return update;
+    } catch (error: unknown) {
+      setLauncherUpdateState({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Launcher update status is not available.",
+      });
+      throw error;
     }
   }
 
@@ -298,6 +328,24 @@ function App() {
               error instanceof Error
                 ? error.message
                 : "Launcher settings are not available.",
+          });
+        }
+      });
+
+    checkLauncherUpdate()
+      .then((update) => {
+        if (isMounted) {
+          setLauncherUpdateState({ kind: "ready", value: update });
+        }
+      })
+      .catch((error: unknown) => {
+        if (isMounted) {
+          setLauncherUpdateState({
+            kind: "error",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Launcher update status is not available.",
           });
         }
       });
@@ -467,6 +515,11 @@ function App() {
     launcherSettings != null && javaPathNormalized !== savedJavaPathNormalized;
   const launcherSettingsDirty = ramSettingsDirty || javaSettingsDirty;
   const ramInputLabel = `${ramInputMb} MB`;
+  const launcherUpdate = launcherUpdateState.kind === "ready"
+    ? launcherUpdateState.value
+    : null;
+  const updateAvailable = launcherUpdate?.available ?? false;
+  const currentVersionLabel = `v${appVersion}`;
 
   const settingsRows = [
     {
@@ -779,6 +832,57 @@ function App() {
     }
   }
 
+  async function handleCheckLauncherUpdate() {
+    setActionMessage(null);
+    setCheckingUpdate(true);
+
+    try {
+      const update = await refreshLauncherUpdateStatus();
+      setActionMessage(update.message);
+    } catch (error: unknown) {
+      setLauncherUpdateState({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Launcher update status is not available.",
+      });
+      setActionMessage(
+        error instanceof Error
+          ? error.message
+          : "Launcher update status is not available.",
+      );
+    } finally {
+      setCheckingUpdate(false);
+    }
+  }
+
+  async function handleInstallLauncherUpdate() {
+    setActionMessage(null);
+    setInstallingUpdate(true);
+
+    try {
+      const update = await installLauncherUpdate();
+      setLauncherUpdateState({ kind: "ready", value: update });
+      setActionMessage(update.message);
+    } catch (error: unknown) {
+      setLauncherUpdateState({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Launcher update could not be installed.",
+      });
+      setActionMessage(
+        error instanceof Error
+          ? error.message
+          : "Launcher update could not be installed.",
+      );
+    } finally {
+      setInstallingUpdate(false);
+    }
+  }
+
   async function handleLaunchMinecraft() {
     setActionMessage(null);
     setLaunchingGame(true);
@@ -1068,19 +1172,78 @@ function App() {
               <h4>Launcher update</h4>
             </div>
             <p className="settings-card__lead">
-              This is the place for self-update controls. The intended update path
-              is GitHub Releases with a signed update bundle.
+              The launcher checks signed GitHub Releases artifacts and installs
+              updates on demand.
             </p>
-            <dl className="settings-meta">
-              <div>
-                <dt>Channel</dt>
-                <dd>GitHub Releases</dd>
+            <div className="settings-control-stack">
+              <dl className="settings-meta">
+                <div>
+                  <dt>Current version</dt>
+                  <dd>{currentVersionLabel}</dd>
+                </div>
+                <div>
+                  <dt>Channel</dt>
+                  <dd>GitHub Releases</dd>
+                </div>
+              </dl>
+
+              <div className="settings-update-state">
+                <span className="settings-value-chip">
+                  {launcherUpdateState.kind === "loading"
+                    ? "Checking..."
+                    : launcherUpdateState.kind === "error"
+                      ? "Unavailable"
+                      : updateAvailable
+                        ? `Update ${launcherUpdate?.version} available`
+                        : "Up to date"}
+                </span>
+                <p className="settings-helper-text">
+                  {launcherUpdateState.kind === "loading"
+                    ? "Checking the release endpoint for a newer launcher build."
+                    : launcherUpdateState.kind === "error"
+                      ? launcherUpdateState.message
+                      : launcherUpdate?.message ?? "Launcher is up to date."}
+                </p>
               </div>
-              <div>
-                <dt>Status</dt>
-                <dd>Scaffold only</dd>
+
+              {updateAvailable && launcherUpdate != null && (
+                <div className="settings-release-notes">
+                  <div className="settings-release-notes__header">
+                    <span>Release notes</span>
+                    <span>{launcherUpdate.version}</span>
+                  </div>
+                  {launcherUpdate.date && (
+                    <p className="settings-helper-text">{launcherUpdate.date}</p>
+                  )}
+                  {launcherUpdate.body && (
+                    <p className="settings-release-notes__body">{launcherUpdate.body}</p>
+                  )}
+                </div>
+              )}
+
+              <div className="profile-card__actions">
+                <button
+                  type="button"
+                  className="text-action"
+                  onClick={() => void handleCheckLauncherUpdate()}
+                  disabled={checkingUpdate || installingUpdate}
+                >
+                  {checkingUpdate ? "Checking..." : "Check for updates"}
+                </button>
+                <button
+                  type="button"
+                  className="text-action"
+                  onClick={() => void handleInstallLauncherUpdate()}
+                  disabled={
+                    checkingUpdate ||
+                    installingUpdate ||
+                    !updateAvailable
+                  }
+                >
+                  {installingUpdate ? "Installing..." : "Install update"}
+                </button>
               </div>
-            </dl>
+            </div>
           </section>
 
           <section className="settings-card">

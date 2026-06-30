@@ -1,0 +1,44 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - "app-v*"
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: build and publish
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        with:
+          tagName: app-v__VERSION__
+          releaseName: Nekara Launcher v__VERSION__
+          releaseBody: Signed Windows build and updater metadata for Nekara Launcher.
+          releaseDraft: false
+          prerelease: false

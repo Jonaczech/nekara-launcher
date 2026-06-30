@@ -109,6 +109,10 @@ captured log excerpt available after unsuccessful starts. It also accepts an
 optional custom Java executable path so the runtime can be pinned instead of
 relying only on the system `PATH`.
 
+Launcher self-updates are wired to signed GitHub Releases. The updater checks a
+release endpoint at startup and can install a newer build from the settings
+drawer once release assets are published.
+
 Static UI assets are organized under `src/assets/` with separate folders for
 backgrounds, logos, fonts, and icons.
 

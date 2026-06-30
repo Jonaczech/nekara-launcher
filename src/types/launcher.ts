@@ -152,3 +152,11 @@ export interface LauncherSettings {
   ramStepMb: number;
   message: string;
 }
+
+export interface LauncherUpdateStatus {
+  available: boolean;
+  version: string | null;
+  date: string | null;
+  body: string | null;
+  message: string;
+}
