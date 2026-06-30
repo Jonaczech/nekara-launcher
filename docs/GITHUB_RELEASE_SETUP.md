@@ -61,8 +61,9 @@ The launcher should:
 - The updater endpoint currently points to the GitHub Releases `latest`
   download for `latest.json`.
 - The release workflow is triggered by tags that match `app-v*`.
-- The signing private key must be provided to GitHub Actions through the
-  `TAURI_SIGNING_PRIVATE_KEY` secret.
+- The signing private key and its password must be provided to GitHub Actions
+  through the `TAURI_SIGNING_PRIVATE_KEY` and
+  `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets.
 - The release workflow currently targets Windows only, which matches the
   supported launcher platform for now.
 
