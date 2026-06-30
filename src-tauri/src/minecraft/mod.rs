@@ -5,12 +5,13 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use sha1::{Digest, Sha1};
 
-use crate::{config, filesystem, logging, manifests};
+use crate::{config, fabric, filesystem, logging, manifests};
 
 const ASSET_OBJECTS_BASE_URL: &str = "https://resources.download.minecraft.net";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub enum MinecraftInstallationPlanState {
     Ready,
     Blocked,
@@ -24,8 +25,11 @@ pub struct MinecraftInstallationPlan {
     minecraft_dir: String,
     version_json_path: String,
     client_jar_path: String,
+    fabric_profile_json_path: String,
     libraries_dir: String,
     assets_dir: String,
+    fabric_loader_version: Option<String>,
+    fabric_profile_id: Option<String>,
     version_type: Option<String>,
     version_url: Option<String>,
     required_java_major: Option<u32>,
@@ -39,6 +43,7 @@ pub struct MinecraftInstallationPlan {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub enum MinecraftInstallationState {
     Ready,
     Pending,
@@ -58,16 +63,22 @@ pub struct MinecraftInstallationStatus {
     minecraft_dir: String,
     version_json_path: String,
     client_jar_path: String,
+    fabric_profile_json_path: String,
     libraries_dir: String,
     assets_dir: String,
     asset_index_path: String,
     version_json_ready: bool,
     client_jar_ready: bool,
+    fabric_profile_ready: bool,
     asset_index_ready: bool,
     library_count_total: usize,
     library_count_ready: usize,
+    fabric_library_count_total: usize,
+    fabric_library_count_ready: usize,
     asset_count_total: usize,
     asset_count_ready: usize,
+    fabric_loader_version: Option<String>,
+    fabric_profile_id: Option<String>,
     required_java_major: Option<u32>,
     client_download_url: Option<String>,
     client_download_sha1: Option<String>,
@@ -81,6 +92,7 @@ struct InstallationPaths {
     minecraft_dir: PathBuf,
     version_json_path: PathBuf,
     client_jar_path: PathBuf,
+    fabric_profile_json_path: PathBuf,
     libraries_dir: PathBuf,
     assets_dir: PathBuf,
 }
@@ -89,9 +101,12 @@ struct InstallationSnapshot {
     asset_index_path: PathBuf,
     version_json_ready: bool,
     client_jar_ready: bool,
+    fabric_profile_ready: bool,
     asset_index_ready: bool,
     library_count_total: usize,
     library_count_ready: usize,
+    fabric_library_count_total: usize,
+    fabric_library_count_ready: usize,
     asset_count_total: usize,
     asset_count_ready: usize,
 }
@@ -100,19 +115,21 @@ struct InstallationLock {
     path: PathBuf,
 }
 
-fn installation_paths() -> Result<InstallationPaths, String> {
+fn installation_paths(fabric_profile_id: &str) -> Result<InstallationPaths, String> {
     let game_dir = filesystem::nekara_game_dir()?;
     let minecraft_dir = game_dir.join(".minecraft");
-    let version_dir = minecraft_dir
+    let base_version_dir = minecraft_dir
         .join("versions")
         .join(config::MINECRAFT_VERSION);
+    let fabric_version_dir = minecraft_dir.join("versions").join(fabric_profile_id);
 
     Ok(InstallationPaths {
         libraries_dir: minecraft_dir.join("libraries"),
         assets_dir: minecraft_dir.join("assets"),
         minecraft_dir,
-        version_json_path: version_dir.join(format!("{}.json", config::MINECRAFT_VERSION)),
-        client_jar_path: version_dir.join(format!("{}.jar", config::MINECRAFT_VERSION)),
+        version_json_path: base_version_dir.join(format!("{}.json", config::MINECRAFT_VERSION)),
+        client_jar_path: base_version_dir.join(format!("{}.jar", config::MINECRAFT_VERSION)),
+        fabric_profile_json_path: fabric_version_dir.join(format!("{}.json", fabric_profile_id)),
     })
 }
 
@@ -337,6 +354,10 @@ fn build_missing_summary(snapshot: &InstallationSnapshot) -> String {
         parts.push("client jar".to_string());
     }
 
+    if !snapshot.fabric_profile_ready {
+        parts.push("Fabric profile".to_string());
+    }
+
     if !snapshot.asset_index_ready {
         parts.push("asset index".to_string());
     }
@@ -362,14 +383,25 @@ fn build_missing_summary(snapshot: &InstallationSnapshot) -> String {
     }
 }
 
+fn combined_required_java_major(
+    base_required_java_major: Option<u32>,
+    fabric_min_java_major: u32,
+) -> u32 {
+    base_required_java_major
+        .unwrap_or(fabric_min_java_major)
+        .max(fabric_min_java_major)
+}
+
 fn build_installation_status(
     paths: &InstallationPaths,
-    details: &manifests::OfficialMinecraftVersionDetails,
+    base_details: &manifests::OfficialMinecraftVersionDetails,
+    fabric_details: &fabric::FabricInstallationDetails,
     snapshot: InstallationSnapshot,
     message: String,
 ) -> MinecraftInstallationStatus {
     let state = if snapshot.version_json_ready
         && snapshot.client_jar_ready
+        && snapshot.fabric_profile_ready
         && snapshot.asset_index_ready
         && snapshot.library_count_ready == snapshot.library_count_total
         && snapshot.asset_count_ready == snapshot.asset_count_total
@@ -383,41 +415,54 @@ fn build_installation_status(
         state,
         target_version: config::MINECRAFT_VERSION,
         manifest_url: config::MINECRAFT_VERSION_MANIFEST_URL,
-        latest_release: Some(details.latest_release.clone()),
-        latest_snapshot: Some(details.latest_snapshot.clone()),
-        version_type: Some(details.version_type.clone()),
-        version_url: Some(details.version_url.clone()),
+        latest_release: Some(base_details.latest_release.clone()),
+        latest_snapshot: Some(base_details.latest_snapshot.clone()),
+        version_type: Some(base_details.version_type.clone()),
+        version_url: Some(base_details.version_url.clone()),
         minecraft_dir: paths.minecraft_dir.display().to_string(),
         version_json_path: paths.version_json_path.display().to_string(),
         client_jar_path: paths.client_jar_path.display().to_string(),
+        fabric_profile_json_path: paths.fabric_profile_json_path.display().to_string(),
         libraries_dir: paths.libraries_dir.display().to_string(),
         assets_dir: paths.assets_dir.display().to_string(),
         asset_index_path: snapshot.asset_index_path.display().to_string(),
         version_json_ready: snapshot.version_json_ready,
         client_jar_ready: snapshot.client_jar_ready,
+        fabric_profile_ready: snapshot.fabric_profile_ready,
         asset_index_ready: snapshot.asset_index_ready,
         library_count_total: snapshot.library_count_total,
         library_count_ready: snapshot.library_count_ready,
+        fabric_library_count_total: snapshot.fabric_library_count_total,
+        fabric_library_count_ready: snapshot.fabric_library_count_ready,
         asset_count_total: snapshot.asset_count_total,
         asset_count_ready: snapshot.asset_count_ready,
-        required_java_major: details.required_java_major,
-        client_download_url: Some(details.client_download_url.clone()),
-        client_download_sha1: Some(details.client_download_sha1.clone()),
-        asset_index_id: Some(details.asset_index.id.clone()),
-        asset_index_url: Some(details.asset_index.url.clone()),
-        asset_index_total_size: Some(details.asset_index.total_size),
+        fabric_loader_version: Some(fabric_details.loader_version.clone()),
+        fabric_profile_id: Some(fabric_details.profile_id.clone()),
+        required_java_major: Some(combined_required_java_major(
+            base_details.required_java_major,
+            fabric_details.min_java_major,
+        )),
+        client_download_url: Some(base_details.client_download_url.clone()),
+        client_download_sha1: Some(base_details.client_download_sha1.clone()),
+        asset_index_id: Some(base_details.asset_index.id.clone()),
+        asset_index_url: Some(base_details.asset_index.url.clone()),
+        asset_index_total_size: Some(base_details.asset_index.total_size),
         message,
     }
 }
 
 async fn collect_installation_snapshot(
     paths: &InstallationPaths,
-    details: &manifests::OfficialMinecraftVersionDetails,
+    base_details: &manifests::OfficialMinecraftVersionDetails,
+    fabric_details: &fabric::FabricInstallationDetails,
 ) -> Result<InstallationSnapshot, String> {
-    let asset_index_path = asset_index_path(paths, &details.asset_index.id);
-    let version_json_ready = text_matches(&paths.version_json_path, &details.version_json)?;
-    let client_jar_ready = sha1_matches(&paths.client_jar_path, &details.client_download_sha1)?;
-    let asset_index_ready = sha1_matches(&asset_index_path, &details.asset_index.sha1)?;
+    let asset_index_path = asset_index_path(paths, &base_details.asset_index.id);
+    let version_json_ready = text_matches(&paths.version_json_path, &base_details.version_json)?;
+    let client_jar_ready =
+        sha1_matches(&paths.client_jar_path, &base_details.client_download_sha1)?;
+    let fabric_profile_ready =
+        text_matches(&paths.fabric_profile_json_path, &fabric_details.profile_json)?;
+    let asset_index_ready = sha1_matches(&asset_index_path, &base_details.asset_index.sha1)?;
     let local_asset_index_contents = if asset_index_ready {
         read_local_asset_index(&asset_index_path)?
     } else {
@@ -425,9 +470,16 @@ async fn collect_installation_snapshot(
     };
 
     let mut library_count_ready = 0usize;
-    for library in &details.libraries {
+    for library in &base_details.libraries {
         if sha1_matches(&library_path(paths, library), &library.sha1)? {
             library_count_ready += 1;
+        }
+    }
+
+    let mut fabric_library_count_ready = 0usize;
+    for library in &fabric_details.libraries {
+        if sha1_matches(&library_path(paths, library), &library.sha1)? {
+            fabric_library_count_ready += 1;
         }
     }
 
@@ -449,9 +501,12 @@ async fn collect_installation_snapshot(
         asset_index_path,
         version_json_ready,
         client_jar_ready,
+        fabric_profile_ready,
         asset_index_ready,
-        library_count_total: details.libraries.len(),
+        library_count_total: base_details.libraries.len() + fabric_details.libraries.len(),
         library_count_ready,
+        fabric_library_count_total: fabric_details.libraries.len(),
+        fabric_library_count_ready,
         asset_count_total,
         asset_count_ready,
     })
@@ -459,172 +514,139 @@ async fn collect_installation_snapshot(
 
 #[tauri::command]
 pub async fn get_minecraft_installation_plan() -> Result<MinecraftInstallationPlan, String> {
-    let paths = installation_paths()?;
+    let base_details = manifests::fetch_official_minecraft_version_details().await?;
+    let fabric_details = fabric::fetch_fabric_installation_details().await?;
+    let paths = installation_paths(&fabric_details.profile_id)?;
 
     let _ = filesystem::ensure_nekara_game_directory()?;
 
-    match manifests::fetch_official_minecraft_version_details().await {
-        Ok(details) => Ok(MinecraftInstallationPlan {
-            state: MinecraftInstallationPlanState::Ready,
-            target_version: config::MINECRAFT_VERSION,
-            minecraft_dir: paths.minecraft_dir.display().to_string(),
-            version_json_path: paths.version_json_path.display().to_string(),
-            client_jar_path: paths.client_jar_path.display().to_string(),
-            libraries_dir: paths.libraries_dir.display().to_string(),
-            assets_dir: paths.assets_dir.display().to_string(),
-            version_type: Some(details.version_type),
-            version_url: Some(details.version_url),
-            required_java_major: details.required_java_major,
-            client_download_url: Some(details.client_download_url),
-            client_download_sha1: Some(details.client_download_sha1),
-            asset_index_id: Some(details.asset_index.id),
-            asset_index_url: Some(details.asset_index.url),
-            library_count: Some(details.libraries.len()),
-            message: format!(
-                "Official metadata resolved for {} and local install paths are prepared.",
-                config::MINECRAFT_VERSION
-            ),
-        }),
-        Err(message) => Ok(MinecraftInstallationPlan {
-            state: MinecraftInstallationPlanState::Blocked,
-            target_version: config::MINECRAFT_VERSION,
-            minecraft_dir: paths.minecraft_dir.display().to_string(),
-            version_json_path: paths.version_json_path.display().to_string(),
-            client_jar_path: paths.client_jar_path.display().to_string(),
-            libraries_dir: paths.libraries_dir.display().to_string(),
-            assets_dir: paths.assets_dir.display().to_string(),
-            version_type: None,
-            version_url: None,
-            required_java_major: None,
-            client_download_url: None,
-            client_download_sha1: None,
-            asset_index_id: None,
-            asset_index_url: None,
-            library_count: None,
-            message,
-        }),
-    }
+    Ok(MinecraftInstallationPlan {
+        state: MinecraftInstallationPlanState::Ready,
+        target_version: config::MINECRAFT_VERSION,
+        minecraft_dir: paths.minecraft_dir.display().to_string(),
+        version_json_path: paths.version_json_path.display().to_string(),
+        client_jar_path: paths.client_jar_path.display().to_string(),
+        fabric_profile_json_path: paths.fabric_profile_json_path.display().to_string(),
+        libraries_dir: paths.libraries_dir.display().to_string(),
+        assets_dir: paths.assets_dir.display().to_string(),
+        fabric_loader_version: Some(fabric_details.loader_version.clone()),
+        fabric_profile_id: Some(fabric_details.profile_id.clone()),
+        version_type: Some(base_details.version_type.clone()),
+        version_url: Some(base_details.version_url.clone()),
+        required_java_major: Some(combined_required_java_major(
+            base_details.required_java_major,
+            fabric_details.min_java_major,
+        )),
+        client_download_url: Some(base_details.client_download_url.clone()),
+        client_download_sha1: Some(base_details.client_download_sha1.clone()),
+        asset_index_id: Some(base_details.asset_index.id.clone()),
+        asset_index_url: Some(base_details.asset_index.url.clone()),
+        library_count: Some(base_details.libraries.len() + fabric_details.libraries.len()),
+        message: format!(
+            "Fabric loader {} is available for {} and local install paths are prepared.",
+            fabric_details.loader_version,
+            config::MINECRAFT_VERSION
+        ),
+    })
 }
 
 #[tauri::command]
 pub async fn get_minecraft_installation_status() -> Result<MinecraftInstallationStatus, String> {
-    let paths = installation_paths()?;
+    let base_details = manifests::fetch_official_minecraft_version_details().await?;
+    let fabric_details = fabric::fetch_fabric_installation_details().await?;
+    let paths = installation_paths(&fabric_details.profile_id)?;
 
     let _ = filesystem::ensure_nekara_game_directory()?;
 
-    match manifests::fetch_official_minecraft_version_details().await {
-        Ok(details) => {
-            let snapshot = collect_installation_snapshot(&paths, &details).await?;
-            let message = if matches!(
-                build_installation_status(
-                    &paths,
-                    &details,
-                    InstallationSnapshot {
-                        asset_index_path: snapshot.asset_index_path.clone(),
-                        version_json_ready: snapshot.version_json_ready,
-                        client_jar_ready: snapshot.client_jar_ready,
-                        asset_index_ready: snapshot.asset_index_ready,
-                        library_count_total: snapshot.library_count_total,
-                        library_count_ready: snapshot.library_count_ready,
-                        asset_count_total: snapshot.asset_count_total,
-                        asset_count_ready: snapshot.asset_count_ready,
-                    },
-                    String::new(),
-                )
-                .state,
-                MinecraftInstallationState::Ready
-            ) {
-                format!(
-                    "Official Minecraft files for {} are prepared.",
-                    config::MINECRAFT_VERSION
-                )
-            } else {
-                format!(
-                    "Official Minecraft files still need preparation: {}.",
-                    build_missing_summary(&snapshot)
-                )
-            };
+    let snapshot = collect_installation_snapshot(&paths, &base_details, &fabric_details).await?;
+    let message = if matches!(
+        build_installation_status(
+            &paths,
+            &base_details,
+            &fabric_details,
+            InstallationSnapshot {
+                asset_index_path: snapshot.asset_index_path.clone(),
+                version_json_ready: snapshot.version_json_ready,
+                client_jar_ready: snapshot.client_jar_ready,
+                fabric_profile_ready: snapshot.fabric_profile_ready,
+                asset_index_ready: snapshot.asset_index_ready,
+                library_count_total: snapshot.library_count_total,
+                library_count_ready: snapshot.library_count_ready,
+                fabric_library_count_total: snapshot.fabric_library_count_total,
+                fabric_library_count_ready: snapshot.fabric_library_count_ready,
+                asset_count_total: snapshot.asset_count_total,
+                asset_count_ready: snapshot.asset_count_ready,
+            },
+            String::new(),
+        )
+        .state,
+        MinecraftInstallationState::Ready
+    ) {
+        format!(
+            "Fabric client files for {} are prepared.",
+            config::MINECRAFT_VERSION
+        )
+    } else {
+        format!(
+            "Fabric client files still need preparation: {}.",
+            build_missing_summary(&snapshot)
+        )
+    };
 
-            Ok(build_installation_status(
-                &paths, &details, snapshot, message,
-            ))
-        }
-        Err(message) => Ok(MinecraftInstallationStatus {
-            state: MinecraftInstallationState::Blocked,
-            target_version: config::MINECRAFT_VERSION,
-            manifest_url: config::MINECRAFT_VERSION_MANIFEST_URL,
-            latest_release: None,
-            latest_snapshot: None,
-            version_type: None,
-            version_url: None,
-            minecraft_dir: paths.minecraft_dir.display().to_string(),
-            version_json_path: paths.version_json_path.display().to_string(),
-            client_jar_path: paths.client_jar_path.display().to_string(),
-            libraries_dir: paths.libraries_dir.display().to_string(),
-            assets_dir: paths.assets_dir.display().to_string(),
-            asset_index_path: paths
-                .assets_dir
-                .join("indexes")
-                .join("unknown.json")
-                .display()
-                .to_string(),
-            version_json_ready: false,
-            client_jar_ready: false,
-            asset_index_ready: false,
-            library_count_total: 0,
-            library_count_ready: 0,
-            asset_count_total: 0,
-            asset_count_ready: 0,
-            required_java_major: None,
-            client_download_url: None,
-            client_download_sha1: None,
-            asset_index_id: None,
-            asset_index_url: None,
-            asset_index_total_size: None,
-            message,
-        }),
-    }
+    Ok(build_installation_status(
+        &paths,
+        &base_details,
+        &fabric_details,
+        snapshot,
+        message,
+    ))
 }
 
 #[tauri::command]
 pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationStatus, String> {
     let _ = logging::append_launcher_log_entry(
         "minecraft",
-        "Preparing official Minecraft files for the Nekara launcher.",
+        "Preparing Fabric client files for the Nekara launcher.",
     );
+    let base_details = manifests::fetch_official_minecraft_version_details().await?;
+    let fabric_details = fabric::fetch_fabric_installation_details().await?;
     let _installation_lock = acquire_installation_lock()?;
-    let paths = installation_paths()?;
-    let details = manifests::fetch_official_minecraft_version_details().await?;
+    let paths = installation_paths(&fabric_details.profile_id)?;
     let asset_index_contents =
-        manifests::fetch_official_asset_index_contents(&details.asset_index).await?;
+        manifests::fetch_official_asset_index_contents(&base_details.asset_index).await?;
 
     let _ = filesystem::ensure_nekara_game_directory()?;
 
     let mut changed_parts = Vec::new();
 
-    if !text_matches(&paths.version_json_path, &details.version_json)? {
-        write_text_file(&paths.version_json_path, &details.version_json)?;
+    if !text_matches(&paths.version_json_path, &base_details.version_json)? {
+        write_text_file(&paths.version_json_path, &base_details.version_json)?;
         changed_parts.push("version metadata");
     }
 
-    if !sha1_matches(&paths.client_jar_path, &details.client_download_sha1)? {
+    if !sha1_matches(&paths.client_jar_path, &base_details.client_download_sha1)? {
         download_verified_file(
             &paths.client_jar_path,
-            &details.client_download_url,
-            &details.client_download_sha1,
+            &base_details.client_download_url,
+            &base_details.client_download_sha1,
         )
         .await?;
         changed_parts.push("client jar");
     }
 
-    let asset_index_path = asset_index_path(&paths, &details.asset_index.id);
-    if !sha1_matches(&asset_index_path, &details.asset_index.sha1)? {
+    if !text_matches(&paths.fabric_profile_json_path, &fabric_details.profile_json)? {
+        write_text_file(&paths.fabric_profile_json_path, &fabric_details.profile_json)?;
+        changed_parts.push("Fabric profile");
+    }
+
+    let asset_index_path = asset_index_path(&paths, &base_details.asset_index.id);
+    if !sha1_matches(&asset_index_path, &base_details.asset_index.sha1)? {
         write_text_file(&asset_index_path, &asset_index_contents.raw_json)?;
         changed_parts.push("asset index");
     }
 
     let mut downloaded_libraries = 0usize;
-    for library in &details.libraries {
+    for library in &base_details.libraries {
         let local_path = library_path(&paths, library);
         if sha1_matches(&local_path, &library.sha1)? {
             continue;
@@ -636,6 +658,21 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
 
     if downloaded_libraries > 0 {
         changed_parts.push("libraries");
+    }
+
+    let mut downloaded_fabric_libraries = 0usize;
+    for library in &fabric_details.libraries {
+        let local_path = library_path(&paths, library);
+        if sha1_matches(&local_path, &library.sha1)? {
+            continue;
+        }
+
+        download_verified_file(&local_path, &library.url, &library.sha1).await?;
+        downloaded_fabric_libraries += 1;
+    }
+
+    if downloaded_fabric_libraries > 0 {
+        changed_parts.push("Fabric libraries");
     }
 
     let mut downloaded_assets = 0usize;
@@ -659,28 +696,29 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
         changed_parts.push("asset objects");
     }
 
-    let snapshot = collect_installation_snapshot(&paths, &details).await?;
+    let snapshot = collect_installation_snapshot(&paths, &base_details, &fabric_details).await?;
     let message = if changed_parts.is_empty() {
         format!(
-            "Official Minecraft files for {} were already up to date.",
+            "Fabric client files for {} were already up to date.",
             config::MINECRAFT_VERSION
         )
     } else {
         let missing_summary = build_missing_summary(&snapshot);
         let all_ready = snapshot.version_json_ready
             && snapshot.client_jar_ready
+            && snapshot.fabric_profile_ready
             && snapshot.asset_index_ready
             && snapshot.library_count_ready == snapshot.library_count_total
             && snapshot.asset_count_ready == snapshot.asset_count_total;
 
         if all_ready {
             format!(
-                "Official Minecraft files prepared successfully: {}.",
+                "Fabric client files prepared successfully: {}.",
                 changed_parts.join(", ")
             )
         } else {
             format!(
-                "Minecraft preparation finished, but some files still need attention: {missing_summary}."
+                "Fabric preparation finished, but some files still need attention: {missing_summary}."
             )
         }
     };
@@ -691,6 +729,10 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
     );
 
     Ok(build_installation_status(
-        &paths, &details, snapshot, message,
+        &paths,
+        &base_details,
+        &fabric_details,
+        snapshot,
+        message,
     ))
 }

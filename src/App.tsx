@@ -474,7 +474,7 @@ function App() {
       : Math.round((installOperationReadyUnits / installOperationTotalUnits) * 100);
   const progressPanelLabel =
     preparingInstallation || (installationStatus != null && !installationReady)
-      ? "Client preparation progress"
+      ? "Fabric client progress"
       : "Preparation progress";
   const progressPanelValue =
     preparingInstallation || (installationStatus != null && !installationReady)
@@ -488,13 +488,13 @@ function App() {
     ? "Minecraft is running"
     : launchingGame
       ? "Launching Minecraft"
-      : preparingInstallation
-    ? "Preparing official files"
+    : preparingInstallation
+    ? "Preparing Fabric client"
     : readinessCount === 5
       ? "Ready to launch"
       : "Preparing Nekara";
   const primaryHint = !offlinePlayerReady
-    ? "Choose an offline player name to unlock the launch flow."
+    ? "Choose a local player name to unlock the launch flow."
     : gameRunning
       ? gameLaunch?.message ?? "Minecraft is currently running from the launcher."
       : gameFailed || gameExitedWithError
@@ -506,15 +506,15 @@ function App() {
         ? "The launcher is building the launch command and starting the Minecraft process."
     : preparingInstallation
       ? installationProgressLabel == null
-        ? "The launcher is downloading and verifying official Minecraft files, libraries, and assets."
-        : `The launcher is downloading and verifying official Minecraft files. Current progress: ${installationProgressLabel}.`
+        ? "The launcher is downloading and verifying Fabric client files, libraries, and assets."
+        : `The launcher is downloading and verifying Fabric client files. Current progress: ${installationProgressLabel}.`
       : !installationReady
         ? installationStatus?.message ??
-          "Official Minecraft files still need to be prepared."
+          "Fabric client files still need to be prepared."
         : readinessCount === 5
           ? "Everything required for the first offline launch is in place."
           : !javaCompatible
-            ? "Minecraft files are ready. The remaining blocker is a compatible Java runtime."
+            ? "Fabric client files are ready. The remaining blocker is a compatible Java runtime."
             : "The launcher is checking the remaining runtime details.";
   const primaryButtonLabel = !offlinePlayerReady
     ? "Save player name"
@@ -546,72 +546,18 @@ function App() {
   const updateAvailable = launcherUpdate?.available ?? false;
   const currentVersionLabel = `v${appVersion}`;
 
-  const settingsRows = [
+  const diagnosticRows = [
     {
-      label: "Official manifest",
-      value:
-        installationStatus?.manifestUrl ??
-        "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+      label: "Fabric loader",
+      value: installationStatus?.fabricLoaderVersion ?? "Unavailable",
     },
     {
-      label: "Version metadata URL",
-      value: installationStatus?.versionUrl ?? "Unavailable until metadata loads.",
+      label: "Fabric profile",
+      value: installationStatus?.fabricProfileId ?? "Unavailable",
     },
     {
-      label: "Client download",
-      value:
-        installationStatus?.clientDownloadUrl ?? "Unavailable until metadata loads.",
-    },
-    {
-      label: "Client hash",
-      value:
-        installationStatus?.clientDownloadSha1 ?? "Unavailable until metadata loads.",
-    },
-    {
-      label: "Required Java",
-      value: installationStatus?.requiredJavaMajor?.toString() ?? "Unavailable",
-    },
-    {
-      label: "Asset index",
-      value: installationStatus?.assetIndexUrl ?? "Unavailable until metadata loads.",
-    },
-    {
-      label: "Asset index total size",
-      value:
-        installationStatus?.assetIndexTotalSize == null
-          ? "Unavailable"
-          : `${Math.round(installationStatus.assetIndexTotalSize / 1024 / 1024)} MB`,
-    },
-    {
-      label: "Java executable",
-      value: javaRuntime?.executablePath ?? "Not detected yet.",
-    },
-    {
-      label: "Java version",
-      value: javaRuntime?.javaVersion ?? "Not detected yet.",
-    },
-    {
-      label: "Java compatibility",
-      value: javaCompatible ? "Compatible" : "Upgrade Java for this version",
-    },
-    {
-      label: "Configured Java",
-      value:
-        launcherSettings?.javaExecutablePath ??
-        "System PATH is used when no custom Java path is configured.",
-    },
-    {
-      label: "Java source",
-      value: javaRuntime?.source ?? "Unavailable",
-    },
-    {
-      label: "Configured RAM",
-      value:
-        gameLaunch?.configuredMaxRamMb != null
-          ? `${gameLaunch.configuredMaxRamMb} MB`
-          : launcherSettings != null
-            ? `${launcherSettings.maxRamMb} MB`
-            : "Unavailable",
+      label: "Minecraft dir",
+      value: gameDirectory?.minecraftDir ?? "Unavailable",
     },
     {
       label: "Launcher data",
@@ -624,26 +570,6 @@ function App() {
     {
       label: "Launcher log file",
       value: launcherLog?.logFile ?? "Unavailable",
-    },
-    {
-      label: "Nekara game dir",
-      value: gameDirectory?.nekaraGameDir ?? "Unavailable",
-    },
-    {
-      label: "Version JSON path",
-      value: installationStatus?.versionJsonPath ?? "Unavailable",
-    },
-    {
-      label: "Libraries path",
-      value: installationStatus?.librariesDir ?? "Unavailable",
-    },
-    {
-      label: "Assets path",
-      value: installationStatus?.assetsDir ?? "Unavailable",
-    },
-    {
-      label: "Asset index path",
-      value: installationStatus?.assetIndexPath ?? "Unavailable",
     },
     {
       label: "Install status",
@@ -659,20 +585,11 @@ function App() {
             : "No",
     },
     {
-      label: "Client JAR ready",
+      label: "Fabric profile ready",
       value:
         installationStatus == null
           ? "Unavailable"
-          : installationStatus.clientJarReady
-            ? "Yes"
-            : "No",
-    },
-    {
-      label: "Asset index ready",
-      value:
-        installationStatus == null
-          ? "Unavailable"
-          : installationStatus.assetIndexReady
+          : installationStatus.fabricProfileReady
             ? "Yes"
             : "No",
     },
@@ -681,7 +598,7 @@ function App() {
       value:
         installationStatus == null
           ? "Unavailable"
-          : `${installationStatus.libraryCountReady}/${installationStatus.libraryCountTotal}`,
+          : `${installationStatus.libraryCountReady}/${installationStatus.libraryCountTotal} + ${installationStatus.fabricLibraryCountReady}/${installationStatus.fabricLibraryCountTotal}`,
     },
     {
       label: "Assets ready",
@@ -689,6 +606,14 @@ function App() {
         installationStatus == null
           ? "Unavailable"
           : `${installationStatus.assetCountReady}/${installationStatus.assetCountTotal}`,
+    },
+    {
+      label: "Java compatibility",
+      value: javaCompatible ? "Compatible" : "Upgrade Java for this version",
+    },
+    {
+      label: "Java executable",
+      value: javaRuntime?.executablePath ?? "Not detected yet.",
     },
     {
       label: "Game status",
@@ -710,21 +635,13 @@ function App() {
       label: "Log excerpt",
       value: gameLaunch?.logExcerpt ?? "No log excerpt captured yet.",
     },
-    {
-      label: "Game PID",
-      value: gameLaunch?.pid?.toString() ?? "Unavailable",
-    },
-    {
-      label: "Player profile",
-      value: offlinePlayer?.message ?? "Unavailable",
-    },
   ];
 
   const readinessChecks: LauncherCheck[] = [
     ...(launcherStatus?.checks ?? []),
     {
       id: "minecraft-installation",
-      label: "Official client files",
+      label: "Fabric client files",
       state:
         installationState.kind === "error"
           ? "blocked"
@@ -964,8 +881,8 @@ function App() {
     if (!javaCompatible) {
       setActionMessage(
         installationStatus?.requiredJavaMajor == null
-          ? "Official Minecraft files are ready. Install or expose Java in PATH to continue toward launch."
-          : `Official Minecraft files are ready, but Java ${installationStatus.requiredJavaMajor} or newer is still required.`,
+          ? "Fabric client files are ready. Install or expose Java in PATH to continue toward launch."
+          : `Fabric client files are ready, but Java ${installationStatus.requiredJavaMajor} or newer is still required.`,
       );
       return;
     }
@@ -1023,12 +940,11 @@ function App() {
         <section className="launcher-body">
           <section className="hero-stage" aria-labelledby="launcher-title">
             <div className="hero-stage__copy">
-              <p className="eyebrow">One game. One configuration.</p>
+              <p className="eyebrow">One game. One Fabric profile.</p>
               <h2 id="launcher-title">Launcher</h2>
               <p className="hero-text">
-                Offline mode keeps us moving toward a playable launcher. Pick a
-                local player name, prepare the Nekara client, and keep the launch
-                path focused.
+                Pick a local player name, prepare the Nekara Fabric client, and
+                keep the launch path focused on the game, not on setup noise.
               </p>
             </div>
 
@@ -1085,7 +1001,7 @@ function App() {
                 <UserRound size={32} />
               </div>
               <div className="profile-card__body">
-                <p className="eyebrow">Player</p>
+                <p className="eyebrow">Offline player</p>
                 <h3>
                   {playerState.kind === "loading"
                     ? "Checking profile"
@@ -1135,7 +1051,7 @@ function App() {
               <div className="menu-card__header">
                 <div>
                   <p className="eyebrow">Menu</p>
-                  <h3>Icons</h3>
+                  <h3>Shortcuts</h3>
                 </div>
               </div>
 
@@ -1452,10 +1368,10 @@ function App() {
 
           <section className="settings-card settings-card--wide">
             <div className="settings-card__header">
-              <h4>Diagnostics</h4>
+              <h4>Client diagnostics</h4>
             </div>
             <dl className="settings-diagnostics">
-              {settingsRows.map((row) => (
+              {diagnosticRows.map((row) => (
                 <div key={row.label}>
                   <dt>{row.label}</dt>
                   <dd>{row.value}</dd>

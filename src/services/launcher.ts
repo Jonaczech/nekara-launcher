@@ -34,7 +34,7 @@ const browserPreviewLauncherStatus: LauncherStatus = {
     },
     {
       id: "metadata-resolution",
-      label: "Official Minecraft metadata available",
+      label: "Minecraft metadata available",
       state: "pending",
     },
     {
@@ -99,11 +99,19 @@ const browserPreviewMinecraftInstallationPlan: MinecraftInstallationPlan = {
   minecraftDir: "Browser preview fallback",
   versionJsonPath: "Browser preview fallback",
   clientJarPath: "Browser preview fallback",
+  fabricProfileJsonPath: "Browser preview fallback",
+  librariesDir: "Browser preview fallback",
+  assetsDir: "Browser preview fallback",
+  fabricLoaderVersion: null,
+  fabricProfileId: null,
   versionType: null,
   versionUrl: null,
   requiredJavaMajor: null,
   clientDownloadUrl: null,
   clientDownloadSha1: null,
+  assetIndexId: null,
+  assetIndexUrl: null,
+  libraryCount: null,
   message:
     "Browser preview fallback is active. Run the app inside Tauri to prepare install paths.",
 };
@@ -120,16 +128,22 @@ const browserPreviewMinecraftInstallationStatus: MinecraftInstallationStatus = {
   minecraftDir: "Browser preview fallback",
   versionJsonPath: "Browser preview fallback",
   clientJarPath: "Browser preview fallback",
+  fabricProfileJsonPath: "Browser preview fallback",
   librariesDir: "Browser preview fallback",
   assetsDir: "Browser preview fallback",
   assetIndexPath: "Browser preview fallback",
   versionJsonReady: false,
   clientJarReady: false,
+  fabricProfileReady: false,
   assetIndexReady: false,
   libraryCountTotal: 0,
   libraryCountReady: 0,
+  fabricLibraryCountTotal: 0,
+  fabricLibraryCountReady: 0,
   assetCountTotal: 0,
   assetCountReady: 0,
+  fabricLoaderVersion: null,
+  fabricProfileId: null,
   requiredJavaMajor: null,
   clientDownloadUrl: null,
   clientDownloadSha1: null,
@@ -137,7 +151,7 @@ const browserPreviewMinecraftInstallationStatus: MinecraftInstallationStatus = {
   assetIndexUrl: null,
   assetIndexTotalSize: null,
   message:
-    "Browser preview fallback is active. Run the app inside Tauri to prepare official Minecraft files.",
+    "Browser preview fallback is active. Run the app inside Tauri to prepare Fabric client files.",
 };
 
 const browserPreviewOfflinePlayerStatus: OfflinePlayerStatus = {

@@ -11,7 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use md5::{Digest, Md5};
 use serde::{Deserialize, Serialize};
 
-use crate::{auth, config, filesystem, java, logging, manifests, settings};
+use crate::{auth, config, fabric, filesystem, java, logging, manifests, settings};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -57,6 +57,7 @@ struct LaunchPaths {
     minecraft_dir: PathBuf,
     version_json_path: PathBuf,
     client_jar_path: PathBuf,
+    fabric_profile_json_path: PathBuf,
     libraries_dir: PathBuf,
     assets_dir: PathBuf,
     logs_dir: PathBuf,
@@ -67,11 +68,15 @@ struct LaunchPaths {
 #[derive(Deserialize)]
 struct LaunchVersionManifest {
     id: String,
-    assets: String,
+    #[serde(default, rename = "inheritsFrom")]
+    inherits_from: Option<String>,
+    #[serde(default)]
+    assets: Option<String>,
     #[serde(rename = "type")]
     version_type: String,
     #[serde(rename = "mainClass")]
     main_class: String,
+    #[serde(default)]
     arguments: LaunchArguments,
     logging: Option<LaunchLogging>,
 }
@@ -421,12 +426,13 @@ fn replace_placeholders(value: &str, context: &LaunchContext) -> String {
     replaced
 }
 
-fn launch_paths() -> Result<LaunchPaths, String> {
+fn launch_paths(fabric_profile_id: &str) -> Result<LaunchPaths, String> {
     let game_dir = filesystem::nekara_game_dir()?;
     let minecraft_dir = game_dir.join(".minecraft");
-    let version_dir = minecraft_dir
+    let base_version_dir = minecraft_dir
         .join("versions")
         .join(config::MINECRAFT_VERSION);
+    let fabric_version_dir = minecraft_dir.join("versions").join(fabric_profile_id);
 
     Ok(LaunchPaths {
         libraries_dir: minecraft_dir.join("libraries"),
@@ -438,8 +444,9 @@ fn launch_paths() -> Result<LaunchPaths, String> {
             .join(std::env::consts::ARCH),
         log_configs_dir: minecraft_dir.join("assets").join("log_configs"),
         minecraft_dir,
-        version_json_path: version_dir.join(format!("{}.json", config::MINECRAFT_VERSION)),
-        client_jar_path: version_dir.join(format!("{}.jar", config::MINECRAFT_VERSION)),
+        version_json_path: base_version_dir.join(format!("{}.json", config::MINECRAFT_VERSION)),
+        client_jar_path: base_version_dir.join(format!("{}.jar", config::MINECRAFT_VERSION)),
+        fabric_profile_json_path: fabric_version_dir.join(format!("{}.json", fabric_profile_id)),
     })
 }
 
@@ -573,7 +580,8 @@ fn parse_launch_manifest(version_json: &str) -> Result<LaunchVersionManifest, St
 
 fn ensure_launch_requirements(
     paths: &LaunchPaths,
-    details: &manifests::OfficialMinecraftVersionDetails,
+    base_details: &manifests::OfficialMinecraftVersionDetails,
+    fabric_details: &fabric::FabricInstallationDetails,
 ) -> Result<(), String> {
     if !paths.version_json_path.exists() {
         return Err("Minecraft version metadata is missing. Prepare the client first.".to_string());
@@ -583,19 +591,33 @@ fn ensure_launch_requirements(
         return Err("Minecraft client jar is missing. Prepare the client first.".to_string());
     }
 
+    if !paths.fabric_profile_json_path.exists() {
+        return Err("Fabric profile metadata is missing. Prepare the client first.".to_string());
+    }
+
     let asset_index_path = paths
         .assets_dir
         .join("indexes")
-        .join(format!("{}.json", details.asset_index.id));
+        .join(format!("{}.json", base_details.asset_index.id));
     if !asset_index_path.exists() {
         return Err("Minecraft asset index is missing. Prepare the client first.".to_string());
     }
 
-    for library in &details.libraries {
+    for library in &base_details.libraries {
         let library_path = paths.libraries_dir.join(&library.path);
         if !library_path.exists() {
             return Err(format!(
                 "A required library is missing: {}. Prepare the client first.",
+                library_path.display()
+            ));
+        }
+    }
+
+    for library in &fabric_details.libraries {
+        let library_path = paths.libraries_dir.join(&library.path);
+        if !library_path.exists() {
+            return Err(format!(
+                "A required Fabric library is missing: {}. Prepare the client first.",
                 library_path.display()
             ));
         }
@@ -626,9 +648,10 @@ async fn ensure_logging_config(
 
 fn build_classpath(
     paths: &LaunchPaths,
-    details: &manifests::OfficialMinecraftVersionDetails,
+    base_details: &manifests::OfficialMinecraftVersionDetails,
+    fabric_details: &fabric::FabricInstallationDetails,
 ) -> (String, usize) {
-    let mut entries: Vec<String> = details
+    let mut entries: Vec<String> = base_details
         .libraries
         .iter()
         .map(|library| {
@@ -639,6 +662,13 @@ fn build_classpath(
                 .to_string()
         })
         .collect();
+
+    for library in &fabric_details.libraries {
+        let entry = paths.libraries_dir.join(&library.path).display().to_string();
+        if !entries.contains(&entry) {
+            entries.push(entry);
+        }
+    }
 
     entries.push(paths.client_jar_path.display().to_string());
 
@@ -776,9 +806,10 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         ),
     );
 
-    let paths = launch_paths()?;
-    let details = manifests::fetch_official_minecraft_version_details().await?;
-    if let Err(error) = ensure_launch_requirements(&paths, &details) {
+    let base_details = manifests::fetch_official_minecraft_version_details().await?;
+    let fabric_details = fabric::fetch_fabric_installation_details().await?;
+    let paths = launch_paths(&fabric_details.profile_id)?;
+    if let Err(error) = ensure_launch_requirements(&paths, &base_details, &fabric_details) {
         let _ = logging::append_launcher_log_entry(
             "game",
             &format!("Launch prerequisites failed: {error}"),
@@ -787,7 +818,12 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
             player_name: Some(player_name.clone()),
             java_executable: None,
             java_major_version: None,
-            required_java_major: details.required_java_major,
+            required_java_major: Some(
+                base_details
+                    .required_java_major
+                    .unwrap_or(fabric_details.min_java_major)
+                    .max(fabric_details.min_java_major),
+            ),
             configured_max_ram_mb: Some(launcher_settings.max_ram_mb),
             working_directory: Some(paths.minecraft_dir.display().to_string()),
             log_path: None,
@@ -807,7 +843,12 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
                 player_name: Some(player_name.clone()),
                 java_executable: None,
                 java_major_version: java_runtime.major_version,
-                required_java_major: details.required_java_major,
+                required_java_major: Some(
+                    base_details
+                        .required_java_major
+                        .unwrap_or(fabric_details.min_java_major)
+                        .max(fabric_details.min_java_major),
+                ),
                 configured_max_ram_mb: Some(launcher_settings.max_ram_mb),
                 working_directory: Some(paths.minecraft_dir.display().to_string()),
                 log_path: None,
@@ -825,7 +866,12 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         }
     };
 
-    if let Some(required_java_major) = details.required_java_major {
+    let required_java_major = base_details
+        .required_java_major
+        .unwrap_or(fabric_details.min_java_major)
+        .max(fabric_details.min_java_major);
+
+    if required_java_major > 0 {
         let detected_major = match java_runtime.major_version {
             Some(major_version) => major_version,
             None => {
@@ -895,13 +941,25 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         }
     }
 
-    let launch_manifest = parse_launch_manifest(&details.version_json)?;
+    let launch_manifest = parse_launch_manifest(&fabric_details.profile_json)?;
+    if launch_manifest.inherits_from.as_deref() != Some(config::MINECRAFT_VERSION) {
+        let _ = logging::append_launcher_log_entry(
+            "game",
+            &format!(
+                "Fabric profile {} inherits from {:?} instead of {}.",
+                launch_manifest.id,
+                launch_manifest.inherits_from,
+                config::MINECRAFT_VERSION
+            ),
+        );
+    }
     let logging_path = ensure_logging_config(&paths, &launch_manifest).await?;
 
     ensure_directory(&paths.natives_dir)?;
     ensure_directory(&paths.logs_dir)?;
 
-    let (classpath, classpath_entry_count) = build_classpath(&paths, &details);
+    let (classpath, classpath_entry_count) =
+        build_classpath(&paths, &base_details, &fabric_details);
     let offline_uuid = build_offline_uuid(&player_name);
     let log_path = paths
         .logs_dir
@@ -912,7 +970,10 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         version_name: launch_manifest.id.clone(),
         game_directory: paths.minecraft_dir.display().to_string(),
         assets_root: paths.assets_dir.display().to_string(),
-        assets_index_name: launch_manifest.assets.clone(),
+        assets_index_name: launch_manifest
+            .assets
+            .clone()
+            .unwrap_or_else(|| base_details.asset_index.id.clone()),
         auth_uuid: offline_uuid,
         auth_access_token: "0".to_string(),
         client_id: "nekara-offline".to_string(),
@@ -951,7 +1012,7 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         player_name: Some(player_name.clone()),
         java_executable: Some(java_executable.clone()),
         java_major_version: java_runtime.major_version,
-        required_java_major: details.required_java_major,
+        required_java_major: Some(required_java_major),
         main_class: Some(launch_manifest.main_class.clone()),
         working_directory: Some(paths.minecraft_dir.display().to_string()),
         log_path: Some(log_path.display().to_string()),
@@ -1014,7 +1075,7 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
                 player_name: Some(player_name.clone()),
                 java_executable: Some(java_executable.clone()),
                 java_major_version: java_runtime.major_version,
-                required_java_major: details.required_java_major,
+                required_java_major: Some(required_java_major),
                 configured_max_ram_mb: Some(launcher_settings.max_ram_mb),
                 working_directory: Some(paths.minecraft_dir.display().to_string()),
                 log_path: Some(log_path.display().to_string()),
@@ -1034,7 +1095,7 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         player_name: Some(player_name),
         java_executable: Some(java_executable),
         java_major_version: java_runtime.major_version,
-        required_java_major: details.required_java_major,
+        required_java_major: Some(required_java_major),
         main_class: Some(launch_manifest.main_class),
         working_directory: Some(paths.minecraft_dir.display().to_string()),
         log_path: Some(log_path.display().to_string()),

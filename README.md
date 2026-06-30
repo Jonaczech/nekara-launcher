@@ -20,7 +20,7 @@ The application is responsible for:
 - launcher self-update support,
 - player identity for the launch session,
 - isolated Nekara game directory management,
-- official Minecraft metadata and file preparation,
+- official Minecraft base metadata, Fabric profile preparation, and client file integrity checks,
 - Java runtime detection or preparation,
 - file integrity validation and repair,
 - launch command construction,
@@ -30,14 +30,15 @@ The application is responsible for:
 The current scaffold already includes:
 
 - a launcher status command,
-- an official Minecraft metadata check command,
+- an official Minecraft base metadata check command,
 - a Java runtime detection command,
-- an installation plan command for the isolated Nekara client,
-- an installation status command plus a repair action for the official
-  `version.json`, client `.jar`, official libraries, asset index, and asset
-  objects,
+- an installation plan command for the isolated Nekara Fabric client,
+- an installation status command plus a repair action for the resolved
+  `version.json`, client `.jar`, Fabric profile JSON, official libraries,
+  Fabric libraries, asset index, and asset objects,
 - an offline launch command that builds a real Minecraft process invocation
-  from official metadata and monitors its status,
+  from official metadata plus the Fabric loader profile and monitors its
+  status,
 - an offline player profile flow that stores the local player name in launcher
   data,
 - a frameless React launcher shell that renders the current readiness state.
@@ -89,25 +90,29 @@ technology decision.
 See [ADR 0003](docs/adr/0003-github-releases-updater-and-install-integrity.md)
 for the current update and installation integrity direction.
 
+See [ADR 0004](docs/adr/0004-fabric-client-runtime.md) for the Fabric client
+runtime decision.
+
 ## Current Repository Status
 
 This repository is at the project foundation stage. The initial Tauri 2 +
 React + TypeScript scaffold exists, with a player-facing launcher shell and
 the first real runtime checks.
 
-The launcher can now prepare the first full official Minecraft layer inside the
-isolated Nekara directory: the resolved version metadata JSON, official client
-jar, official libraries, asset index, and asset objects. Downloaded files are
-verified before they are stored locally, and the launcher reports how many
-libraries and assets are still missing.
+The launcher can now prepare the first full Fabric-backed client layer inside
+the isolated Nekara directory: the resolved version metadata JSON, official
+client jar, official libraries, Fabric profile JSON, Fabric libraries, asset
+index, and asset objects. Downloaded files are verified before they are stored
+locally, and the launcher reports how many libraries and assets are still
+missing.
 
-The launcher can also perform a first offline `Play` flow when the client is
-prepared and a compatible Java runtime is available. The process status and log
-path are surfaced back into the UI for diagnostics. The settings drawer now
-stores the configured Minecraft RAM limit and keeps launch failure hints plus a
-captured log excerpt available after unsuccessful starts. It also accepts an
-optional custom Java executable path so the runtime can be pinned instead of
-relying only on the system `PATH`.
+The launcher can also perform a first offline `Play` flow when the Fabric
+client is prepared and a compatible Java runtime is available. The process
+status and log path are surfaced back into the UI for diagnostics. The
+settings drawer now stores the configured Minecraft RAM limit and keeps launch
+failure hints plus a captured log excerpt available after unsuccessful starts.
+It also accepts an optional custom Java executable path so the runtime can be
+pinned instead of relying only on the system `PATH`.
 
 Launcher-side diagnostic logs are written under the user profile inside the
 Nekara launcher data directory, in a dedicated `logs` folder, so update and

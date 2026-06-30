@@ -56,7 +56,7 @@ pub fn get_launcher_status() -> LauncherStatus {
             },
             LauncherCheck {
                 id: "metadata-resolution",
-                label: "Official Minecraft metadata available",
+                label: "Fabric client metadata available",
                 state: CheckState::Ready,
             },
             LauncherCheck {

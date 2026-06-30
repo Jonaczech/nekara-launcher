@@ -2,6 +2,7 @@ mod auth;
 mod config;
 mod filesystem;
 mod game;
+mod fabric;
 mod java;
 mod launcher;
 mod logging;

@@ -67,11 +67,19 @@ export interface MinecraftInstallationPlan {
   minecraftDir: string;
   versionJsonPath: string;
   clientJarPath: string;
+  fabricProfileJsonPath: string;
+  librariesDir: string;
+  assetsDir: string;
+  fabricLoaderVersion: string | null;
+  fabricProfileId: string | null;
   versionType: string | null;
   versionUrl: string | null;
   requiredJavaMajor: number | null;
   clientDownloadUrl: string | null;
   clientDownloadSha1: string | null;
+  assetIndexId: string | null;
+  assetIndexUrl: string | null;
+  libraryCount: number | null;
   message: string;
 }
 
@@ -88,16 +96,22 @@ export interface MinecraftInstallationStatus {
   minecraftDir: string;
   versionJsonPath: string;
   clientJarPath: string;
+  fabricProfileJsonPath: string;
   librariesDir: string;
   assetsDir: string;
   assetIndexPath: string;
   versionJsonReady: boolean;
   clientJarReady: boolean;
+  fabricProfileReady: boolean;
   assetIndexReady: boolean;
   libraryCountTotal: number;
   libraryCountReady: number;
+  fabricLibraryCountTotal: number;
+  fabricLibraryCountReady: number;
   assetCountTotal: number;
   assetCountReady: number;
+  fabricLoaderVersion: string | null;
+  fabricProfileId: string | null;
   requiredJavaMajor: number | null;
   clientDownloadUrl: string | null;
   clientDownloadSha1: string | null;
