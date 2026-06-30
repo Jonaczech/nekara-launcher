@@ -1,5 +1,7 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
+use std::mem;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Mutex, OnceLock};
@@ -117,6 +119,31 @@ struct LaunchRule {
 struct LaunchRuleOperatingSystem {
     name: Option<String>,
     arch: Option<String>,
+    #[serde(rename = "versionRange")]
+    version_range: Option<LaunchRuleVersionRange>,
+}
+
+#[derive(Deserialize)]
+struct LaunchRuleVersionRange {
+    min: Option<String>,
+    max: Option<String>,
+}
+
+#[cfg(target_os = "windows")]
+#[repr(C)]
+struct OsVersionInfoW {
+    dw_os_version_info_size: u32,
+    dw_major_version: u32,
+    dw_minor_version: u32,
+    dw_build_number: u32,
+    dw_platform_id: u32,
+    sz_csd_version: [u16; 128],
+}
+
+#[cfg(target_os = "windows")]
+#[link(name = "ntdll")]
+extern "system" {
+    fn RtlGetVersion(lp_version_information: *mut OsVersionInfoW) -> i32;
 }
 
 #[derive(Deserialize)]
@@ -228,6 +255,64 @@ fn current_os_name() -> &'static str {
     }
 }
 
+#[cfg(target_os = "windows")]
+fn current_windows_version() -> Option<(u32, u32, u32)> {
+    let mut version_info = unsafe { mem::zeroed::<OsVersionInfoW>() };
+    version_info.dw_os_version_info_size = std::mem::size_of::<OsVersionInfoW>() as u32;
+
+    let status = unsafe { RtlGetVersion(&mut version_info as *mut OsVersionInfoW) };
+    if status != 0 {
+        return None;
+    }
+
+    Some((
+        version_info.dw_major_version,
+        version_info.dw_minor_version,
+        version_info.dw_build_number,
+    ))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn current_windows_version() -> Option<(u32, u32, u32)> {
+    None
+}
+
+fn parse_version_components(version: &str) -> Option<[u32; 4]> {
+    let mut components = [0_u32; 4];
+
+    for (index, part) in version.split('.').take(4).enumerate() {
+        components[index] = part.parse().ok()?;
+    }
+
+    Some(components)
+}
+
+fn compare_versions(left: [u32; 4], right: [u32; 4]) -> Ordering {
+    left.cmp(&right)
+}
+
+fn current_windows_version_matches(range: &LaunchRuleVersionRange) -> bool {
+    let Some(current_version) = current_windows_version() else {
+        return false;
+    };
+
+    let current = [current_version.0, current_version.1, current_version.2, 0];
+
+    if let Some(min) = range.min.as_deref().and_then(parse_version_components) {
+        if compare_versions(current, min) == Ordering::Less {
+            return false;
+        }
+    }
+
+    if let Some(max) = range.max.as_deref().and_then(parse_version_components) {
+        if compare_versions(current, max) == Ordering::Greater {
+            return false;
+        }
+    }
+
+    true
+}
+
 fn rule_matches(rule: &LaunchRule) -> bool {
     let os_matches = rule
         .os
@@ -241,9 +326,15 @@ fn rule_matches(rule: &LaunchRule) -> bool {
         .and_then(|operating_system| operating_system.arch.as_deref())
         .map(|arch| arch == std::env::consts::ARCH)
         .unwrap_or(true);
+    let version_matches = rule
+        .os
+        .as_ref()
+        .and_then(|operating_system| operating_system.version_range.as_ref())
+        .map(current_windows_version_matches)
+        .unwrap_or(true);
     let features_match = rule.features.values().all(|value| !value);
 
-    os_matches && arch_matches && features_match
+    os_matches && arch_matches && version_matches && features_match
 }
 
 fn argument_is_allowed(rules: &[LaunchRule]) -> bool {
