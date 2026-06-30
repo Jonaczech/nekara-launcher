@@ -337,6 +337,14 @@ export function clearOfflinePlayerProfile() {
   return invoke<OfflinePlayerStatus>("clear_offline_player_profile");
 }
 
+export function clearLauncherUpdaterCache() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve(false);
+  }
+
+  return invoke<boolean>("clear_launcher_updater_cache");
+}
+
 export function getLauncherLogInfo() {
   if (!isTauriRuntime()) {
     return Promise.resolve(browserPreviewLauncherLogInfo);

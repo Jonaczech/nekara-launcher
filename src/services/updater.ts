@@ -1,6 +1,9 @@
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
-import { appendLauncherLogEntry } from "./launcher";
+import {
+  appendLauncherLogEntry,
+  clearLauncherUpdaterCache,
+} from "./launcher";
 import type { LauncherUpdateStatus } from "../types/launcher";
 
 function isTauriRuntime() {
@@ -34,6 +37,22 @@ function toUpdateStatus(update: Awaited<ReturnType<typeof check>>): LauncherUpda
     body: update.body ?? null,
     message: `Launcher update ${update.version} is available.`,
   };
+}
+
+function formatUpdaterError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
 }
 
 async function logUpdate(scope: string, message: string) {
@@ -95,13 +114,14 @@ export async function installLauncherUpdate() {
       };
     }
 
+    await logUpdate("updater", "Clearing stale updater cache before install.");
+    await clearLauncherUpdaterCache();
     await logUpdate("updater", `Downloading launcher update ${update.version}.`);
     await update.downloadAndInstall();
     await logUpdate("updater", `Launcher update ${update.version} installed successfully. Relaunching.`);
     await relaunch();
   } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown updater failure.";
+    const errorMessage = formatUpdaterError(error);
     await logUpdate(
       "updater",
       update == null

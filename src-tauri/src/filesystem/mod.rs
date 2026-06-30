@@ -53,6 +53,31 @@ pub fn launcher_data_dir() -> Result<PathBuf, String> {
     Ok(project_dirs()?.data_local_dir().to_path_buf())
 }
 
+pub fn updater_cache_dir() -> Result<PathBuf, String> {
+    let local_app_data = std::env::var_os("LOCALAPPDATA")
+        .ok_or_else(|| "Unable to determine local application data directory.".to_string())?;
+
+    Ok(PathBuf::from(local_app_data).join("nekara-launcher-updater"))
+}
+
+#[tauri::command]
+pub fn clear_launcher_updater_cache() -> Result<bool, String> {
+    let cache_dir = updater_cache_dir()?;
+
+    if !cache_dir.exists() {
+        return Ok(false);
+    }
+
+    fs::remove_dir_all(&cache_dir).map_err(|error| {
+        format!(
+            "Unable to clear launcher updater cache at {}: {error}",
+            cache_dir.display()
+        )
+    })?;
+
+    Ok(true)
+}
+
 #[tauri::command]
 pub fn ensure_nekara_game_directory() -> Result<GameDirectoryInfo, String> {
     let launcher_data_dir = launcher_data_dir()?;

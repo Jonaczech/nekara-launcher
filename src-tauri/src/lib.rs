@@ -28,6 +28,7 @@ pub fn run() {
             minecraft::prepare_minecraft_installation,
             settings::get_launcher_settings,
             settings::save_launcher_settings,
+            filesystem::clear_launcher_updater_cache,
             filesystem::ensure_nekara_game_directory,
             logging::append_launcher_log,
             logging::get_launcher_log_info,
