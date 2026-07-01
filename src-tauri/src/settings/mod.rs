@@ -15,6 +15,8 @@ struct LauncherSettingsFile {
     max_ram_mb: u32,
     #[serde(default)]
     java_executable_path: Option<String>,
+    #[serde(default)]
+    game_directory_path: Option<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -22,6 +24,7 @@ struct LauncherSettingsFile {
 pub struct LauncherSettings {
     pub max_ram_mb: u32,
     pub java_executable_path: Option<String>,
+    pub game_directory_path: Option<String>,
     pub min_ram_mb: u32,
     pub max_allowed_ram_mb: u32,
     pub ram_step_mb: u32,
@@ -77,6 +80,24 @@ fn resolved_max_ram_mb() -> Result<u32, String> {
     }
 }
 
+fn normalize_game_directory_path(
+    game_directory_path: Option<String>,
+) -> Result<Option<String>, String> {
+    let Some(path) = game_directory_path
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+    else {
+        return Ok(None);
+    };
+
+    let candidate = PathBuf::from(&path);
+    if !candidate.is_absolute() {
+        return Err("Instalační cesta Minecraftu musí být absolutní.".to_string());
+    }
+
+    Ok(Some(path))
+}
+
 pub fn resolve_java_executable_path() -> Result<Option<String>, String> {
     Ok(read_launcher_settings_file()?
         .and_then(|settings| settings.java_executable_path)
@@ -84,10 +105,29 @@ pub fn resolve_java_executable_path() -> Result<Option<String>, String> {
         .filter(|path| !path.is_empty()))
 }
 
+pub fn resolve_game_directory_path() -> Result<Option<String>, String> {
+    let path = read_launcher_settings_file()?
+        .and_then(|settings| settings.game_directory_path);
+    normalize_game_directory_path(path)
+}
+
 pub fn resolve_launcher_settings() -> Result<LauncherSettings, String> {
     let max_ram_mb = resolved_max_ram_mb()?;
     let java_executable_path = resolve_java_executable_path()?;
-    let message = if let Some(java_executable_path) = java_executable_path.as_deref() {
+    let game_directory_path = resolve_game_directory_path()?;
+    let message = if let Some(game_directory_path) = game_directory_path.as_deref() {
+        if let Some(java_executable_path) = java_executable_path.as_deref() {
+            format!(
+                "Limit RAM launcheru je nastaven na {} MB, vlastní Java je {} a herní data se ukládají do {}.",
+                max_ram_mb, java_executable_path, game_directory_path
+            )
+        } else {
+            format!(
+                "Limit RAM launcheru je nastaven na {} MB a herní data se ukládají do {}.",
+                max_ram_mb, game_directory_path
+            )
+        }
+    } else if let Some(java_executable_path) = java_executable_path.as_deref() {
         format!(
             "Limit RAM launcheru je nastaven na {} MB a vlastní cesta k Javě je nastavena na {}.",
             max_ram_mb, java_executable_path
@@ -99,6 +139,7 @@ pub fn resolve_launcher_settings() -> Result<LauncherSettings, String> {
     Ok(LauncherSettings {
         max_ram_mb,
         java_executable_path,
+        game_directory_path,
         min_ram_mb: MIN_MAX_RAM_MB,
         max_allowed_ram_mb: MAX_MAX_RAM_MB,
         ram_step_mb: RAM_STEP_MB,
@@ -115,15 +156,18 @@ pub fn get_launcher_settings() -> Result<LauncherSettings, String> {
 pub fn save_launcher_settings(
     max_ram_mb: u32,
     java_executable_path: Option<String>,
+    game_directory_path: Option<String>,
 ) -> Result<LauncherSettings, String> {
     let normalized_max_ram_mb = normalize_max_ram_mb(max_ram_mb)?;
     let normalized_java_executable_path = java_executable_path
         .map(|path| path.trim().to_string())
         .filter(|path| !path.is_empty());
+    let normalized_game_directory_path = normalize_game_directory_path(game_directory_path)?;
     let settings_path = launcher_settings_path()?;
     let settings = LauncherSettingsFile {
         max_ram_mb: normalized_max_ram_mb,
         java_executable_path: normalized_java_executable_path,
+        game_directory_path: normalized_game_directory_path,
     };
     let payload = serde_json::to_string_pretty(&settings)
         .map_err(|error| format!("Unable to encode launcher settings: {error}"))?;

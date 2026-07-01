@@ -3,10 +3,13 @@ use std::fs::OpenOptions;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use serde::Serialize;
+use flate2::Compression;
+use flate2::write::GzEncoder;
+use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
+use sha2::Sha512;
 
-use crate::{config, fabric, filesystem, logging, manifests};
+use crate::{client_package, config, fabric, filesystem, logging, manifests};
 
 const ASSET_OBJECTS_BASE_URL: &str = "https://resources.download.minecraft.net";
 
@@ -29,6 +32,7 @@ pub struct MinecraftInstallationPlan {
     fabric_profile_json_path: String,
     libraries_dir: String,
     assets_dir: String,
+    mods_dir: String,
     fabric_loader_version: Option<String>,
     fabric_profile_id: Option<String>,
     version_type: Option<String>,
@@ -39,6 +43,7 @@ pub struct MinecraftInstallationPlan {
     asset_index_id: Option<String>,
     asset_index_url: Option<String>,
     library_count: Option<usize>,
+    mod_count: Option<usize>,
     message: String,
 }
 
@@ -67,6 +72,7 @@ pub struct MinecraftInstallationStatus {
     fabric_profile_json_path: String,
     libraries_dir: String,
     assets_dir: String,
+    mods_dir: String,
     asset_index_path: String,
     version_json_ready: bool,
     client_jar_ready: bool,
@@ -78,6 +84,8 @@ pub struct MinecraftInstallationStatus {
     fabric_library_count_ready: usize,
     asset_count_total: usize,
     asset_count_ready: usize,
+    mod_count_total: usize,
+    mod_count_ready: usize,
     fabric_loader_version: Option<String>,
     fabric_profile_id: Option<String>,
     required_java_major: Option<u32>,
@@ -96,6 +104,7 @@ struct InstallationPaths {
     fabric_profile_json_path: PathBuf,
     libraries_dir: PathBuf,
     assets_dir: PathBuf,
+    mods_dir: PathBuf,
 }
 
 struct InstallationSnapshot {
@@ -110,6 +119,13 @@ struct InstallationSnapshot {
     fabric_library_count_ready: usize,
     asset_count_total: usize,
     asset_count_ready: usize,
+    mod_count_total: usize,
+    mod_count_ready: usize,
+}
+
+#[derive(Deserialize, Serialize, Default)]
+struct ManagedModsState {
+    files: Vec<String>,
 }
 
 struct InstallationLock {
@@ -127,6 +143,7 @@ fn installation_paths(fabric_profile_id: &str) -> Result<InstallationPaths, Stri
     Ok(InstallationPaths {
         libraries_dir: minecraft_dir.join("libraries"),
         assets_dir: minecraft_dir.join("assets"),
+        mods_dir: minecraft_dir.join("mods"),
         minecraft_dir,
         version_json_path: base_version_dir.join(format!("{}.json", config::MINECRAFT_VERSION)),
         client_jar_path: base_version_dir.join(format!("{}.jar", config::MINECRAFT_VERSION)),
@@ -218,6 +235,17 @@ fn sha1_hex(bytes: &[u8]) -> String {
     hex
 }
 
+fn sha512_hex(bytes: &[u8]) -> String {
+    let digest = Sha512::digest(bytes);
+    let mut hex = String::with_capacity(digest.len() * 2);
+
+    for byte in digest {
+        hex.push_str(&format!("{byte:02x}"));
+    }
+
+    hex
+}
+
 fn read_sha1_hex(path: &Path) -> Result<String, String> {
     let bytes = fs::read(path).map_err(|error| {
         format!(
@@ -257,6 +285,21 @@ fn file_size_matches(path: &Path, expected_size: u64) -> Result<bool, String> {
         .map_err(|error| format!("Unable to read metadata for {}: {error}", path.display()))?;
 
     Ok(metadata.len() == expected_size)
+}
+
+fn sha512_matches(path: &Path, expected_sha512: &str) -> Result<bool, String> {
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    let bytes = fs::read(path).map_err(|error| {
+        format!(
+            "Unable to read {} for SHA-512 verification: {error}",
+            path.display()
+        )
+    })?;
+
+    Ok(sha512_hex(&bytes).eq_ignore_ascii_case(expected_sha512))
 }
 
 fn read_local_asset_index(
@@ -319,6 +362,41 @@ async fn download_verified_bytes(url: &str, expected_sha1: &str) -> Result<Vec<u
     Ok(bytes.to_vec())
 }
 
+async fn download_verified_bytes_sha512(
+    url: &str,
+    expected_sha512: &str,
+) -> Result<Vec<u8>, String> {
+    let client = reqwest::Client::builder()
+        .user_agent(config::PRODUCT_NAME)
+        .timeout(Duration::from_secs(config::HTTP_REQUEST_TIMEOUT_SECS))
+        .build()
+        .map_err(|error| format!("Failed to create HTTP client: {error}"))?;
+
+    let response = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|error| format!("Unable to download approved mod file from {url}: {error}"))?;
+
+    let response = response
+        .error_for_status()
+        .map_err(|error| format!("Approved mod download failed for {url}: {error}"))?;
+
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|error| format!("Unable to read approved mod response from {url}: {error}"))?;
+
+    let actual_sha512 = sha512_hex(bytes.as_ref());
+    if !actual_sha512.eq_ignore_ascii_case(expected_sha512) {
+        return Err(format!(
+            "Downloaded mod hash mismatch for {url}. Expected {expected_sha512}, got {actual_sha512}."
+        ));
+    }
+
+    Ok(bytes.to_vec())
+}
+
 async fn download_verified_file(path: &Path, url: &str, expected_sha1: &str) -> Result<(), String> {
     ensure_parent_directory(path)?;
 
@@ -347,6 +425,237 @@ async fn download_verified_file(path: &Path, url: &str, expected_sha1: &str) -> 
             path.display()
         )
     })
+}
+
+async fn download_verified_file_sha512(
+    path: &Path,
+    url: &str,
+    expected_sha512: &str,
+) -> Result<(), String> {
+    ensure_parent_directory(path)?;
+
+    let bytes = download_verified_bytes_sha512(url, expected_sha512).await?;
+    let temp_path = path.with_extension("download");
+
+    fs::write(&temp_path, &bytes).map_err(|error| {
+        format!(
+            "Unable to write temporary file to {}: {error}",
+            temp_path.display()
+        )
+    })?;
+
+    if path.exists() {
+        fs::remove_file(path).map_err(|error| {
+            format!(
+                "Unable to replace existing file at {}: {error}",
+                path.display()
+            )
+        })?;
+    }
+
+    fs::rename(&temp_path, path).map_err(|error| {
+        format!(
+            "Unable to move verified file into place at {}: {error}",
+            path.display()
+        )
+    })
+}
+
+fn managed_mods_state_path(paths: &InstallationPaths) -> PathBuf {
+    paths.mods_dir.join(config::MANAGED_MODS_STATE_FILE)
+}
+
+fn read_managed_mods_state(paths: &InstallationPaths) -> Result<ManagedModsState, String> {
+    let state_path = managed_mods_state_path(paths);
+    if !state_path.exists() {
+        return Ok(ManagedModsState::default());
+    }
+
+    let contents = fs::read_to_string(&state_path)
+        .map_err(|error| format!("Unable to read {}: {error}", state_path.display()))?;
+
+    serde_json::from_str(&contents)
+        .map_err(|error| format!("Unable to decode {}: {error}", state_path.display()))
+}
+
+fn write_managed_mods_state(
+    paths: &InstallationPaths,
+    state: &ManagedModsState,
+) -> Result<(), String> {
+    let state_path = managed_mods_state_path(paths);
+    write_text_file(
+        &state_path,
+        &serde_json::to_string_pretty(state)
+            .map_err(|error| format!("Unable to encode managed mods state: {error}"))?,
+    )
+}
+
+fn push_nbt_string_payload(payload: &mut Vec<u8>, value: &str) -> Result<(), String> {
+    let bytes = value.as_bytes();
+    let length = u16::try_from(bytes.len())
+        .map_err(|_| format!("NBT string is too long: {}", value.len()))?;
+    payload.extend_from_slice(&length.to_be_bytes());
+    payload.extend_from_slice(bytes);
+    Ok(())
+}
+
+fn push_nbt_named_string(payload: &mut Vec<u8>, name: &str, value: &str) -> Result<(), String> {
+    payload.push(8);
+    push_nbt_string_payload(payload, name)?;
+    push_nbt_string_payload(payload, value)
+}
+
+fn build_servers_dat_payload() -> Result<Vec<u8>, String> {
+    let mut payload = Vec::new();
+
+    // Root compound with empty name.
+    payload.push(10);
+    payload.extend_from_slice(&0u16.to_be_bytes());
+
+    // List named "servers" containing one compound.
+    payload.push(9);
+    push_nbt_string_payload(&mut payload, "servers")?;
+    payload.push(10);
+    payload.extend_from_slice(&1i32.to_be_bytes());
+
+    push_nbt_named_string(
+        &mut payload,
+        "name",
+        config::PRESET_MULTIPLAYER_SERVER_NAME,
+    )?;
+    push_nbt_named_string(
+        &mut payload,
+        "ip",
+        config::PRESET_MULTIPLAYER_SERVER_ADDRESS,
+    )?;
+
+    // End first server compound and root compound.
+    payload.push(0);
+    payload.push(0);
+
+    Ok(payload)
+}
+
+fn build_servers_dat_gzip_bytes() -> Result<Vec<u8>, String> {
+    let payload = build_servers_dat_payload()?;
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    use std::io::Write;
+    encoder
+        .write_all(&payload)
+        .map_err(|error| format!("Unable to encode preset multiplayer server payload: {error}"))?;
+    encoder
+        .finish()
+        .map_err(|error| format!("Unable to finalize preset multiplayer server payload: {error}"))
+}
+
+fn ensure_preset_multiplayer_server(paths: &InstallationPaths) -> Result<bool, String> {
+    let servers_dat_path = paths.minecraft_dir.join("servers.dat");
+    let encoded_payload = build_servers_dat_gzip_bytes()?;
+
+    if servers_dat_path.exists() {
+        let existing_bytes = fs::read(&servers_dat_path).map_err(|error| {
+            format!("Unable to read {}: {error}", servers_dat_path.display())
+        })?;
+        if existing_bytes == encoded_payload {
+            return Ok(false);
+        }
+    }
+
+    ensure_parent_directory(&servers_dat_path)?;
+    fs::write(&servers_dat_path, &encoded_payload).map_err(|error| {
+        format!(
+            "Unable to write preset multiplayer server file at {}: {error}",
+            servers_dat_path.display()
+        )
+    })?;
+
+    Ok(true)
+}
+
+async fn sync_approved_mods(paths: &InstallationPaths) -> Result<usize, String> {
+    let approved_package = client_package::load_approved_client_package()?;
+    if approved_package.minecraft_version != config::MINECRAFT_VERSION {
+        return Err(format!(
+            "Approved mod manifest targets {}, expected {}.",
+            approved_package.minecraft_version,
+            config::MINECRAFT_VERSION
+        ));
+    }
+
+    if approved_package.game_configuration_id != config::GAME_CONFIGURATION_ID {
+        return Err(format!(
+            "Approved mod manifest targets configuration {}, expected {}.",
+            approved_package.game_configuration_id,
+            config::GAME_CONFIGURATION_ID
+        ));
+    }
+
+    fs::create_dir_all(&paths.mods_dir).map_err(|error| {
+        format!(
+            "Unable to create mods directory at {}: {error}",
+            paths.mods_dir.display()
+        )
+    })?;
+
+    let previous_state = read_managed_mods_state(paths)?;
+    let mut changed_count = 0usize;
+    let mut current_files = Vec::with_capacity(approved_package.mods.len());
+
+    log_prepare_step("Ověřuji a synchronizuji schválené Fabric mody.");
+    for approved_mod in &approved_package.mods {
+        if approved_mod.distribution != "required" {
+            continue;
+        }
+
+        let local_path = paths.mods_dir.join(&approved_mod.file_name);
+        current_files.push(approved_mod.file_name.clone());
+
+        if file_size_matches(&local_path, approved_mod.size)?
+            && sha512_matches(&local_path, &approved_mod.sha512)?
+        {
+            continue;
+        }
+
+        log_prepare_step(&format!(
+            "Stahuji nebo opravuji mod {} ({}) do {}.",
+            approved_mod.display_name,
+            approved_mod.id,
+            local_path.display()
+        ));
+        download_verified_file_sha512(
+            &local_path,
+            &approved_mod.download_url,
+            &approved_mod.sha512,
+        )
+        .await?;
+        changed_count += 1;
+    }
+
+    for previous_file in previous_state.files {
+        if current_files.contains(&previous_file) {
+            continue;
+        }
+
+        let previous_path = paths.mods_dir.join(&previous_file);
+        if previous_path.exists() {
+            fs::remove_file(&previous_path).map_err(|error| {
+                format!(
+                    "Unable to remove outdated managed mod at {}: {error}",
+                    previous_path.display()
+                )
+            })?;
+            changed_count += 1;
+        }
+    }
+
+    write_managed_mods_state(
+        paths,
+        &ManagedModsState {
+            files: current_files,
+        },
+    )?;
+
+    Ok(changed_count)
 }
 
 fn build_missing_summary(snapshot: &InstallationSnapshot) -> String {
@@ -382,6 +691,11 @@ fn build_missing_summary(snapshot: &InstallationSnapshot) -> String {
         parts.push(format!("{missing_assets} objektů assetů"));
     }
 
+    let missing_mods = snapshot.mod_count_total.saturating_sub(snapshot.mod_count_ready);
+    if missing_mods > 0 {
+        parts.push(format!("{missing_mods} modů"));
+    }
+
     if parts.is_empty() {
         "nothing".to_string()
     } else {
@@ -411,6 +725,7 @@ fn build_installation_status(
         && snapshot.asset_index_ready
         && snapshot.library_count_ready == snapshot.library_count_total
         && snapshot.asset_count_ready == snapshot.asset_count_total
+        && snapshot.mod_count_ready == snapshot.mod_count_total
     {
         MinecraftInstallationState::Ready
     } else {
@@ -431,6 +746,7 @@ fn build_installation_status(
         fabric_profile_json_path: paths.fabric_profile_json_path.display().to_string(),
         libraries_dir: paths.libraries_dir.display().to_string(),
         assets_dir: paths.assets_dir.display().to_string(),
+        mods_dir: paths.mods_dir.display().to_string(),
         asset_index_path: snapshot.asset_index_path.display().to_string(),
         version_json_ready: snapshot.version_json_ready,
         client_jar_ready: snapshot.client_jar_ready,
@@ -442,6 +758,8 @@ fn build_installation_status(
         fabric_library_count_ready: snapshot.fabric_library_count_ready,
         asset_count_total: snapshot.asset_count_total,
         asset_count_ready: snapshot.asset_count_ready,
+        mod_count_total: snapshot.mod_count_total,
+        mod_count_ready: snapshot.mod_count_ready,
         fabric_loader_version: Some(fabric_details.loader_version.clone()),
         fabric_profile_id: Some(fabric_details.profile_id.clone()),
         required_java_major: Some(combined_required_java_major(
@@ -462,6 +780,7 @@ async fn collect_installation_snapshot(
     base_details: &manifests::OfficialMinecraftVersionDetails,
     fabric_details: &fabric::FabricInstallationDetails,
 ) -> Result<InstallationSnapshot, String> {
+    let approved_package = client_package::load_approved_client_package()?;
     let asset_index_path = asset_index_path(paths, &base_details.asset_index.id);
     let version_json_ready = text_matches(&paths.version_json_path, &base_details.version_json)?;
     let client_jar_ready =
@@ -505,6 +824,21 @@ async fn collect_installation_snapshot(
         0
     };
 
+    let mut mod_count_ready = 0usize;
+    let required_mods: Vec<_> = approved_package
+        .mods
+        .iter()
+        .filter(|approved_mod| approved_mod.distribution == "required")
+        .collect();
+    for approved_mod in &required_mods {
+        let local_path = paths.mods_dir.join(&approved_mod.file_name);
+        if file_size_matches(&local_path, approved_mod.size)?
+            && sha512_matches(&local_path, &approved_mod.sha512)?
+        {
+            mod_count_ready += 1;
+        }
+    }
+
     Ok(InstallationSnapshot {
         asset_index_path,
         version_json_ready,
@@ -517,14 +851,19 @@ async fn collect_installation_snapshot(
         fabric_library_count_ready,
         asset_count_total,
         asset_count_ready,
+        mod_count_total: required_mods.len(),
+        mod_count_ready,
     })
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::*;
+    use crate::{filesystem, settings};
 
     fn test_paths() -> InstallationPaths {
         let root = PathBuf::from("C:/NekaraTest");
@@ -536,6 +875,7 @@ mod tests {
             fabric_profile_json_path: root.join("versions/fabric/fabric.json"),
             libraries_dir: root.join("libraries"),
             assets_dir: root.join("assets"),
+            mods_dir: root.join("mods"),
         }
     }
 
@@ -598,6 +938,8 @@ mod tests {
             fabric_library_count_ready: 1,
             asset_count_total: 2,
             asset_count_ready: 2,
+            mod_count_total: 4,
+            mod_count_ready: 4,
         };
 
         let status = build_installation_status(
@@ -613,12 +955,105 @@ mod tests {
         assert_eq!(status.library_count_ready, 3);
         assert_eq!(status.fabric_library_count_ready, 1);
     }
+
+    #[test]
+    fn preset_multiplayer_server_payload_contains_expected_host() {
+        let payload = build_servers_dat_payload().expect("server payload should build");
+        let payload_text = String::from_utf8_lossy(&payload);
+
+        assert!(payload_text.contains(config::PRESET_MULTIPLAYER_SERVER_NAME));
+        assert!(payload_text.contains(config::PRESET_MULTIPLAYER_SERVER_ADDRESS));
+    }
+
+    #[test]
+    #[ignore = "downloads the full Minecraft/Fabric client package for smoke verification"]
+    fn smoke_prepares_installation_and_writes_server_preset() {
+        let launcher_data_dir =
+            filesystem::launcher_data_dir().expect("launcher data dir should resolve");
+        let settings_path = launcher_data_dir.join(config::LAUNCHER_SETTINGS_FILE);
+        let original_settings = fs::read(&settings_path).ok();
+        let unique_suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("current time should be after epoch")
+            .as_secs();
+        let smoke_root = std::env::temp_dir().join(format!("nekara-smoke-{unique_suffix}"));
+
+        if smoke_root.exists() {
+            fs::remove_dir_all(&smoke_root).expect("previous smoke dir should be removable");
+        }
+
+        let restore_settings = |original_settings: Option<Vec<u8>>| {
+            if let Some(contents) = original_settings {
+                fs::write(&settings_path, contents).expect("launcher settings should restore");
+            } else if settings_path.exists() {
+                fs::remove_file(&settings_path).expect("temporary launcher settings should clear");
+            }
+        };
+
+        let result = (|| -> Result<(), String> {
+            settings::save_launcher_settings(4096, None, Some(smoke_root.display().to_string()))?;
+            let status = tauri::async_runtime::block_on(prepare_minecraft_installation())?;
+
+            if !matches!(status.state, MinecraftInstallationState::Ready) {
+                return Err(format!(
+                    "Smoke preparation did not finish ready: {}",
+                    status.message
+                ));
+            }
+
+            let mods_dir = smoke_root.join(".minecraft").join("mods");
+            let servers_dat = smoke_root.join(".minecraft").join("servers.dat");
+
+            if !mods_dir.exists() {
+                return Err(format!("Smoke test expected mods dir at {}.", mods_dir.display()));
+            }
+
+            if !servers_dat.exists() {
+                return Err(format!(
+                    "Smoke test expected preset server file at {}.",
+                    servers_dat.display()
+                ));
+            }
+
+            let mod_files = fs::read_dir(&mods_dir)
+                .map_err(|error| format!("Unable to list smoke mods dir: {error}"))?
+                .filter_map(Result::ok)
+                .filter(|entry| {
+                    entry
+                        .path()
+                        .extension()
+                        .and_then(|value| value.to_str())
+                        .map(|extension| extension.eq_ignore_ascii_case("jar"))
+                        .unwrap_or(false)
+                })
+                .count();
+
+            if mod_files < 21 {
+                return Err(format!(
+                    "Smoke test expected at least 21 mod jars, found {mod_files}."
+                ));
+            }
+
+            Ok(())
+        })();
+
+        restore_settings(original_settings);
+
+        if smoke_root.exists() {
+            let _ = fs::remove_dir_all(&smoke_root);
+        }
+
+        if let Err(error) = result {
+            panic!("{error}");
+        }
+    }
 }
 
 #[tauri::command]
 pub async fn get_minecraft_installation_plan() -> Result<MinecraftInstallationPlan, String> {
     let base_details = manifests::fetch_official_minecraft_version_details().await?;
     let fabric_details = fabric::fetch_fabric_installation_details().await?;
+    let approved_package = client_package::load_approved_client_package()?;
     let paths = installation_paths(&fabric_details.profile_id)?;
 
     let _ = filesystem::ensure_nekara_game_directory()?;
@@ -632,6 +1067,7 @@ pub async fn get_minecraft_installation_plan() -> Result<MinecraftInstallationPl
         fabric_profile_json_path: paths.fabric_profile_json_path.display().to_string(),
         libraries_dir: paths.libraries_dir.display().to_string(),
         assets_dir: paths.assets_dir.display().to_string(),
+        mods_dir: paths.mods_dir.display().to_string(),
         fabric_loader_version: Some(fabric_details.loader_version.clone()),
         fabric_profile_id: Some(fabric_details.profile_id.clone()),
         version_type: Some(base_details.version_type.clone()),
@@ -645,6 +1081,13 @@ pub async fn get_minecraft_installation_plan() -> Result<MinecraftInstallationPl
         asset_index_id: Some(base_details.asset_index.id.clone()),
         asset_index_url: Some(base_details.asset_index.url.clone()),
         library_count: Some(base_details.libraries.len() + fabric_details.libraries.len()),
+        mod_count: Some(
+            approved_package
+                .mods
+                .iter()
+                .filter(|approved_mod| approved_mod.distribution == "required")
+                .count(),
+        ),
         message: format!(
             "Fabric loader {} je pro {} dostupný a lokální instalační cesty jsou připravené.",
             fabric_details.loader_version,
@@ -679,6 +1122,8 @@ pub async fn get_minecraft_installation_status() -> Result<MinecraftInstallation
                 fabric_library_count_ready: snapshot.fabric_library_count_ready,
                 asset_count_total: snapshot.asset_count_total,
                 asset_count_ready: snapshot.asset_count_ready,
+                mod_count_total: snapshot.mod_count_total,
+                mod_count_ready: snapshot.mod_count_ready,
             },
             String::new(),
         )
@@ -808,6 +1253,15 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
         changed_parts.push("objekty assetů");
     }
 
+    let synchronized_mods = sync_approved_mods(&paths).await?;
+    if synchronized_mods > 0 {
+        changed_parts.push("schválené mody");
+    }
+
+    if ensure_preset_multiplayer_server(&paths)? {
+        changed_parts.push("Nekara server v multiplayeru");
+    }
+
     let snapshot = collect_installation_snapshot(&paths, &base_details, &fabric_details).await?;
     let message = if changed_parts.is_empty() {
         format!(
@@ -821,7 +1275,8 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
             && snapshot.fabric_profile_ready
             && snapshot.asset_index_ready
             && snapshot.library_count_ready == snapshot.library_count_total
-            && snapshot.asset_count_ready == snapshot.asset_count_total;
+            && snapshot.asset_count_ready == snapshot.asset_count_total
+            && snapshot.mod_count_ready == snapshot.mod_count_total;
 
         if all_ready {
             format!(

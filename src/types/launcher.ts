@@ -41,6 +41,7 @@ export interface GameDirectoryInfo {
   launcherDataDir: string;
   nekaraGameDir: string;
   minecraftDir: string;
+  configuredGameDirectoryPath: string | null;
   exists: boolean;
   created: boolean;
   message: string;
@@ -70,6 +71,7 @@ export interface MinecraftInstallationPlan {
   fabricProfileJsonPath: string;
   librariesDir: string;
   assetsDir: string;
+  modsDir: string;
   fabricLoaderVersion: string | null;
   fabricProfileId: string | null;
   versionType: string | null;
@@ -80,6 +82,7 @@ export interface MinecraftInstallationPlan {
   assetIndexId: string | null;
   assetIndexUrl: string | null;
   libraryCount: number | null;
+  modCount: number | null;
   message: string;
 }
 
@@ -99,6 +102,7 @@ export interface MinecraftInstallationStatus {
   fabricProfileJsonPath: string;
   librariesDir: string;
   assetsDir: string;
+  modsDir: string;
   assetIndexPath: string;
   versionJsonReady: boolean;
   clientJarReady: boolean;
@@ -110,6 +114,8 @@ export interface MinecraftInstallationStatus {
   fabricLibraryCountReady: number;
   assetCountTotal: number;
   assetCountReady: number;
+  modCountTotal: number;
+  modCountReady: number;
   fabricLoaderVersion: string | null;
   fabricProfileId: string | null;
   requiredJavaMajor: number | null;
@@ -126,6 +132,25 @@ export type OfflinePlayerState = "missing" | "ready";
 export interface OfflinePlayerStatus {
   state: OfflinePlayerState;
   playerName: string | null;
+  message: string;
+}
+
+export type MicrosoftAccountState =
+  | "unconfigured"
+  | "signedOut"
+  | "pending"
+  | "ready"
+  | "error";
+
+export interface MicrosoftAccountStatus {
+  state: MicrosoftAccountState;
+  configured: boolean;
+  playerName: string | null;
+  playerUuid: string | null;
+  verificationUri: string | null;
+  userCode: string | null;
+  expiresAtUnixMs: number | null;
+  pollIntervalSeconds: number | null;
   message: string;
 }
 
@@ -161,6 +186,7 @@ export interface GameLaunchStatus {
 export interface LauncherSettings {
   maxRamMb: number;
   javaExecutablePath: string | null;
+  gameDirectoryPath: string | null;
   minRamMb: number;
   maxAllowedRamMb: number;
   ramStepMb: number;

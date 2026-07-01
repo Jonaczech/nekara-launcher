@@ -11,7 +11,7 @@ modpack browser, server list, marketplace, forum, or community portal.
 The launcher should let a player:
 
 1. Start the launcher.
-2. Enter an offline player name.
+2. Sign in with Microsoft or enter an offline player name.
 3. Wait while the Nekara game installation is checked or prepared.
 4. Press Play.
 
@@ -36,11 +36,12 @@ The current scaffold already includes:
 - an installation status command plus a repair action for the resolved
   `version.json`, client `.jar`, Fabric profile JSON, official libraries,
   Fabric libraries, asset index, and asset objects,
-- an offline launch command that builds a real Minecraft process invocation
+- a launch command that builds a real Minecraft process invocation
   from official metadata plus the Fabric loader profile and monitors its
   status,
 - an offline player profile flow that stores the local player name in launcher
-  data,
+  data plus an in-memory Microsoft device-code sign-in flow for Minecraft Java
+  ownership checks,
 - a frameless React launcher shell that renders the current readiness state.
 
 ## Non-Goals
@@ -102,9 +103,12 @@ the first real runtime checks.
 The launcher can now prepare the first full Fabric-backed client layer inside
 the isolated Nekara directory: the resolved version metadata JSON, official
 client jar, official libraries, Fabric profile JSON, Fabric libraries, asset
-index, and asset objects. Downloaded files are verified before they are stored
-locally, and the launcher reports how many libraries and assets are still
-missing.
+index, asset objects, and the approved Nekara Fabric mods manifest. Downloaded
+files are verified before they are stored locally, launcher-managed mods are
+repaired by SHA-512 and cleaned up when the approved manifest changes, and the
+launcher reports how many libraries, assets, and mods are still missing.
+During preparation, the launcher also writes a preset Nekara multiplayer
+server entry into the client so the server appears directly inside Minecraft.
 
 The launcher can also perform a first offline `Play` flow when the Fabric
 client is prepared and a compatible Java runtime is available. The process
@@ -112,11 +116,13 @@ status and log path are surfaced back into the UI for diagnostics. The
 settings drawer now stores the configured Minecraft RAM limit and keeps launch
 failure hints plus a captured log excerpt available after unsuccessful starts.
 It also accepts an optional custom Java executable path so the runtime can be
-pinned instead of relying only on the system `PATH`.
+pinned instead of relying only on the system `PATH`. The settings page also
+accepts an optional custom game installation directory so the isolated Nekara
+client does not have to live under the default AppData location.
 
 The player-facing UI and launcher diagnostics are localized to Czech, and the
-launcher now auto-starts client preparation when the Fabric-backed installation
-is still missing files.
+launcher startup now staggers heavier runtime checks so the first window paint
+is less likely to hang on Windows.
 
 Launcher-side diagnostic logs are written under the user profile inside the
 Nekara launcher data directory, in a dedicated `logs` folder, so update and
@@ -172,6 +178,12 @@ Visual Studio developer command prompt with `~/.cargo/bin` on PATH.
 The current pnpm workspace explicitly approves the `esbuild` install script,
 which is required by Vite.
 
-The current launcher flow uses a local offline player name instead of Microsoft
-sign-in so installation and launch work can continue without account
-integration.
+Microsoft sign-in requires a public client ID that is allowed to use desktop
+authorization-code flow with a loopback redirect. The current implementation
+reads it from the build/runtime environment variable
+`NEKARA_MICROSOFT_CLIENT_ID`. The corresponding Microsoft app registration
+must allow the redirect URI `http://localhost:39231/auth/callback`.
+
+If the variable is missing, the launcher keeps the Microsoft account section
+visible but reports that the flow is not configured yet, while offline launch
+remains available.

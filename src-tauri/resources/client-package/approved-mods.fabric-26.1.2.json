@@ -8,46 +8,298 @@
   },
   "mods": [
     {
-      "id": "fabric-api",
-      "displayName": "Fabric API",
-      "distribution": "required",
-      "status": "planned"
-    },
-    {
-      "id": "sodium",
-      "displayName": "Sodium",
-      "distribution": "required",
-      "status": "planned"
-    },
-    {
-      "id": "iris",
-      "displayName": "Iris Shaders",
-      "distribution": "optional",
-      "status": "planned"
-    },
-    {
-      "id": "ferrite-core",
-      "displayName": "FerriteCore",
-      "distribution": "required",
-      "status": "planned"
-    },
-    {
-      "id": "invmove",
-      "displayName": "InvMove",
-      "distribution": "required",
-      "status": "planned"
-    },
-    {
       "id": "entity-model-features",
       "displayName": "Entity Model Features",
       "distribution": "required",
-      "status": "planned"
+      "source": {
+        "provider": "modrinth",
+        "projectId": "4I1XuqiY",
+        "version": "3.2.4-fabric-26.1",
+        "filename": "entity_model_features-3.2.4-26.1-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/4I1XuqiY/versions/3AWXQABp/entity_model_features-3.2.4-26.1-fabric.jar",
+        "sha512": "b4b27472517832751200532f0542ada0a8d700039eac1222f9944a42fc965ba361d5119d53593a733cd4807ab4337f2143959762f8a0ea01bc5eb1d98ff3dc6e",
+        "size": 577617
+      }
     },
     {
       "id": "entity-texture-features",
       "displayName": "Entity Texture Features",
       "distribution": "required",
-      "status": "planned"
+      "source": {
+        "provider": "modrinth",
+        "projectId": "BVzZfTc1",
+        "version": "7.1-fabric-26.1",
+        "filename": "entity_texture_features_26.1-fabric-7.1.jar",
+        "url": "https://cdn.modrinth.com/data/BVzZfTc1/versions/pzW03Rc5/entity_texture_features_26.1-fabric-7.1.jar",
+        "sha512": "9d740d901f691a5b9fb1eaa4acec488c9ceba2fa90742a8ca66f60a303b28c388cd2da8a6d2aac1aef3b0783bfeea5843657938bd6a5810e468ef7be12bd2b8b",
+        "size": 740706
+      }
+    },
+    {
+      "id": "cloth-config",
+      "displayName": "Cloth Config API",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "9s6osm5g",
+        "version": "26.1.154+fabric",
+        "filename": "cloth-config-26.1.154.jar",
+        "url": "https://cdn.modrinth.com/data/9s6osm5g/versions/GFM8zh9J/cloth-config-26.1.154.jar",
+        "sha512": "8bfb75f2cac0a9910316c6a368a228c0f8f1261ac6f03dec5fba594e1619ac04334a3df4fb29778d61d0b8290d55949371a523d722b35501bf9a2902956d3b17",
+        "size": 1135373
+      }
+    },
+    {
+      "id": "entity-culling",
+      "displayName": "Entity Culling",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "NNAgCjsB",
+        "version": "1.10.5",
+        "filename": "entityculling-fabric-1.10.5-mc26.1.jar",
+        "url": "https://cdn.modrinth.com/data/NNAgCjsB/versions/zAi8nQHj/entityculling-fabric-1.10.5-mc26.1.jar",
+        "sha512": "66fb5518f61a62643eb2901e3d16550fb2ccb496c397f29d1adacf745f4f836805c593cec8560aeab9f2b826cd3af4535d526c4f1ff5a6bde56d5578b3079a18",
+        "size": 1581987
+      }
+    },
+    {
+      "id": "fabric-api",
+      "displayName": "Fabric API",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "P7dR8mSH",
+        "version": "0.154.0+26.1.2",
+        "filename": "fabric-api-0.154.0+26.1.2.jar",
+        "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/1F9Sl2ke/fabric-api-0.154.0%2B26.1.2.jar",
+        "sha512": "0f5885ca80716dee547e8e8ec6c2eda137b5591d40d8fb424d9d1d99a3e5c7a6d861ef11590903f9fa18838806de8876e51285c5d830cfa50f518c0217139e78",
+        "size": 2514453
+      }
+    },
+    {
+      "id": "ferrite-core",
+      "displayName": "FerriteCore",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "uXXizFIs",
+        "version": "9.0.0-fabric",
+        "filename": "ferritecore-9.0.0-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/uXXizFIs/versions/d5ddUdiB/ferritecore-9.0.0-fabric.jar",
+        "sha512": "d81fa97e11784c19d42f89c2f433831d007603dd7193cee45fa177e4a6a9c52b384b198586e04a0f7f63cd996fed713322578bde9a8db57e1188854ae5cbe584",
+        "size": 72677
+      }
+    },
+    {
+      "id": "forge-config-api-port",
+      "displayName": "Forge Config API Port",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "ohNO6lps",
+        "version": "26.1.5",
+        "filename": "ForgeConfigAPIPort-v26.1.5-mc26.1.x-Fabric.jar",
+        "url": "https://cdn.modrinth.com/data/ohNO6lps/versions/jUe0ucoE/ForgeConfigAPIPort-v26.1.5-mc26.1.x-Fabric.jar",
+        "sha512": "44951fd147de9282c7a483eec0863e0838e98f68579b4d5852e4aaf038b82f03558c9dfd05fa3a4e5aa60ce5ede15cbbac59d4527d379494619804740f9a184f",
+        "size": 609711
+      }
+    },
+    {
+      "id": "chat-animation",
+      "displayName": "Chat Animation [Smooth Chat]",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "DnNYdJsx",
+        "version": "1.2.0+fabric-26.1",
+        "filename": "chatanimation-fabric-1.2.0+mc26.1.jar",
+        "url": "https://cdn.modrinth.com/data/DnNYdJsx/versions/Neol7G6v/chatanimation-fabric-1.2.0%2Bmc26.1.jar",
+        "sha512": "8db2325545a43227db2325482bff96efb802ca0540e1c97d2da7c74d1bc69fd134591240f9b291f3f672b8a96828536571e91c85f57f2220e6cdb77166ef226e",
+        "size": 381042
+      }
+    },
+    {
+      "id": "iceberg",
+      "displayName": "Iceberg",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "5faXoLqX",
+        "version": "1.4.1.1",
+        "filename": "Iceberg-26.1.2-fabric-1.4.1.1.jar",
+        "url": "https://cdn.modrinth.com/data/5faXoLqX/versions/7rUyNFgK/Iceberg-26.1.2-fabric-1.4.1.1.jar",
+        "sha512": "6d5fd2161bcebef83848236a14c8b9c3cd2e188adab49378b8d66d983dbd59966b69e5035df2189942f29a820fc1c87f8d86ff6ddd3ff672a3c02c557de7361e",
+        "size": 373396
+      }
+    },
+    {
+      "id": "immediatelyfast",
+      "displayName": "ImmediatelyFast",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "5ZwdcRci",
+        "version": "1.15.3+26.1-fabric",
+        "filename": "ImmediatelyFast-Fabric-1.15.3+26.1.jar",
+        "url": "https://cdn.modrinth.com/data/5ZwdcRci/versions/xOA9hbpf/ImmediatelyFast-Fabric-1.15.3%2B26.1.jar",
+        "sha512": "b665037aee8e76e330f068f640b340b97ce8c0c0e940dfccda8a5b00f772dfa9b2d20594bb950e4f2595b359ad3c27190a4d998da28d4507a9747ab507980d11",
+        "size": 310057
+      }
+    },
+    {
+      "id": "invmove",
+      "displayName": "InvMove",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "REfW2AEX",
+        "version": "0.9.5+26.1.2-fabric",
+        "filename": "InvMove-0.9.5+26.1.2-Fabric.jar",
+        "url": "https://cdn.modrinth.com/data/REfW2AEX/versions/O4AcyiAr/InvMove-0.9.5%2B26.1.2-Fabric.jar",
+        "sha512": "6d6ff32d6aa9c7d78e895abb4797d66b9a19e497ade8c36bb23341802a38f3291f5f5860f508d1adc7f279919f2771e9eb378aa709cac07825a158da0cb5a118",
+        "size": 83967
+      }
+    },
+    {
+      "id": "iris",
+      "displayName": "Iris Shaders",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "YL57xq9U",
+        "version": "1.10.9+26.1-fabric",
+        "filename": "iris-fabric-1.10.9+mc26.1.1.jar",
+        "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/MwcLS51S/iris-fabric-1.10.9%2Bmc26.1.1.jar",
+        "sha512": "01714943b36e7b78618bf133a20da489197322e20ebc2d9858f15bb57ac198fdab23dac6c917d6239ad3fe2e7c47f53fb387d475805eb7269fbfc16e30664155",
+        "size": 2803860
+      }
+    },
+    {
+      "id": "item-highlighter",
+      "displayName": "Item Highlighter",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "cVNW5lr6",
+        "version": "1.2.1",
+        "filename": "Highlighter-26.1.2-fabric-1.2.1.jar",
+        "url": "https://cdn.modrinth.com/data/cVNW5lr6/versions/JkO3yIXY/Highlighter-26.1.2-fabric-1.2.1.jar",
+        "sha512": "3df8942cafd95f25ba8fa3ab206566bcde0d5c420dc68877dd3f7cf473b60867a78b57fd51da4b92fe6b512e675fac6e98043745dbe63052524d844e6072bc1b",
+        "size": 29388
+      }
+    },
+    {
+      "id": "lithium",
+      "displayName": "Lithium",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "gvQqBUqZ",
+        "version": "mc26.1.2-0.24.6-fabric",
+        "filename": "lithium-fabric-0.24.6+mc26.1.2.jar",
+        "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/fQBdPR1m/lithium-fabric-0.24.6%2Bmc26.1.2.jar",
+        "sha512": "fac351f5b6150889b9355a01889c35b5798147d4bedb291594a590a2d41909eb8dc494ef0051317bf55886f2fc7fe134abbe2e755098df38473edb2bf43357e9",
+        "size": 911415
+      }
+    },
+    {
+      "id": "pick-up-notifier",
+      "displayName": "Pick Up Notifier",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "ZX66K16c",
+        "version": "26.1.1",
+        "filename": "PickUpNotifier-v26.1.1-mc26.1.x-Fabric.jar",
+        "url": "https://cdn.modrinth.com/data/ZX66K16c/versions/ls0tFt5C/PickUpNotifier-v26.1.1-mc26.1.x-Fabric.jar",
+        "sha512": "19a9e6de247c961c6620e4f937c409c095e331289f073cc60619bc3cd48a39fbe3131bf7ecf5ea758dae156674d304c4f9382cfeb52f22b20060ed235fb852e8",
+        "size": 76693
+      }
+    },
+    {
+      "id": "puzzles-lib",
+      "displayName": "Puzzles Lib",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "QAGBst4M",
+        "version": "26.1.11",
+        "filename": "PuzzlesLib-v26.1.11-mc26.1.x-Fabric.jar",
+        "url": "https://cdn.modrinth.com/data/QAGBst4M/versions/EzXrKtxs/PuzzlesLib-v26.1.11-mc26.1.x-Fabric.jar",
+        "sha512": "b8e4be07782229ce2624b6c33d5d28ec2374e0677fea48c232a3796c18116e8ad8fe0c7294808b7fb12925aa05dc34d8e19f28757033041809c01e6d4943ca24",
+        "size": 1143972
+      }
+    },
+    {
+      "id": "reeses-sodium-options",
+      "displayName": "Reese's Sodium Options",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "Bh37bMuy",
+        "version": "mc26.1.2-2.2.0+fabric",
+        "filename": "reeses-sodium-options-fabric-2.2.0+mc26.1.2.jar",
+        "url": "https://cdn.modrinth.com/data/Bh37bMuy/versions/wkblahhj/reeses-sodium-options-fabric-2.2.0%2Bmc26.1.2.jar",
+        "sha512": "c34d26c4decc5f8091dc95998342a65bd7a6bbeda83c4b0dd59ef90d04157e9e7dc57c7ce8811c3d3923ed0396282c432ebeba6839815b79dde08d14b4ff867c",
+        "size": 235821
+      }
+    },
+    {
+      "id": "sodium",
+      "displayName": "Sodium",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "AANobbMI",
+        "version": "mc26.1.2-0.8.12-fabric",
+        "filename": "sodium-fabric-0.8.12+mc26.1.2.jar",
+        "url": "https://cdn.modrinth.com/data/AANobbMI/versions/eRJU33Hp/sodium-fabric-0.8.12%2Bmc26.1.2.jar",
+        "sha512": "402bb945d1f893a72c152c137e08f8a0c045d725a4d6ca2af7bcfe929c4d80338da509094cfe3a8cd162346b78c5069dc3cf1d57bf94a1bce557f6425da7e76f",
+        "size": 1844226
+      }
+    },
+    {
+      "id": "sodium-extra",
+      "displayName": "Sodium Extra",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "PtjYWJkn",
+        "version": "mc26.1.1-0.8.7+fabric",
+        "filename": "sodium-extra-fabric-0.8.7+mc26.1.1.jar",
+        "url": "https://cdn.modrinth.com/data/PtjYWJkn/versions/1bz3AMCV/sodium-extra-fabric-0.8.7%2Bmc26.1.1.jar",
+        "sha512": "aed5ab19ca13c9e77d16140506d4cf83fbe15bd77fe76276f67fe8f7157ec591e9b8a65ab4176f2a880b58172634b54a5b369db40201a84618acfcc488d14ba0",
+        "size": 401602
+      }
+    },
+    {
+      "id": "sound-physics-remastered",
+      "displayName": "Sound Physics Remastered",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "qyVF9oeo",
+        "version": "fabric-1.5.1+26.1.2",
+        "filename": "sound-physics-remastered-fabric-1.5.1+26.1.2.jar",
+        "url": "https://cdn.modrinth.com/data/qyVF9oeo/versions/y3vsp51g/sound-physics-remastered-fabric-1.5.1%2B26.1.2.jar",
+        "sha512": "7dd35bbe930d79a303564c61bf9e9de53480d0c602e6bd6889cbcff52969d76fbc598ca15dfd7a22219e5702f9c89ca5d7c8619d4f9612775a2053cd55e7a819",
+        "size": 201734
+      }
+    },
+    {
+      "id": "spark",
+      "displayName": "spark",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "l6YH9Als",
+        "version": "1.10.173-fabric",
+        "filename": "spark-1.10.173-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/l6YH9Als/versions/iYFOl6lQ/spark-1.10.173-fabric.jar",
+        "sha512": "1dcbf2b76ceacf07523afaeaf63d3625b0318077cc6ce588bb701aea4a494bc2a5179fd2ca5aeda9513c6a2248c2ec590387e8aec6ac9fd8e3d01760bbc3dbfb",
+        "size": 3887184
+      }
     }
   ]
 }

@@ -8,8 +8,8 @@ use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use md5::{Digest, Md5};
 use serde::{Deserialize, Serialize};
+use sha1::Digest;
 
 use crate::{auth, config, fabric, filesystem, java, logging, manifests, settings};
 
@@ -536,35 +536,6 @@ async fn download_verified_file(path: &Path, url: &str, expected_sha1: &str) -> 
         .map_err(|error| format!("Unable to write {}: {error}", path.display()))
 }
 
-fn build_offline_uuid(player_name: &str) -> String {
-    let mut hasher = Md5::new();
-    hasher.update(format!("OfflinePlayer:{player_name}").as_bytes());
-    let mut bytes = hasher.finalize().to_vec();
-
-    bytes[6] = (bytes[6] & 0x0f) | 0x30;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-
-    format!(
-        "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-        bytes[0],
-        bytes[1],
-        bytes[2],
-        bytes[3],
-        bytes[4],
-        bytes[5],
-        bytes[6],
-        bytes[7],
-        bytes[8],
-        bytes[9],
-        bytes[10],
-        bytes[11],
-        bytes[12],
-        bytes[13],
-        bytes[14],
-        bytes[15],
-    )
-}
-
 fn classpath_separator() -> &'static str {
     if cfg!(target_os = "windows") {
         ";"
@@ -806,7 +777,9 @@ pub fn get_game_launch_status() -> Result<GameLaunchStatus, String> {
 }
 
 #[tauri::command]
-pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
+pub async fn launch_minecraft(
+    auth_state: tauri::State<'_, auth::AppAuthState>,
+) -> Result<GameLaunchStatus, String> {
     let current_status = read_game_status()?;
     if matches!(
         current_status.state,
@@ -815,10 +788,8 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         return Err("Minecraft už běží v této relaci launcheru.".to_string());
     }
 
-    let offline_player = auth::resolve_offline_player_status()?;
-    let player_name = offline_player
-        .player_name
-        .ok_or_else(|| "Před spuštěním zadej jméno offline hráče.".to_string())?;
+    let launch_identity = auth::resolve_launch_identity(&auth_state)?;
+    let player_name = launch_identity.player_name.clone();
     let launcher_settings = settings::resolve_launcher_settings()?;
     let _ = logging::append_launcher_log_entry(
         "game",
@@ -984,7 +955,6 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
 
     let (classpath, classpath_entry_count) =
         build_classpath(&paths, &base_details, &fabric_details);
-    let offline_uuid = build_offline_uuid(&player_name);
     let log_path = paths
         .logs_dir
         .join(format!("minecraft-{}.log", current_timestamp_ms()));
@@ -998,10 +968,10 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
             .assets
             .clone()
             .unwrap_or_else(|| base_details.asset_index.id.clone()),
-        auth_uuid: offline_uuid,
-        auth_access_token: "0".to_string(),
-        client_id: "nekara-offline".to_string(),
-        auth_xuid: "0".to_string(),
+        auth_uuid: launch_identity.player_uuid,
+        auth_access_token: launch_identity.access_token,
+        client_id: launch_identity.client_id,
+        auth_xuid: launch_identity.xuid,
         version_type: launch_manifest.version_type.clone(),
         natives_directory: paths.natives_dir.display().to_string(),
         launcher_name: config::PRODUCT_NAME.to_string(),

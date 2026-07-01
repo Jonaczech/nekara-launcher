@@ -6,6 +6,7 @@ import type {
   LauncherSettings,
   LauncherLogInfo,
   LauncherStatus,
+  MicrosoftAccountStatus,
   MinecraftInstallationPlan,
   MinecraftInstallationStatus,
   MinecraftMetadataCheck,
@@ -75,6 +76,7 @@ const browserPreviewGameDirectoryInfo: GameDirectoryInfo = {
   launcherDataDir: "Browser preview fallback",
   nekaraGameDir: "Browser preview fallback",
   minecraftDir: "Browser preview fallback",
+  configuredGameDirectoryPath: null,
   exists: false,
   created: false,
   message:
@@ -102,6 +104,7 @@ const browserPreviewMinecraftInstallationPlan: MinecraftInstallationPlan = {
   fabricProfileJsonPath: "Browser preview fallback",
   librariesDir: "Browser preview fallback",
   assetsDir: "Browser preview fallback",
+  modsDir: "Browser preview fallback",
   fabricLoaderVersion: null,
   fabricProfileId: null,
   versionType: null,
@@ -112,6 +115,7 @@ const browserPreviewMinecraftInstallationPlan: MinecraftInstallationPlan = {
   assetIndexId: null,
   assetIndexUrl: null,
   libraryCount: null,
+  modCount: null,
   message:
     "Je aktivní náhradní režim pro prohlížeč. Pro přípravu instalačních cest spusť aplikaci uvnitř Tauri.",
 };
@@ -131,6 +135,7 @@ const browserPreviewMinecraftInstallationStatus: MinecraftInstallationStatus = {
   fabricProfileJsonPath: "Browser preview fallback",
   librariesDir: "Browser preview fallback",
   assetsDir: "Browser preview fallback",
+  modsDir: "Browser preview fallback",
   assetIndexPath: "Browser preview fallback",
   versionJsonReady: false,
   clientJarReady: false,
@@ -142,6 +147,8 @@ const browserPreviewMinecraftInstallationStatus: MinecraftInstallationStatus = {
   fabricLibraryCountReady: 0,
   assetCountTotal: 0,
   assetCountReady: 0,
+  modCountTotal: 0,
+  modCountReady: 0,
   fabricLoaderVersion: null,
   fabricProfileId: null,
   requiredJavaMajor: null,
@@ -159,6 +166,19 @@ const browserPreviewOfflinePlayerStatus: OfflinePlayerStatus = {
   playerName: null,
   message:
     "Je aktivní náhradní režim pro prohlížeč. Pro uložení offline hráčského profilu spusť aplikaci uvnitř Tauri.",
+};
+
+const browserPreviewMicrosoftAccountStatus: MicrosoftAccountStatus = {
+  state: "unconfigured",
+  configured: false,
+  playerName: null,
+  playerUuid: null,
+  verificationUri: null,
+  userCode: null,
+  expiresAtUnixMs: null,
+  pollIntervalSeconds: null,
+  message:
+    "Microsoft přihlášení není v browser preview dostupné. Spusť launcher uvnitř Tauri.",
 };
 
 const browserPreviewGameLaunchStatus: GameLaunchStatus = {
@@ -187,6 +207,7 @@ const browserPreviewGameLaunchStatus: GameLaunchStatus = {
 const browserPreviewLauncherSettings: LauncherSettings = {
   maxRamMb: 4096,
   javaExecutablePath: null,
+  gameDirectoryPath: null,
   minRamMb: 2048,
   maxAllowedRamMb: 12288,
   ramStepMb: 512,
@@ -276,6 +297,38 @@ export function getGameLaunchStatus() {
   return invoke<GameLaunchStatus>("get_game_launch_status");
 }
 
+export function getMicrosoftAccountStatus() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve(browserPreviewMicrosoftAccountStatus);
+  }
+
+  return invoke<MicrosoftAccountStatus>("get_microsoft_account_status");
+}
+
+export function beginMicrosoftDeviceLogin() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve(browserPreviewMicrosoftAccountStatus);
+  }
+
+  return invoke<MicrosoftAccountStatus>("begin_microsoft_device_login");
+}
+
+export function pollMicrosoftDeviceLogin() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve(browserPreviewMicrosoftAccountStatus);
+  }
+
+  return invoke<MicrosoftAccountStatus>("poll_microsoft_device_login");
+}
+
+export function signOutMicrosoftAccount() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve(browserPreviewMicrosoftAccountStatus);
+  }
+
+  return invoke<MicrosoftAccountStatus>("sign_out_microsoft_account");
+}
+
 export function launchMinecraft() {
   if (!isTauriRuntime()) {
     return Promise.resolve({
@@ -299,12 +352,14 @@ export function getLauncherSettings() {
 export function saveLauncherSettings(
   maxRamMb: number,
   javaExecutablePath: string | null,
+  gameDirectoryPath: string | null,
 ) {
   if (!isTauriRuntime()) {
     return Promise.resolve({
       ...browserPreviewLauncherSettings,
       maxRamMb,
       javaExecutablePath,
+      gameDirectoryPath,
       message: `Náhradní režim pro prohlížeč uložil ${maxRamMb} MB jako limit RAM.`,
     });
   }
@@ -312,6 +367,7 @@ export function saveLauncherSettings(
   return invoke<LauncherSettings>("save_launcher_settings", {
     maxRamMb,
     javaExecutablePath,
+    gameDirectoryPath,
   });
 }
 

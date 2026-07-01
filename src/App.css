@@ -339,7 +339,7 @@ code {
 
 .home-grid {
   display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   align-self: end;
 }
@@ -355,6 +355,10 @@ code {
 
 .home-card--player {
   background: rgba(8, 8, 10, 0.72);
+}
+
+.home-card--account {
+  background: rgba(10, 10, 12, 0.78);
 }
 
 .home-card__lead,
@@ -431,6 +435,10 @@ code {
   gap: 10px;
 }
 
+.home-summary--single {
+  grid-template-columns: 1fr;
+}
+
 .home-summary div,
 .settings-meta div,
 .settings-diagnostics div,
@@ -447,6 +455,15 @@ code {
 .settings-diagnostics dd {
   margin: 6px 0 0;
   word-break: break-word;
+}
+
+.home-code {
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.home-link {
+  font-size: 0.9rem;
 }
 
 .settings-page {
