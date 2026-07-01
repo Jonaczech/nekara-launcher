@@ -123,7 +123,7 @@ offline launch flow, and an offline player profile flow in place.
 4. Add progress reporting and cancellation for long download operations.
 5. Introduce managed Java runtime support using the same integrity and lock
    model.
-6. Publish the `0.1.9` branded recovery release and run the updater smoke
+6. Publish the `0.1.11` branded recovery release and run the updater smoke
    check against GitHub Releases.
 
 ## Notes for Future Work

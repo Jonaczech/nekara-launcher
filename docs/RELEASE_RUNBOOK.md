@@ -6,7 +6,7 @@ through GitHub Releases.
 ## Current Baseline
 
 - Desktop stack: Tauri 2 + React + TypeScript + Rust
-- Current release target after the updater/fabric fixes and launcher visual refresh: `0.1.9`
+- Current release target after the updater/fabric fixes, startup smoothing, and launcher layout simplification: `0.1.11`
 - Release trigger: Git tag matching `app-v*`
 - Release workflow: `.github/workflows/release.yml`
 - Updater endpoint: GitHub Releases `latest.json`
@@ -32,8 +32,8 @@ through GitHub Releases.
 3. Create the release tag:
 
 ```bash
-git tag app-v0.1.9
-git push origin app-v0.1.9
+git tag app-v0.1.11
+git push origin app-v0.1.11
 ```
 
 4. Wait for `.github/workflows/release.yml` to finish.
@@ -60,4 +60,4 @@ git push origin app-v0.1.9
 Launcher builds that shipped with the old updater public key cannot trust
 releases signed by the corrected key. Those users need one manual reinstall
 onto `0.1.8` or newer before automatic updates can work again. The first
-recommended branded recovery installer is `0.1.9`.
+recommended branded recovery installer is `0.1.11`.

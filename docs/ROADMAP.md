@@ -117,8 +117,8 @@ stable launcher release that can update itself.
   by GitHub Releases.
 - [x] Fix the Fabric installation readiness state so a prepared client can
   leave the pending state.
-- [x] Bump the launcher version to `0.1.9`.
-- [ ] Publish `app-v0.1.9` from CI so players can reinstall onto the corrected
+- [x] Bump the launcher version to `0.1.11`.
+- [ ] Publish `app-v0.1.11` from CI so players can reinstall onto the corrected
   updater key.
 - [ ] Replace any locally installed pre-`0.1.8` launcher builds with the new
   installer once the release is published.

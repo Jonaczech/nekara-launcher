@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
-  CircleAlert,
-  Download,
+  House,
   LoaderCircle,
   Minimize2,
   Play,
@@ -18,28 +17,25 @@ import "./App.css";
 import {
   checkJavaRuntime,
   clearOfflinePlayerProfile,
-  getLauncherLogInfo,
-  getGameLaunchStatus,
-  getLauncherSettings,
-  getMinecraftInstallationStatus,
   ensureNekaraGameDirectory,
+  getGameLaunchStatus,
+  getLauncherLogInfo,
+  getLauncherSettings,
   getLauncherStatus,
-  launchMinecraft,
+  getMinecraftInstallationStatus,
   getOfflinePlayerStatus,
+  launchMinecraft,
   prepareMinecraftInstallation,
   saveLauncherSettings,
   saveOfflinePlayerProfile,
 } from "./services/launcher";
-import {
-  checkLauncherUpdate,
-  installLauncherUpdate,
-} from "./services/updater";
+import { checkLauncherUpdate, installLauncherUpdate } from "./services/updater";
 import type {
-  GameLaunchStatus,
   GameDirectoryInfo,
+  GameLaunchStatus,
   JavaRuntimeCheck,
-  LauncherLogInfo,
   LauncherCheck,
+  LauncherLogInfo,
   LauncherSettings,
   LauncherStatus,
   LauncherUpdateStatus,
@@ -64,24 +60,24 @@ function App() {
   const [launcherState, setLauncherState] = useState<LoadState<LauncherStatus>>({
     kind: "loading",
   });
-  const [directoryState, setDirectoryState] = useState<
-    LoadState<GameDirectoryInfo>
-  >({ kind: "loading" });
+  const [directoryState, setDirectoryState] = useState<LoadState<GameDirectoryInfo>>({
+    kind: "loading",
+  });
   const [javaState, setJavaState] = useState<LoadState<JavaRuntimeCheck>>({
     kind: "loading",
   });
   const [installationState, setInstallationState] = useState<
     LoadState<MinecraftInstallationStatus>
   >({ kind: "loading" });
-  const [gameLaunchState, setGameLaunchState] = useState<
-    LoadState<GameLaunchStatus>
-  >({ kind: "loading" });
+  const [gameLaunchState, setGameLaunchState] = useState<LoadState<GameLaunchStatus>>({
+    kind: "loading",
+  });
   const [launcherSettingsState, setLauncherSettingsState] = useState<
     LoadState<LauncherSettings>
   >({ kind: "loading" });
-  const [launcherLogState, setLauncherLogState] = useState<
-    LoadState<LauncherLogInfo>
-  >({ kind: "loading" });
+  const [launcherLogState, setLauncherLogState] = useState<LoadState<LauncherLogInfo>>({
+    kind: "loading",
+  });
   const [launcherUpdateState, setLauncherUpdateState] = useState<
     LoadState<LauncherUpdateStatus>
   >({ kind: "loading" });
@@ -98,16 +94,14 @@ function App() {
   const [preparingInstallation, setPreparingInstallation] = useState(false);
   const [launchingGame, setLaunchingGame] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
+  const [currentView, setCurrentView] = useState<"home" | "settings">("home");
   const [startupSettled, setStartupSettled] = useState(false);
   const autoPrepareTriggeredRef = useRef(false);
 
   function updateRamInput(value: number) {
-    if (Number.isNaN(value)) {
-      return;
+    if (!Number.isNaN(value)) {
+      setRamInputMb(value);
     }
-
-    setRamInputMb(value);
   }
 
   function updateJavaPathInput(value: string) {
@@ -122,9 +116,7 @@ function App() {
       setLauncherState({
         kind: "error",
         message:
-          error instanceof Error
-            ? error.message
-            : "Stav launcheru není k dispozici.",
+          error instanceof Error ? error.message : "Stav launcheru není k dispozici.",
       });
     }
   }
@@ -168,7 +160,7 @@ function App() {
         kind: "error",
         message:
           error instanceof Error
-          ? error.message
+            ? error.message
             : "Detekce Java runtime není k dispozici.",
       });
     }
@@ -201,7 +193,7 @@ function App() {
         kind: "error",
         message:
           error instanceof Error
-          ? error.message
+            ? error.message
             : "Stav aktualizace launcheru není k dispozici.",
       });
       throw error;
@@ -226,7 +218,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Příprava herního adresáře není k dispozici.",
+                : "Herní adresář Nekary není k dispozici.",
           });
         }
       });
@@ -245,7 +237,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Stav offline hráče není k dispozici.",
+                : "Offline profil hráče není k dispozici.",
           });
         }
       });
@@ -264,84 +256,44 @@ function App() {
           setLauncherLogState({
             kind: "error",
             message:
-              error instanceof Error
-                ? error.message
-                : "Umístění logu launcheru není k dispozici.",
+              error instanceof Error ? error.message : "Log launcheru není dostupný.",
           });
         }
       });
 
-    const startupSettleTimeout = window.setTimeout(() => {
-      if (!isMounted) {
-        return;
-      }
-
-      setStartupSettled(true);
-    }, 900);
-
-    const deferredRuntimeTimeout = window.setTimeout(() => {
-      if (!isMounted) {
-        return;
-      }
-
+    const runtimeTimer = window.setTimeout(() => {
       void refreshJavaRuntime();
       void refreshInstallationStatus();
     }, 180);
 
-    const deferredUpdaterTimeout = window.setTimeout(() => {
-      if (!isMounted) {
-        return;
+    const startupTimer = window.setTimeout(() => {
+      if (isMounted) {
+        setStartupSettled(true);
       }
+    }, 900);
 
-      void refreshLauncherUpdateStatus().catch(() => {
-        // The state is already updated inside refreshLauncherUpdateStatus.
-      });
+    const updateTimer = window.setTimeout(() => {
+      void refreshLauncherUpdateStatus().catch(() => undefined);
     }, 1400);
 
     return () => {
       isMounted = false;
-      window.clearTimeout(startupSettleTimeout);
-      window.clearTimeout(deferredRuntimeTimeout);
-      window.clearTimeout(deferredUpdaterTimeout);
+      window.clearTimeout(runtimeTimer);
+      window.clearTimeout(startupTimer);
+      window.clearTimeout(updateTimer);
     };
   }, []);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      void refreshGameLaunchStatus();
-    }, 3000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!preparingInstallation) {
+    if (!startupSettled || autoPrepareTriggeredRef.current) {
       return;
     }
 
-    void refreshInstallationStatus();
-
-    const intervalId = window.setInterval(() => {
-      void refreshInstallationStatus();
-    }, 1500);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [preparingInstallation]);
-
-  useEffect(() => {
-    if (autoPrepareTriggeredRef.current) {
+    if (playerState.kind !== "ready" || installationState.kind !== "ready") {
       return;
     }
 
-    if (!startupSettled) {
-      return;
-    }
-
-    if (installationState.kind !== "ready") {
+    if (playerState.value.state !== "ready") {
       return;
     }
 
@@ -350,28 +302,27 @@ function App() {
       return;
     }
 
-    if (preparingInstallation || launchingGame) {
+    if (preparingInstallation) {
       return;
     }
 
     autoPrepareTriggeredRef.current = true;
     void handlePrepareInstallation();
-  }, [installationState, launchingGame, preparingInstallation, startupSettled]);
+  }, [installationState, playerState, preparingInstallation, startupSettled]);
 
-  const launcherStatus =
-    launcherState.kind === "ready" ? launcherState.value : null;
-  const gameDirectory =
-    directoryState.kind === "ready" ? directoryState.value : null;
+  const launcherStatus = launcherState.kind === "ready" ? launcherState.value : null;
+  const gameDirectory = directoryState.kind === "ready" ? directoryState.value : null;
   const javaRuntime = javaState.kind === "ready" ? javaState.value : null;
   const installationStatus =
     installationState.kind === "ready" ? installationState.value : null;
-  const gameLaunch =
-    gameLaunchState.kind === "ready" ? gameLaunchState.value : null;
+  const gameLaunch = gameLaunchState.kind === "ready" ? gameLaunchState.value : null;
   const launcherSettings =
     launcherSettingsState.kind === "ready" ? launcherSettingsState.value : null;
-  const launcherLog =
-    launcherLogState.kind === "ready" ? launcherLogState.value : null;
+  const launcherLog = launcherLogState.kind === "ready" ? launcherLogState.value : null;
+  const launcherUpdate =
+    launcherUpdateState.kind === "ready" ? launcherUpdateState.value : null;
   const offlinePlayer = playerState.kind === "ready" ? playerState.value : null;
+
   const offlinePlayerReady = offlinePlayer?.state === "ready";
   const installationReady = installationStatus?.state === "ready";
   const metadataAvailable =
@@ -394,11 +345,11 @@ function App() {
       installation: installationReady,
     }),
     [
-      gameDirectory?.exists,
-      installationReady,
-      javaCompatible,
       metadataAvailable,
+      gameDirectory?.exists,
+      javaCompatible,
       offlinePlayerReady,
+      installationReady,
     ],
   );
 
@@ -411,9 +362,7 @@ function App() {
   const installOperationTotalUnits =
     installationStatus == null
       ? 0
-      : 3 +
-        installationStatus.libraryCountTotal +
-        installationStatus.assetCountTotal;
+      : 3 + installationStatus.libraryCountTotal + installationStatus.assetCountTotal;
   const installOperationReadyUnits =
     installationStatus == null
       ? 0
@@ -438,55 +387,60 @@ function App() {
     preparingInstallation || (installationStatus != null && !installationReady)
       ? installOperationPercent
       : readinessPercent;
+
   const primaryStatus = gameRunning
     ? "Minecraft běží"
     : launchingGame
       ? "Spouštím Minecraft"
       : preparingInstallation
-    ? "Připravuji Fabric klienta"
-    : readinessCount === 5
-      ? "Připraveno ke spuštění"
-      : "Připravuji Nekaru";
+        ? "Připravuji Fabric klienta"
+        : readinessCount === 5
+          ? "Připraveno ke spuštění"
+          : "Připravuji Nekaru";
+
   const installationErrorMessage =
     installationState.kind === "error" ? installationState.message : null;
-  const primaryHint = installationErrorMessage != null
-    ? installationErrorMessage
-    : !offlinePlayerReady
-    ? "Zadej lokální jméno hráče, aby se odemklo spuštění."
-    : gameRunning
-      ? gameLaunch?.message ?? "Minecraft právě běží z launcheru."
-      : gameFailed || gameExitedWithError
-        ? gameLaunch?.diagnosticSummary ??
-          gameLaunch?.suggestedFix ??
-          gameLaunch?.message ??
-          "Minecraft nenaběhl správně. Otevři diagnostiku a podívej se na poslední log."
-      : launchingGame
-        ? "Launcher skládá příkaz ke spuštění a startuje proces Minecraftu."
-    : preparingInstallation
-      ? installationProgressLabel == null
-        ? "Launcher stahuje a ověřuje Fabric klientské soubory, knihovny a assety."
-        : `Launcher stahuje a ověřuje Fabric klientské soubory. Aktuální průběh: ${installationProgressLabel}.`
-      : !installationReady
-        ? installationStatus?.message ??
-          "Fabric klientské soubory je ještě potřeba připravit."
-        : readinessCount === 5
-          ? "Vše potřebné pro první offline spuštění je připravené."
-          : !javaCompatible
-            ? "Fabric klientské soubory jsou připravené. Zbývá už jen kompatibilní Java runtime."
-            : "Launcher ještě kontroluje zbývající runtime detaily.";
+  const primaryHint =
+    installationErrorMessage != null
+      ? installationErrorMessage
+      : !offlinePlayerReady
+        ? "Zadej lokální jméno hráče, aby se odemklo spuštění."
+        : gameRunning
+          ? gameLaunch?.message ?? "Minecraft právě běží z launcheru."
+          : gameFailed || gameExitedWithError
+            ? gameLaunch?.diagnosticSummary ??
+              gameLaunch?.suggestedFix ??
+              gameLaunch?.message ??
+              "Minecraft nenaběhl správně. Otevři diagnostiku a podívej se na poslední log."
+            : launchingGame
+              ? "Launcher skládá příkaz ke spuštění a startuje proces Minecraftu."
+              : preparingInstallation
+                ? installationProgressLabel == null
+                  ? "Launcher stahuje a ověřuje Fabric klientské soubory, knihovny a assety."
+                  : `Launcher stahuje a ověřuje Fabric klientské soubory. Aktuální průběh: ${installationProgressLabel}.`
+                : !installationReady
+                  ? installationStatus?.message ??
+                    "Fabric klientské soubory je ještě potřeba připravit."
+                  : readinessCount === 5
+                    ? "Vše potřebné pro první offline spuštění je připravené."
+                    : !javaCompatible
+                      ? "Fabric klientské soubory jsou připravené. Zbývá už jen kompatibilní Java runtime."
+                      : "Launcher ještě kontroluje zbývající runtime detaily.";
+
   const primaryButtonLabel = !offlinePlayerReady
     ? "Uložit jméno hráče"
     : gameRunning
       ? "Běží"
       : launchingGame
         ? "Spouštím..."
-    : preparingInstallation
-      ? "Připravuji soubory..."
-      : !installationReady
-        ? "Připravit klienta"
-      : readinessCount === 5
-          ? "Hrát"
-          : "Instalace připravena";
+        : preparingInstallation
+          ? "Připravuji soubory..."
+          : !installationReady
+            ? "Připravit klienta"
+            : readinessCount === 5
+              ? "Hrát"
+              : "Instalace připravena";
+
   const ramMinMb = launcherSettings?.minRamMb ?? 2048;
   const ramMaxMb = launcherSettings?.maxAllowedRamMb ?? 12288;
   const ramStepMb = launcherSettings?.ramStepMb ?? 512;
@@ -498,26 +452,23 @@ function App() {
     launcherSettings != null && javaPathNormalized !== savedJavaPathNormalized;
   const launcherSettingsDirty = ramSettingsDirty || javaSettingsDirty;
   const ramInputLabel = `${ramInputMb} MB`;
-  const launcherUpdate = launcherUpdateState.kind === "ready"
-    ? launcherUpdateState.value
-    : null;
   const updateAvailable = launcherUpdate?.available ?? false;
   const currentVersionLabel = `v${appVersion}`;
   const playerSummary = offlinePlayer?.playerName ?? "Nenastaveno";
-  const installSummary = installationReady
-    ? "Klient připraven"
-    : preparingInstallation
-      ? "Připravuji klienta"
-      : "Čeká příprava";
-  const javaSummary = javaCompatible
-    ? `Java ${javaRuntime?.majorVersion ?? ""}`.trim()
-    : "Je potřeba Java";
   const updateSummary =
     launcherUpdateState.kind === "error"
       ? "Update chyba"
       : updateAvailable
         ? `Update ${launcherUpdate?.version ?? ""}`.trim()
         : "Aktuální build";
+  const releaseStatusLabel =
+    launcherUpdateState.kind === "loading"
+      ? "Kontroluji..."
+      : launcherUpdateState.kind === "error"
+        ? "Nedostupné"
+        : updateAvailable
+          ? `Dostupná aktualizace ${launcherUpdate?.version}`
+          : "Aktuální build";
   const statusPanelTitle = installationReady
     ? gameRunning
       ? "Nekara právě běží"
@@ -827,9 +778,7 @@ function App() {
       setGameLaunchState({
         kind: "error",
         message:
-          error instanceof Error
-            ? error.message
-            : "Minecraft se nepodařilo spustit.",
+          error instanceof Error ? error.message : "Minecraft se nepodařilo spustit.",
       });
       setActionMessage(
         error instanceof Error ? error.message : "Minecraft se nepodařilo spustit.",
@@ -888,19 +837,19 @@ function App() {
             </div>
             <button
               type="button"
-              className="rail-button"
-              aria-label="Nastavení"
-              onClick={() => setShowSettings(true)}
+              className={`rail-button ${currentView === "home" ? "rail-button--active" : ""}`}
+              aria-label="Domů"
+              onClick={() => setCurrentView("home")}
             >
-              <Settings2 size={18} />
+              <House size={18} />
             </button>
             <button
               type="button"
-              className="rail-button"
-              aria-label="Diagnostika"
-              onClick={() => setShowSettings(true)}
+              className={`rail-button ${currentView === "settings" ? "rail-button--active" : ""}`}
+              aria-label="Nastavení"
+              onClick={() => setCurrentView("settings")}
             >
-              <CircleAlert size={18} />
+              <Settings2 size={18} />
             </button>
           </aside>
 
@@ -910,10 +859,7 @@ function App() {
               data-tauri-drag-region="true"
               onMouseDown={handleTitleBarMouseDown}
             >
-              <div className="stage-topbar__meta">
-                <span className="stage-chip">{currentVersionLabel}</span>
-                <span className="stage-chip">{updateSummary}</span>
-              </div>
+              <div className="stage-topbar__meta" />
 
               <div
                 className="window-bar__controls"
@@ -942,447 +888,390 @@ function App() {
               </div>
             </header>
 
-            <section className="hero-panel">
-              <div className="hero-copy">
-                <p className="hero-eyebrow">Nekara Launcher</p>
-                <h1 id="launcher-title">Nekara</h1>
-                <p className="hero-subtitle">Jedna hra. Jeden klient. Jedna cesta do světa.</p>
-              </div>
+            {currentView === "home" ? (
+              <>
+                <section className="hero-panel">
+                  <div className="hero-copy">
+                    <p className="hero-eyebrow">Nekara Launcher</p>
+                    <h1 id="launcher-title">Nekara</h1>
+                    <p className="hero-subtitle">Jedna hra. Jeden klient. Jedna cesta do světa.</p>
+                  </div>
 
-              <div className="hero-actions">
-                <button
-                  type="button"
-                  className="primary-action"
-                  onClick={() => void handlePrimaryAction()}
-                  disabled={savingPlayer || preparingInstallation || launchingGame}
-                >
-                  {savingPlayer || preparingInstallation || launchingGame ? (
-                    <LoaderCircle size={18} className="spin" />
-                  ) : (
-                    <Play size={18} />
-                  )}
-                  <span>{primaryButtonLabel}</span>
-                </button>
+                  <div className="hero-actions hero-actions--stacked">
+                    <button
+                      type="button"
+                      className="primary-action"
+                      onClick={() => void handlePrimaryAction()}
+                      disabled={savingPlayer || preparingInstallation || launchingGame}
+                    >
+                      {savingPlayer || preparingInstallation || launchingGame ? (
+                        <LoaderCircle size={18} className="spin" />
+                      ) : (
+                        <Play size={18} />
+                      )}
+                      <span>{primaryButtonLabel}</span>
+                    </button>
 
-                <button
-                  type="button"
-                  className="icon-action"
-                  onClick={() => setShowSettings(true)}
-                  aria-label="Otevřít nastavení launcheru"
-                >
-                  <Settings2 size={18} />
-                </button>
-              </div>
+                    <section className="progress-panel progress-panel--hero" aria-label="Průběh přípravy launcheru">
+                      <div className="progress-panel__header">
+                        <span>{progressPanelLabel}</span>
+                        <span>{progressPanelValue}</span>
+                      </div>
+                      <div className="progress-track" role="presentation">
+                        <div
+                          className="progress-track__fill"
+                          style={{ width: `${progressPanelPercent}%` }}
+                        />
+                      </div>
+                    </section>
+                  </div>
 
-              <div className="hero-status">
-                <span className="hero-status__label">
-                  {primaryStatus === "Připraveno ke spuštění" ? (
-                    <ShieldCheck size={14} />
-                  ) : (
-                    <LoaderCircle size={14} className={preparingInstallation ? "spin" : ""} />
-                  )}
-                  {primaryStatus}
-                </span>
-                <p>{primaryHint}</p>
-              </div>
+                  <div className="hero-status">
+                    <span className="hero-status__label">
+                      {primaryStatus === "Připraveno ke spuštění" ? (
+                        <ShieldCheck size={14} />
+                      ) : (
+                        <LoaderCircle size={14} className={preparingInstallation ? "spin" : ""} />
+                      )}
+                      {primaryStatus}
+                    </span>
+                    <p>{primaryHint}</p>
+                    {preparingInstallation && installationProgressLabel && (
+                      <p className="hero-status__meta">{installationProgressLabel}</p>
+                    )}
+                  </div>
+                </section>
 
-              <section className="progress-panel progress-panel--hero" aria-label="Příprava launcheru">
-                <div className="progress-panel__header">
-                  <span>{progressPanelLabel}</span>
-                  <span>{progressPanelValue}</span>
+                <section className="home-grid">
+                  <section className="home-card home-card--player">
+                    <div className="panel-heading">
+                      <UserRound size={18} />
+                      <span>Hráč</span>
+                    </div>
+                    <p className="home-card__lead">
+                      Lokální profil pro první spuštění klienta.
+                    </p>
+                    <label className="player-field">
+                      <span className="player-field__label">Offline jméno</span>
+                      <input
+                        type="text"
+                        maxLength={16}
+                        value={playerNameInput}
+                        onChange={(event) => setPlayerNameInput(event.target.value)}
+                        placeholder="Zadej jméno"
+                      />
+                    </label>
+                    <div className="player-field__actions">
+                      <button
+                        type="button"
+                        className="inline-action"
+                        onClick={() => void handleSaveOfflinePlayer()}
+                        disabled={savingPlayer}
+                      >
+                        Uložit
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-action inline-action--muted"
+                        onClick={() => void handleClearOfflinePlayer()}
+                        disabled={savingPlayer}
+                      >
+                        Vymazat
+                      </button>
+                    </div>
+                  </section>
+
+                  <section className="home-card">
+                    <p className="status-story__tag">Stav klienta</p>
+                    <h2>{statusPanelTitle}</h2>
+                    <p>{statusPanelText}</p>
+                    <dl className="home-summary">
+                      <div>
+                        <dt>Profil</dt>
+                        <dd>{playerSummary}</dd>
+                      </div>
+                      <div>
+                        <dt>Připravenost</dt>
+                        <dd>{progressPanelValue}</dd>
+                      </div>
+                    </dl>
+                  </section>
+                </section>
+              </>
+            ) : (
+              <section className="settings-page">
+                <div className="settings-page__header">
+                  <div>
+                    <p className="eyebrow">Nastavení</p>
+                    <h2>Ovládání launcheru</h2>
+                  </div>
+                  <p className="settings-page__lead">
+                    Sekundární volby, aktualizace a diagnostika na jednom místě.
+                  </p>
                 </div>
-                <div className="progress-track" role="presentation">
-                  <div
-                    className="progress-track__fill"
-                    style={{ width: `${progressPanelPercent}%` }}
-                  />
+
+                <div className="settings-grid">
+                  <section className="settings-card">
+                    <div className="settings-card__header">
+                      <h4>Aktualizace launcheru</h4>
+                    </div>
+                    <p className="settings-card__lead">
+                      Launcher kontroluje podepsané artefakty z GitHub Releases a aktualizace instaluje na vyžádání.
+                    </p>
+                    <div className="settings-control-stack">
+                      <dl className="settings-meta">
+                        <div>
+                          <dt>Verze launcheru</dt>
+                          <dd>{currentVersionLabel}</dd>
+                        </div>
+                        <div>
+                          <dt>Aktuální build</dt>
+                          <dd>{updateSummary}</dd>
+                        </div>
+                        <div>
+                          <dt>Release stav</dt>
+                          <dd>{releaseStatusLabel}</dd>
+                        </div>
+                        <div>
+                          <dt>Kanál</dt>
+                          <dd>GitHub Releases</dd>
+                        </div>
+                      </dl>
+
+                      <div className="settings-update-state">
+                        <span className="settings-value-chip">{releaseStatusLabel}</span>
+                        <p className="settings-helper-text">
+                          {launcherUpdateState.kind === "loading"
+                            ? "Kontroluji release endpoint kvůli novější verzi launcheru."
+                            : launcherUpdateState.kind === "error"
+                              ? launcherUpdateState.message
+                              : launcherUpdate?.message ?? "Launcher je aktuální."}
+                        </p>
+                      </div>
+
+                      {updateAvailable && launcherUpdate != null && (
+                        <div className="settings-release-notes">
+                          <div className="settings-release-notes__header">
+                            <span>Poznámky k vydání</span>
+                            <span>{launcherUpdate.version}</span>
+                          </div>
+                          {launcherUpdate.date && (
+                            <p className="settings-helper-text">{launcherUpdate.date}</p>
+                          )}
+                          {launcherUpdate.body && (
+                            <p className="settings-release-notes__body">{launcherUpdate.body}</p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="profile-card__actions">
+                        <button
+                          type="button"
+                          className="text-action"
+                          onClick={() => void handleCheckLauncherUpdate()}
+                          disabled={checkingUpdate || installingUpdate}
+                        >
+                          {checkingUpdate ? "Kontroluji..." : secondaryActionLabel}
+                        </button>
+                        <button
+                          type="button"
+                          className="text-action"
+                          onClick={() => void handleInstallLauncherUpdate()}
+                          disabled={checkingUpdate || installingUpdate || !updateAvailable}
+                        >
+                          {installingUpdate ? "Instaluji..." : "Nainstalovat aktualizaci"}
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="settings-card">
+                    <div className="settings-card__header">
+                      <h4>RAM</h4>
+                    </div>
+                    <p className="settings-card__lead">
+                      Přidělení paměti patří sem, ne na hlavní obrazovku.
+                    </p>
+                    {launcherSettingsState.kind === "error" ? (
+                      <p className="settings-error-note">{launcherSettingsState.message}</p>
+                    ) : (
+                      <div className="settings-control-stack">
+                        <div className="settings-inline-fields">
+                          <label className="settings-slider-field">
+                            <span>Limit paměti</span>
+                            <input
+                              className="settings-slider"
+                              type="range"
+                              min={ramMinMb}
+                              max={ramMaxMb}
+                              step={ramStepMb}
+                              value={ramInputMb}
+                              onChange={(event) =>
+                                updateRamInput(Number.parseInt(event.target.value, 10))
+                              }
+                              disabled={launcherSettingsState.kind !== "ready" || savingSettings}
+                            />
+                          </label>
+
+                          <label className="settings-number-field">
+                            <span>Aktuální hodnota</span>
+                            <input
+                              type="number"
+                              min={ramMinMb}
+                              max={ramMaxMb}
+                              step={ramStepMb}
+                              value={ramInputMb}
+                              onChange={(event) =>
+                                updateRamInput(Number.parseInt(event.target.value || "0", 10))
+                              }
+                              disabled={launcherSettingsState.kind !== "ready" || savingSettings}
+                            />
+                          </label>
+                        </div>
+
+                        <div className="settings-inline-meta">
+                          <span className="settings-value-chip">{ramInputLabel}</span>
+                          <span className="settings-helper-text">
+                            Spouští Minecraft s vybraným limitem <code>-Xmx</code>.
+                          </span>
+                        </div>
+
+                        <div className="profile-card__actions">
+                          <button
+                            type="button"
+                            className="text-action"
+                            onClick={() => void handleSaveLauncherSettings()}
+                            disabled={
+                              launcherSettingsState.kind !== "ready" ||
+                              savingSettings ||
+                              !launcherSettingsDirty
+                            }
+                          >
+                            {savingSettings ? "Ukládám..." : "Uložit RAM"}
+                          </button>
+                          <button
+                            type="button"
+                            className="text-action"
+                            onClick={() => {
+                              if (launcherSettings != null) {
+                                setRamInputMb(launcherSettings.maxRamMb);
+                              } else {
+                                void refreshLauncherSettings();
+                              }
+                            }}
+                            disabled={savingSettings}
+                          >
+                            Obnovit
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="settings-card">
+                    <div className="settings-card__header">
+                      <h4>Java runtime</h4>
+                    </div>
+                    <p className="settings-card__lead">
+                      Nech to prázdné, pokud chceš použít první <code>java</code> z PATH, nebo sem vlož vlastní <code>java.exe</code>.
+                    </p>
+                    {launcherSettingsState.kind === "error" ? (
+                      <p className="settings-error-note">{launcherSettingsState.message}</p>
+                    ) : (
+                      <div className="settings-control-stack">
+                        <label className="settings-path-field">
+                          <span>Cesta ke spustitelnému souboru Javy</span>
+                          <input
+                            type="text"
+                            value={javaPathInput}
+                            onChange={(event) => updateJavaPathInput(event.target.value)}
+                            placeholder="C:\\Program Files\\Java\\bin\\java.exe"
+                            disabled={launcherSettingsState.kind !== "ready" || savingSettings}
+                          />
+                        </label>
+
+                        <div className="settings-inline-meta">
+                          <span className="settings-value-chip">
+                            {javaPathNormalized.length > 0 ? "Vlastní cesta" : "Systémová PATH"}
+                          </span>
+                          <span className="settings-helper-text">
+                            Launcher zkusí tento soubor dřív, než přejde na systémové hledání.
+                          </span>
+                        </div>
+
+                        <div className="profile-card__actions">
+                          <button
+                            type="button"
+                            className="text-action"
+                            onClick={() => void handleSaveLauncherSettings()}
+                            disabled={
+                              launcherSettingsState.kind !== "ready" ||
+                              savingSettings ||
+                              !launcherSettingsDirty
+                            }
+                          >
+                            {savingSettings ? "Ukládám..." : "Uložit runtime"}
+                          </button>
+                          <button
+                            type="button"
+                            className="text-action"
+                            onClick={() => {
+                              if (launcherSettings != null) {
+                                setJavaPathInput(launcherSettings.javaExecutablePath ?? "");
+                              } else {
+                                void refreshLauncherSettings();
+                              }
+                            }}
+                            disabled={savingSettings}
+                          >
+                            Obnovit
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="settings-card">
+                    <div className="settings-card__header">
+                      <h4>Připravenost</h4>
+                    </div>
+                    <ul className="settings-checklist">
+                      {readinessChecks.map((check) => (
+                        <li key={check.id} className={`settings-checkline settings-checkline--${check.state}`}>
+                          <span className="settings-checkline__label">{check.label}</span>
+                          <span className="settings-checkline__value">
+                            {checkStateLabel[check.state]}
+                          </span>
+                        </li>
+                      ))}
+                      {readinessChecks.length === 0 && (
+                        <li className="settings-checkline settings-checkline--pending">
+                          <span className="settings-checkline__label">Načítám stav launcheru</span>
+                          <span className="settings-checkline__value">Čeká</span>
+                        </li>
+                      )}
+                    </ul>
+                  </section>
+
+                  <section className="settings-card settings-card--wide">
+                    <div className="settings-card__header">
+                      <h4>Diagnostika klienta</h4>
+                    </div>
+                    <dl className="settings-diagnostics">
+                      {diagnosticRows.map((row) => (
+                        <div key={row.label}>
+                          <dt>{row.label}</dt>
+                          <dd>{row.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
                 </div>
               </section>
-            </section>
-
-            <section className="command-panel">
-              <div className="command-panel__player">
-                <div className="panel-heading">
-                  <UserRound size={18} />
-                  <span>Hráč</span>
-                </div>
-                <label className="player-field">
-                  <span className="player-field__label">Offline jméno</span>
-                  <input
-                    type="text"
-                    maxLength={16}
-                    value={playerNameInput}
-                    onChange={(event) => setPlayerNameInput(event.target.value)}
-                    placeholder="Zadej jméno"
-                  />
-                </label>
-                <div className="player-field__actions">
-                  <button
-                    type="button"
-                    className="inline-action"
-                    onClick={() => void handleSaveOfflinePlayer()}
-                    disabled={savingPlayer}
-                  >
-                    Uložit
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-action inline-action--muted"
-                    onClick={() => void handleClearOfflinePlayer()}
-                    disabled={savingPlayer}
-                  >
-                    Vymazat
-                  </button>
-                </div>
-              </div>
-
-              <div className="command-panel__status">
-                <div className="status-grid">
-                  <div className="status-tile">
-                    <span>Profil</span>
-                    <strong>{playerSummary}</strong>
-                  </div>
-                  <div className="status-tile">
-                    <span>Klient</span>
-                    <strong>{installSummary}</strong>
-                  </div>
-                  <div className="status-tile">
-                    <span>Java</span>
-                    <strong>{javaSummary}</strong>
-                  </div>
-                  <div className="status-tile">
-                    <span>Release</span>
-                    <strong>{updateSummary}</strong>
-                  </div>
-                </div>
-
-                <div className="status-story">
-                  <p className="status-story__tag">{progressPanelLabel}</p>
-                  <h2>{statusPanelTitle}</h2>
-                  <p>{statusPanelText}</p>
-                  {preparingInstallation && installationProgressLabel && (
-                    <p className="status-story__meta">{installationProgressLabel}</p>
-                  )}
-                </div>
-
-                <div className="command-actions">
-                  <button
-                    type="button"
-                    className="secondary-action"
-                    onClick={() =>
-                      updateAvailable
-                        ? void handleInstallLauncherUpdate()
-                        : void handleCheckLauncherUpdate()
-                    }
-                    disabled={checkingUpdate || installingUpdate}
-                  >
-                    <Download size={16} />
-                    <span>
-                      {checkingUpdate
-                        ? "Kontroluji..."
-                        : installingUpdate
-                          ? "Instaluji..."
-                          : secondaryActionLabel}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary-action secondary-action--muted"
-                    onClick={() => setShowSettings(true)}
-                  >
-                    <CircleAlert size={16} />
-                    <span>Detaily</span>
-                  </button>
-                </div>
-              </div>
-            </section>
-
+            )}
           </div>
         </section>
       </div>
-
-      <aside className={`settings-drawer ${showSettings ? "settings-drawer--open" : ""}`}>
-        <div className="settings-drawer__header">
-          <div>
-            <p className="eyebrow">Nastavení</p>
-            <h3>Ovládání launcheru</h3>
-          </div>
-          <button
-            type="button"
-            className="text-action"
-            data-tauri-drag-region="false"
-            onClick={() => setShowSettings(false)}
-          >
-            <X size={14} />
-            Skrýt
-          </button>
-        </div>
-
-        <div className="settings-grid">
-          <section className="settings-card">
-            <div className="settings-card__header">
-              <h4>Aktualizace launcheru</h4>
-            </div>
-            <p className="settings-card__lead">
-              Launcher kontroluje podepsané artefakty z GitHub Releases a
-              aktualizace instaluje na vyžádání.
-            </p>
-            <div className="settings-control-stack">
-              <dl className="settings-meta">
-                <div>
-                  <dt>Aktuální verze</dt>
-                  <dd>{currentVersionLabel}</dd>
-                </div>
-                <div>
-                  <dt>Kanál</dt>
-                  <dd>GitHub Releases</dd>
-                </div>
-              </dl>
-
-              <div className="settings-update-state">
-                <span className="settings-value-chip">
-                  {launcherUpdateState.kind === "loading"
-                    ? "Kontroluji..."
-                    : launcherUpdateState.kind === "error"
-                      ? "Nedostupné"
-                      : updateAvailable
-                        ? `Dostupná aktualizace ${launcherUpdate?.version}`
-                        : "Aktuální"}
-                </span>
-                <p className="settings-helper-text">
-                  {launcherUpdateState.kind === "loading"
-                    ? "Kontroluji release endpoint kvůli novější verzi launcheru."
-                    : launcherUpdateState.kind === "error"
-                      ? launcherUpdateState.message
-                      : launcherUpdate?.message ?? "Launcher je aktuální."}
-                </p>
-              </div>
-
-              {updateAvailable && launcherUpdate != null && (
-                <div className="settings-release-notes">
-                  <div className="settings-release-notes__header">
-                    <span>Poznámky k vydání</span>
-                    <span>{launcherUpdate.version}</span>
-                  </div>
-                  {launcherUpdate.date && (
-                    <p className="settings-helper-text">{launcherUpdate.date}</p>
-                  )}
-                  {launcherUpdate.body && (
-                    <p className="settings-release-notes__body">{launcherUpdate.body}</p>
-                  )}
-                </div>
-              )}
-
-              <div className="profile-card__actions">
-                <button
-                  type="button"
-                  className="text-action"
-                  onClick={() => void handleCheckLauncherUpdate()}
-                  disabled={checkingUpdate || installingUpdate}
-                >
-                  {checkingUpdate ? "Kontroluji..." : "Zkontrolovat aktualizace"}
-                </button>
-                <button
-                  type="button"
-                  className="text-action"
-                  onClick={() => void handleInstallLauncherUpdate()}
-                  disabled={
-                    checkingUpdate ||
-                    installingUpdate ||
-                    !updateAvailable
-                  }
-                >
-                  {installingUpdate ? "Instaluji..." : "Nainstalovat aktualizaci"}
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section className="settings-card">
-            <div className="settings-card__header">
-              <h4>RAM</h4>
-            </div>
-              <p className="settings-card__lead">
-              Přidělení paměti patří sem, ne na hlavní obrazovku.
-            </p>
-            {launcherSettingsState.kind === "error" ? (
-              <p className="settings-error-note">{launcherSettingsState.message}</p>
-            ) : (
-              <div className="settings-control-stack">
-                <div className="settings-inline-fields">
-                  <label className="settings-slider-field">
-                    <span>Limit paměti</span>
-                    <input
-                      className="settings-slider"
-                      type="range"
-                      min={ramMinMb}
-                      max={ramMaxMb}
-                      step={ramStepMb}
-                      value={ramInputMb}
-                      onChange={(event) =>
-                        updateRamInput(Number.parseInt(event.target.value, 10))
-                      }
-                      disabled={launcherSettingsState.kind !== "ready" || savingSettings}
-                    />
-                  </label>
-
-                  <label className="settings-number-field">
-                    <span>Aktuální hodnota</span>
-                    <input
-                      type="number"
-                      min={ramMinMb}
-                      max={ramMaxMb}
-                      step={ramStepMb}
-                      value={ramInputMb}
-                      onChange={(event) =>
-                        updateRamInput(Number.parseInt(event.target.value || "0", 10))
-                      }
-                      disabled={launcherSettingsState.kind !== "ready" || savingSettings}
-                    />
-                  </label>
-                </div>
-
-                <div className="settings-inline-meta">
-                  <span className="settings-value-chip">{ramInputLabel}</span>
-                  <span className="settings-helper-text">
-                    Spouští Minecraft s vybraným limitem `-Xmx`.
-                  </span>
-                </div>
-
-                <div className="profile-card__actions">
-                  <button
-                    type="button"
-                    className="text-action"
-                    onClick={() => void handleSaveLauncherSettings()}
-                    disabled={
-                      launcherSettingsState.kind !== "ready" ||
-                      savingSettings ||
-                      !launcherSettingsDirty
-                    }
-                  >
-                    {savingSettings ? "Ukládám..." : "Uložit RAM"}
-                  </button>
-                  <button
-                    type="button"
-                    className="text-action"
-                    onClick={() => {
-                      if (launcherSettings != null) {
-                        setRamInputMb(launcherSettings.maxRamMb);
-                      } else {
-                        void refreshLauncherSettings();
-                      }
-                    }}
-                    disabled={savingSettings}
-                  >
-                    Obnovit
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <section className="settings-card">
-            <div className="settings-card__header">
-              <h4>Java runtime</h4>
-            </div>
-            <p className="settings-card__lead">
-              Nech to prázdné, pokud chceš použít první `java` z PATH, nebo sem
-              vlož vlastní `java.exe`, když chceš používat jen jeden známý runtime.
-            </p>
-            {launcherSettingsState.kind === "error" ? (
-              <p className="settings-error-note">{launcherSettingsState.message}</p>
-            ) : (
-              <div className="settings-control-stack">
-                <label className="settings-path-field">
-                  <span>Cesta ke spustitelnému souboru Javy</span>
-                  <input
-                    type="text"
-                    value={javaPathInput}
-                    onChange={(event) => updateJavaPathInput(event.target.value)}
-                    placeholder="C:\\Program Files\\Java\\bin\\java.exe"
-                    disabled={launcherSettingsState.kind !== "ready" || savingSettings}
-                  />
-                </label>
-
-                <div className="settings-inline-meta">
-                  <span className="settings-value-chip">
-                    {javaPathNormalized.length > 0 ? "Vlastní cesta" : "Systémová PATH"}
-                  </span>
-                  <span className="settings-helper-text">
-                    Launcher zkusí tento soubor dřív, než přejde na systémové
-                    hledání.
-                  </span>
-                </div>
-
-                <div className="profile-card__actions">
-                  <button
-                    type="button"
-                    className="text-action"
-                    onClick={() => void handleSaveLauncherSettings()}
-                    disabled={
-                      launcherSettingsState.kind !== "ready" ||
-                      savingSettings ||
-                      !launcherSettingsDirty
-                    }
-                  >
-                    {savingSettings ? "Ukládám..." : "Uložit runtime"}
-                  </button>
-                  <button
-                    type="button"
-                    className="text-action"
-                    onClick={() => {
-                      if (launcherSettings != null) {
-                        setJavaPathInput(launcherSettings.javaExecutablePath ?? "");
-                      } else {
-                        void refreshLauncherSettings();
-                      }
-                    }}
-                    disabled={savingSettings}
-                  >
-                    Obnovit
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <section className="settings-card">
-            <div className="settings-card__header">
-              <h4>Připravenost</h4>
-            </div>
-            <ul className="settings-checklist">
-              {readinessChecks.map((check) => (
-                <li key={check.id} className={`settings-checkline settings-checkline--${check.state}`}>
-                  <span className="settings-checkline__label">{check.label}</span>
-                  <span className="settings-checkline__value">
-                    {checkStateLabel[check.state]}
-                  </span>
-                </li>
-              ))}
-              {readinessChecks.length === 0 && (
-                <li className="settings-checkline settings-checkline--pending">
-                  <span className="settings-checkline__label">Načítám stav launcheru</span>
-                  <span className="settings-checkline__value">Čeká</span>
-                </li>
-              )}
-            </ul>
-          </section>
-
-          <section className="settings-card settings-card--wide">
-            <div className="settings-card__header">
-              <h4>Diagnostika klienta</h4>
-            </div>
-            <dl className="settings-diagnostics">
-              {diagnosticRows.map((row) => (
-                <div key={row.label}>
-                  <dt>{row.label}</dt>
-                  <dd>{row.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        </div>
-      </aside>
     </main>
   );
 }

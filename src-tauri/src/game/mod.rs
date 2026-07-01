@@ -1196,7 +1196,7 @@ mod tests {
                 version_type: merged.version_type.clone(),
                 natives_directory: "C:/Natives".to_string(),
                 launcher_name: "Nekara Launcher".to_string(),
-                launcher_version: "0.1.9".to_string(),
+                launcher_version: "0.1.11".to_string(),
                 classpath: "fabric-loader.jar;client.jar".to_string(),
                 logging_path: None,
             },
