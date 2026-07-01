@@ -99,6 +99,7 @@ function App() {
   const [launchingGame, setLaunchingGame] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [startupSettled, setStartupSettled] = useState(false);
   const autoPrepareTriggeredRef = useRef(false);
 
   function updateRamInput(value: number) {
@@ -210,23 +211,7 @@ function App() {
   useEffect(() => {
     let isMounted = true;
 
-    getLauncherStatus()
-      .then((status) => {
-        if (isMounted) {
-          setLauncherState({ kind: "ready", value: status });
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          setLauncherState({
-            kind: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Stav launcheru není k dispozici.",
-          });
-        }
-      });
+    void refreshLauncherStatus();
 
     ensureNekaraGameDirectory()
       .then((info) => {
@@ -242,42 +227,6 @@ function App() {
               error instanceof Error
                 ? error.message
                 : "Příprava herního adresáře není k dispozici.",
-          });
-        }
-      });
-
-    checkJavaRuntime()
-      .then((check) => {
-        if (isMounted) {
-          setJavaState({ kind: "ready", value: check });
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          setJavaState({
-            kind: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Detekce Java runtime není k dispozici.",
-          });
-        }
-      });
-
-    getMinecraftInstallationStatus()
-      .then((status) => {
-        if (isMounted) {
-          setInstallationState({ kind: "ready", value: status });
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          setInstallationState({
-            kind: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Stav instalace Minecraftu není k dispozici.",
           });
         }
       });
@@ -301,43 +250,8 @@ function App() {
         }
       });
 
-    getGameLaunchStatus()
-      .then((status) => {
-        if (isMounted) {
-          setGameLaunchState({ kind: "ready", value: status });
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          setGameLaunchState({
-            kind: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Stav spuštění Minecraftu není k dispozici.",
-          });
-        }
-      });
-
-    getLauncherSettings()
-      .then((settings) => {
-        if (isMounted) {
-          setLauncherSettingsState({ kind: "ready", value: settings });
-          setRamInputMb(settings.maxRamMb);
-          setJavaPathInput(settings.javaExecutablePath ?? "");
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          setLauncherSettingsState({
-            kind: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Nastavení launcheru není k dispozici.",
-          });
-        }
-      });
+    void refreshGameLaunchStatus();
+    void refreshLauncherSettings();
 
     getLauncherLogInfo()
       .then((info) => {
@@ -357,26 +271,38 @@ function App() {
         }
       });
 
-    checkLauncherUpdate()
-      .then((update) => {
-        if (isMounted) {
-          setLauncherUpdateState({ kind: "ready", value: update });
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          setLauncherUpdateState({
-            kind: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Stav aktualizace launcheru není k dispozici.",
-          });
-        }
+    const startupSettleTimeout = window.setTimeout(() => {
+      if (!isMounted) {
+        return;
+      }
+
+      setStartupSettled(true);
+    }, 900);
+
+    const deferredRuntimeTimeout = window.setTimeout(() => {
+      if (!isMounted) {
+        return;
+      }
+
+      void refreshJavaRuntime();
+      void refreshInstallationStatus();
+    }, 180);
+
+    const deferredUpdaterTimeout = window.setTimeout(() => {
+      if (!isMounted) {
+        return;
+      }
+
+      void refreshLauncherUpdateStatus().catch(() => {
+        // The state is already updated inside refreshLauncherUpdateStatus.
       });
+    }, 1400);
 
     return () => {
       isMounted = false;
+      window.clearTimeout(startupSettleTimeout);
+      window.clearTimeout(deferredRuntimeTimeout);
+      window.clearTimeout(deferredUpdaterTimeout);
     };
   }, []);
 
@@ -411,6 +337,10 @@ function App() {
       return;
     }
 
+    if (!startupSettled) {
+      return;
+    }
+
     if (installationState.kind !== "ready") {
       return;
     }
@@ -426,7 +356,7 @@ function App() {
 
     autoPrepareTriggeredRef.current = true;
     void handlePrepareInstallation();
-  }, [installationState, launchingGame, preparingInstallation]);
+  }, [installationState, launchingGame, preparingInstallation, startupSettled]);
 
   const launcherStatus =
     launcherState.kind === "ready" ? launcherState.value : null;
