@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use serde::Deserialize;
 
-use crate::{config, manifests};
+use crate::{config, logging, manifests};
 
 const FABRIC_META_BASE_URL: &str = "https://meta.fabricmc.net";
 
@@ -30,8 +30,8 @@ struct LoaderVersion {
 
 #[derive(Deserialize, Clone)]
 struct LoaderLauncherMeta {
-    #[serde(rename = "min_java_version")]
-    min_java_version: u32,
+    #[serde(rename = "min_java_version", default)]
+    min_java_version: Option<u32>,
 }
 
 #[derive(Deserialize)]
@@ -44,6 +44,9 @@ struct FabricProfileDocument {
 struct FabricLibraryEntry {
     #[serde(default)]
     rules: Vec<FabricLibraryRule>,
+    name: Option<String>,
+    url: Option<String>,
+    sha1: Option<String>,
     downloads: Option<FabricLibraryDownloads>,
 }
 
@@ -77,6 +80,10 @@ fn build_http_client() -> Result<reqwest::Client, String> {
         .timeout(Duration::from_secs(config::HTTP_REQUEST_TIMEOUT_SECS))
         .build()
         .map_err(|error| format!("Failed to create HTTP client: {error}"))
+}
+
+fn log_fabric_step(message: &str) {
+    let _ = logging::append_launcher_log_entry("fabric", message);
 }
 
 async fn read_text(client: &reqwest::Client, url: &str, label: &str) -> Result<String, String> {
@@ -190,6 +197,93 @@ fn library_artifact_matches_current_platform(path: &str) -> bool {
     false
 }
 
+fn maven_coordinate_to_path(name: &str) -> Result<String, String> {
+    let (coordinate, extension) = match name.split_once('@') {
+        Some((coordinate, extension)) if !extension.trim().is_empty() => {
+            (coordinate, extension.trim())
+        }
+        _ => (name, "jar"),
+    };
+
+    let parts: Vec<&str> = coordinate.split(':').collect();
+    if parts.len() < 3 {
+        return Err(format!("Invalid Maven coordinate in Fabric metadata: {name}"));
+    }
+
+    let group = parts[0].replace('.', "/");
+    let artifact = parts[1];
+    let version = parts[2];
+    let classifier = if parts.len() > 3 {
+        Some(parts[3..].join("-"))
+    } else {
+        None
+    };
+
+    let file_name = match classifier {
+        Some(classifier) => format!("{artifact}-{version}-{classifier}.{extension}"),
+        None => format!("{artifact}-{version}.{extension}"),
+    };
+
+    Ok(format!("{group}/{artifact}/{version}/{file_name}"))
+}
+
+async fn resolve_library_download(
+    client: &reqwest::Client,
+    entry: FabricLibraryEntry,
+) -> Result<Option<manifests::OfficialLibraryDownload>, String> {
+    if !library_is_allowed(&entry.rules) {
+        return Ok(None);
+    }
+
+    if let Some(artifact) = entry
+        .downloads
+        .as_ref()
+        .and_then(|downloads| downloads.artifact.as_ref())
+    {
+        if library_artifact_matches_current_platform(&artifact.path) {
+            return Ok(Some(manifests::OfficialLibraryDownload {
+                path: artifact.path.clone(),
+                url: artifact.url.clone(),
+                sha1: artifact.sha1.clone(),
+            }));
+        }
+
+        return Ok(None);
+    }
+
+    let Some(name) = entry.name.as_deref() else {
+        return Ok(None);
+    };
+    let Some(base_url) = entry.url.as_deref() else {
+        return Ok(None);
+    };
+
+    let path = maven_coordinate_to_path(name)?;
+    if !library_artifact_matches_current_platform(&path) {
+        return Ok(None);
+    }
+
+    let normalized_base_url = if base_url.ends_with('/') {
+        base_url.to_string()
+    } else {
+        format!("{base_url}/")
+    };
+    let artifact_url = format!("{normalized_base_url}{path}");
+    let sha1 = match entry.sha1 {
+        Some(sha1) if !sha1.trim().is_empty() => sha1,
+        _ => read_text(client, &format!("{artifact_url}.sha1"), "Fabric library checksum")
+            .await?
+            .trim()
+            .to_string(),
+    };
+
+    Ok(Some(manifests::OfficialLibraryDownload {
+        path,
+        url: artifact_url,
+        sha1,
+    }))
+}
+
 fn select_loader_summary(summaries: &[LoaderSummary]) -> Result<LoaderSummary, String> {
     summaries
         .iter()
@@ -218,6 +312,7 @@ pub fn fabric_profile_id(loader_version: &str) -> String {
 }
 
 pub async fn fetch_fabric_installation_details() -> Result<FabricInstallationDetails, String> {
+    log_fabric_step("Initializing Fabric metadata HTTP client.");
     let client = build_http_client()?;
     let loader_list_url = format!(
         "{}/v2/versions/loader/{}",
@@ -225,6 +320,7 @@ pub async fn fetch_fabric_installation_details() -> Result<FabricInstallationDet
         config::MINECRAFT_VERSION
     );
 
+    log_fabric_step(&format!("Requesting Fabric loader metadata from {loader_list_url}."));
     let raw_loader_list = read_text(&client, &loader_list_url, "Fabric loader metadata").await?;
     let loader_summaries: Vec<LoaderSummary> =
         serde_json::from_str(&raw_loader_list).map_err(|error| {
@@ -234,9 +330,20 @@ pub async fn fetch_fabric_installation_details() -> Result<FabricInstallationDet
             )
         })?;
 
+    log_fabric_step(&format!(
+        "Loaded {} Fabric loader metadata entries for {}.",
+        loader_summaries.len(),
+        config::MINECRAFT_VERSION
+    ));
     let selected_loader = select_loader_summary(&loader_summaries)?;
     let loader_version = selected_loader.loader.version.clone();
     let profile_url = profile_json_url(&loader_version);
+    log_fabric_step(&format!(
+        "Selected Fabric loader {} with minimum Java {}.",
+        loader_version,
+        selected_loader.launcher_meta.min_java_version.unwrap_or(0)
+    ));
+    log_fabric_step(&format!("Requesting Fabric profile metadata from {profile_url}."));
     let profile_json = read_text(&client, &profile_url, "Fabric profile metadata").await?;
     let profile_document: FabricProfileDocument =
         serde_json::from_str(&profile_json).map_err(|error| {
@@ -246,28 +353,51 @@ pub async fn fetch_fabric_installation_details() -> Result<FabricInstallationDet
             )
         })?;
 
-    let libraries = profile_document
-        .libraries
-        .into_iter()
-        .filter(|entry| library_is_allowed(&entry.rules))
-        .filter_map(|entry| {
-            entry
-                .downloads
-                .and_then(|downloads| downloads.artifact)
-                .filter(|artifact| library_artifact_matches_current_platform(&artifact.path))
-                .map(|artifact| manifests::OfficialLibraryDownload {
-                    path: artifact.path,
-                    url: artifact.url,
-                    sha1: artifact.sha1,
-                })
-        })
-        .collect();
+    log_fabric_step("Fabric profile metadata downloaded and decoded.");
+    let mut libraries = Vec::new();
+    for entry in profile_document.libraries {
+        if let Some(library) = resolve_library_download(&client, entry).await? {
+            libraries.push(library);
+        }
+    }
+    log_fabric_step(&format!(
+        "Resolved {} Fabric libraries for the current platform.",
+        libraries.len()
+    ));
 
     Ok(FabricInstallationDetails {
         loader_version: selected_loader.loader.version,
         profile_id: fabric_profile_id(&loader_version),
         profile_json,
-        min_java_major: selected_loader.launcher_meta.min_java_version,
+        min_java_major: selected_loader.launcher_meta.min_java_version.unwrap_or(0),
         libraries,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fetch_fabric_installation_details_resolves_for_target_version() {
+        let result = tauri::async_runtime::block_on(fetch_fabric_installation_details());
+        assert!(
+            result.is_ok(),
+            "Fabric metadata fetch failed for {}: {:?}",
+            config::MINECRAFT_VERSION,
+            result.err()
+        );
+    }
+
+    #[test]
+    fn maven_coordinate_to_path_builds_expected_jar_path() {
+        assert_eq!(
+            maven_coordinate_to_path("net.fabricmc:fabric-loader:0.19.3").unwrap(),
+            "net/fabricmc/fabric-loader/0.19.3/fabric-loader-0.19.3.jar"
+        );
+        assert_eq!(
+            maven_coordinate_to_path("org.lwjgl:lwjgl:3.4.1:natives-windows").unwrap(),
+            "org/lwjgl/lwjgl/3.4.1/lwjgl-3.4.1-natives-windows.jar"
+        );
+    }
 }

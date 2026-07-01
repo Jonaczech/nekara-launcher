@@ -578,6 +578,28 @@ fn parse_launch_manifest(version_json: &str) -> Result<LaunchVersionManifest, St
         .map_err(|error| format!("Metadata spuštění Minecraftu se nepodařilo dekódovat: {error}"))
 }
 
+fn merge_launch_manifests(
+    base_manifest: LaunchVersionManifest,
+    fabric_manifest: LaunchVersionManifest,
+) -> LaunchVersionManifest {
+    let mut arguments = base_manifest.arguments;
+    arguments
+        .default_user_jvm
+        .extend(fabric_manifest.arguments.default_user_jvm);
+    arguments.jvm.extend(fabric_manifest.arguments.jvm);
+    arguments.game.extend(fabric_manifest.arguments.game);
+
+    LaunchVersionManifest {
+        id: fabric_manifest.id,
+        inherits_from: fabric_manifest.inherits_from.or(base_manifest.inherits_from),
+        assets: fabric_manifest.assets.or(base_manifest.assets),
+        version_type: fabric_manifest.version_type,
+        main_class: fabric_manifest.main_class,
+        arguments,
+        logging: fabric_manifest.logging.or(base_manifest.logging),
+    }
+}
+
 fn ensure_launch_requirements(
     paths: &LaunchPaths,
     base_details: &manifests::OfficialMinecraftVersionDetails,
@@ -941,7 +963,9 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         }
     }
 
-    let launch_manifest = parse_launch_manifest(&fabric_details.profile_json)?;
+    let base_launch_manifest = parse_launch_manifest(&base_details.version_json)?;
+    let fabric_launch_manifest = parse_launch_manifest(&fabric_details.profile_json)?;
+    let launch_manifest = merge_launch_manifests(base_launch_manifest, fabric_launch_manifest);
     if launch_manifest.inherits_from.as_deref() != Some(config::MINECRAFT_VERSION) {
         let _ = logging::append_launcher_log_entry(
             "game",
@@ -1119,4 +1143,75 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
     start_game_monitor(child, running_status.clone());
 
     Ok(running_status)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn merge_launch_manifests_keeps_base_classpath_args_and_fabric_main_class() {
+        let base_manifest = parse_launch_manifest(
+            r#"{
+                "id":"26.1.2",
+                "type":"release",
+                "mainClass":"net.minecraft.client.main.Main",
+                "arguments":{
+                    "jvm":["-cp","${classpath}"],
+                    "game":["--username","${auth_player_name}"]
+                }
+            }"#,
+        )
+        .expect("base manifest should parse");
+
+        let fabric_manifest = parse_launch_manifest(
+            r#"{
+                "id":"fabric-loader-0.19.3-26.1.2",
+                "inheritsFrom":"26.1.2",
+                "type":"release",
+                "mainClass":"net.fabricmc.loader.impl.launch.knot.KnotClient",
+                "arguments":{
+                    "jvm":["-DFabricMcEmu= net.minecraft.client.main.Main "],
+                    "game":[]
+                }
+            }"#,
+        )
+        .expect("fabric manifest should parse");
+
+        let merged = merge_launch_manifests(base_manifest, fabric_manifest);
+
+        assert_eq!(merged.main_class, "net.fabricmc.loader.impl.launch.knot.KnotClient");
+        let merged_jvm_args = resolve_argument_entries(
+            &merged.arguments.jvm,
+            &LaunchContext {
+                auth_player_name: "Tester".to_string(),
+                version_name: merged.id.clone(),
+                game_directory: "C:/Game".to_string(),
+                assets_root: "C:/Assets".to_string(),
+                assets_index_name: "26.1.2".to_string(),
+                auth_uuid: "uuid".to_string(),
+                auth_access_token: "token".to_string(),
+                client_id: "client".to_string(),
+                auth_xuid: "0".to_string(),
+                version_type: merged.version_type.clone(),
+                natives_directory: "C:/Natives".to_string(),
+                launcher_name: "Nekara Launcher".to_string(),
+                launcher_version: "0.1.9".to_string(),
+                classpath: "fabric-loader.jar;client.jar".to_string(),
+                logging_path: None,
+            },
+        );
+
+        assert!(merged_jvm_args.iter().any(|arg| arg == "-cp"));
+        assert!(
+            merged_jvm_args
+                .iter()
+                .any(|arg| arg == "fabric-loader.jar;client.jar")
+        );
+        assert!(
+            merged_jvm_args
+                .iter()
+                .any(|arg| arg.contains("net.minecraft.client.main.Main"))
+        );
+    }
 }

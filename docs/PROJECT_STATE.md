@@ -104,6 +104,12 @@ offline launch flow, and an offline player profile flow in place.
 - The launcher shell was simplified to a REDlauncher-inspired composition using
   Nekara brand wallpaper and icon assets from `brand/`.
 - Tauri application icons were regenerated from the Nekara brand icon source.
+- The Fabric `26.1.2` preparation and launch flow now handles current Fabric
+  metadata structure, resolves Maven-style loader libraries, and merges the
+  base Minecraft launch manifest with the Fabric profile before launch.
+- The launcher UI now uses the `Caudex Regular` brand font from `brand/`.
+- The first approved client mod manifest for Fabric `26.1.2` now exists under
+  `src-tauri/resources/client-package/`.
 
 ## Current Blockers
 

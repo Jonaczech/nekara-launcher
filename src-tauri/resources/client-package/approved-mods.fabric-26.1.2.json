@@ -1,0 +1,53 @@
+{
+  "gameConfigurationId": "nekara",
+  "minecraftVersion": "26.1.2",
+  "loader": {
+    "family": "fabric",
+    "channel": "stable",
+    "profileVersionSource": "fabric-meta"
+  },
+  "mods": [
+    {
+      "id": "fabric-api",
+      "displayName": "Fabric API",
+      "distribution": "required",
+      "status": "planned"
+    },
+    {
+      "id": "sodium",
+      "displayName": "Sodium",
+      "distribution": "required",
+      "status": "planned"
+    },
+    {
+      "id": "iris",
+      "displayName": "Iris Shaders",
+      "distribution": "optional",
+      "status": "planned"
+    },
+    {
+      "id": "ferrite-core",
+      "displayName": "FerriteCore",
+      "distribution": "required",
+      "status": "planned"
+    },
+    {
+      "id": "invmove",
+      "displayName": "InvMove",
+      "distribution": "required",
+      "status": "planned"
+    },
+    {
+      "id": "entity-model-features",
+      "displayName": "Entity Model Features",
+      "distribution": "required",
+      "status": "planned"
+    },
+    {
+      "id": "entity-texture-features",
+      "displayName": "Entity Texture Features",
+      "distribution": "required",
+      "status": "planned"
+    }
+  ]
+}

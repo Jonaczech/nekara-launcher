@@ -517,7 +517,11 @@ function App() {
     : readinessCount === 5
       ? "Připraveno ke spuštění"
       : "Připravuji Nekaru";
-  const primaryHint = !offlinePlayerReady
+  const installationErrorMessage =
+    installationState.kind === "error" ? installationState.message : null;
+  const primaryHint = installationErrorMessage != null
+    ? installationErrorMessage
+    : !offlinePlayerReady
     ? "Zadej lokální jméno hráče, aby se odemklo spuštění."
     : gameRunning
       ? gameLaunch?.message ?? "Minecraft právě běží z launcheru."
@@ -1051,6 +1055,19 @@ function App() {
                 </span>
                 <p>{primaryHint}</p>
               </div>
+
+              <section className="progress-panel progress-panel--hero" aria-label="Příprava launcheru">
+                <div className="progress-panel__header">
+                  <span>{progressPanelLabel}</span>
+                  <span>{progressPanelValue}</span>
+                </div>
+                <div className="progress-track" role="presentation">
+                  <div
+                    className="progress-track__fill"
+                    style={{ width: `${progressPanelPercent}%` }}
+                  />
+                </div>
+              </section>
             </section>
 
             <section className="command-panel">
@@ -1150,18 +1167,6 @@ function App() {
               </div>
             </section>
 
-            <section className="progress-panel" aria-label="Příprava launcheru">
-              <div className="progress-panel__header">
-                <span>{progressPanelLabel}</span>
-                <span>{progressPanelValue}</span>
-              </div>
-              <div className="progress-track" role="presentation">
-                <div
-                  className="progress-track__fill"
-                  style={{ width: `${progressPanelPercent}%` }}
-                />
-              </div>
-            </section>
           </div>
         </section>
       </div>

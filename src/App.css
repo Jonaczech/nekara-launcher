@@ -1,7 +1,15 @@
+@font-face {
+  font-family: "Caudex";
+  src: url("../brand/Caudex-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color: #f5f1e8;
   background: #050506;
-  font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  font-family: "Caudex", "Times New Roman", serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -204,10 +212,10 @@ button {
 .settings-card h4,
 .settings-drawer__header h3 {
   margin: 0;
+  font-family: "Caudex", "Times New Roman", serif;
 }
 
 .hero-copy h1 {
-  font-family: "Bahnschrift", "Arial Narrow", sans-serif;
   font-size: clamp(3rem, 7vw, 4.6rem);
   line-height: 0.96;
   font-weight: 800;
@@ -425,7 +433,6 @@ button {
 
 .status-story h2 {
   margin-top: 8px;
-  font-family: "Bahnschrift", "Arial Narrow", sans-serif;
   font-size: clamp(1.8rem, 4vw, 2.7rem);
   line-height: 0.95;
 }
@@ -453,6 +460,11 @@ button {
   display: grid;
   gap: 10px;
   max-width: 1160px;
+}
+
+.progress-panel--hero {
+  max-width: 440px;
+  margin-top: 2px;
 }
 
 .progress-panel__header {
