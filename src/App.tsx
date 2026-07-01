@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   CircleAlert,
   Download,
-  HardDriveDownload,
   LoaderCircle,
   Minimize2,
   Play,
@@ -13,6 +12,8 @@ import {
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import packageInfo from "../package.json";
+import launcherIcon from "../brand/icons/ikona.png";
+import launcherWallpaper from "../brand/wallpapers/pozadi.png";
 import "./App.css";
 import {
   checkJavaRuntime,
@@ -568,6 +569,30 @@ function App() {
     : null;
   const updateAvailable = launcherUpdate?.available ?? false;
   const currentVersionLabel = `v${appVersion}`;
+  const playerSummary = offlinePlayer?.playerName ?? "Nenastaveno";
+  const installSummary = installationReady
+    ? "Klient připraven"
+    : preparingInstallation
+      ? "Připravuji klienta"
+      : "Čeká příprava";
+  const javaSummary = javaCompatible
+    ? `Java ${javaRuntime?.majorVersion ?? ""}`.trim()
+    : "Je potřeba Java";
+  const updateSummary =
+    launcherUpdateState.kind === "error"
+      ? "Update chyba"
+      : updateAvailable
+        ? `Update ${launcherUpdate?.version ?? ""}`.trim()
+        : "Aktuální build";
+  const statusPanelTitle = installationReady
+    ? gameRunning
+      ? "Nekara právě běží"
+      : "Klient je připravený"
+    : "Příprava klienta";
+  const statusPanelText = actionMessage ?? primaryHint;
+  const secondaryActionLabel = updateAvailable
+    ? "Nainstalovat update"
+    : "Zkontrolovat update";
 
   const diagnosticRows = [
     {
@@ -915,96 +940,217 @@ function App() {
 
   return (
     <main className="launcher-shell">
-      <div className="launcher-shell__glow" />
-
       <div className="launcher-frame">
-        <header
-          className="window-bar"
-          data-tauri-drag-region="true"
-          onMouseDown={handleTitleBarMouseDown}
+        <section
+          className="launcher-stage"
+          aria-labelledby="launcher-title"
+          style={{
+            backgroundImage: `linear-gradient(90deg, rgba(8, 8, 10, 0.96) 0%, rgba(8, 8, 10, 0.8) 32%, rgba(8, 8, 10, 0.2) 66%, rgba(8, 8, 10, 0.62) 100%), linear-gradient(180deg, rgba(8, 8, 10, 0.18), rgba(8, 8, 10, 0.82)), url(${launcherWallpaper})`,
+          }}
         >
-          <div className="window-bar__brand">
-            <div className="brand-mark" aria-hidden="true">
-              N
+          <aside className="launcher-rail" aria-label="Navigace launcheru">
+            <div className="rail-logo">
+              <img src={launcherIcon} alt="Nekara icon" />
             </div>
-            <div className="window-bar__copy">
-            <p className="eyebrow">Nekara Launcher</p>
-              <h1>Nekara</h1>
-            </div>
-          </div>
-
-          <div
-            className="window-bar__controls"
-            aria-label="Ovládání okna"
-            data-window-control="true"
-            data-tauri-drag-region="false"
-          >
             <button
               type="button"
-              className="window-icon-button"
-              aria-label="Minimalizovat okno"
-              data-tauri-drag-region="false"
-              onClick={() => runWindowAction((appWindow) => appWindow.minimize())}
+              className="rail-button"
+              aria-label="Nastavení"
+              onClick={() => setShowSettings(true)}
             >
-              <Minimize2 size={14} />
+              <Settings2 size={18} />
             </button>
             <button
               type="button"
-              className="window-icon-button window-icon-button--close"
-              aria-label="Zavřít okno"
-              data-tauri-drag-region="false"
-              onClick={() => runWindowAction((appWindow) => appWindow.close())}
+              className="rail-button"
+              aria-label="Diagnostika"
+              onClick={() => setShowSettings(true)}
             >
-              <X size={14} />
+              <CircleAlert size={18} />
             </button>
-          </div>
-        </header>
+          </aside>
 
-        <section className="launcher-body">
-          <section className="hero-stage" aria-labelledby="launcher-title">
-            <div className="hero-stage__copy">
-              <p className="eyebrow">Jedna hra. Jeden Fabric profil.</p>
-              <h2 id="launcher-title">Launcher</h2>
-              <p className="hero-text">
-                Zadej lokální jméno hráče, připrav Fabric klienta Nekary a
-                soustřeď se na hru, ne na zbytečné nastavování.
-              </p>
-            </div>
+          <div className="stage-main">
+            <header
+              className="stage-topbar"
+              data-tauri-drag-region="true"
+              onMouseDown={handleTitleBarMouseDown}
+            >
+              <div className="stage-topbar__meta">
+                <span className="stage-chip">{currentVersionLabel}</span>
+                <span className="stage-chip">{updateSummary}</span>
+              </div>
 
-            <div className="hero-stage__action">
-              <button
-                type="button"
-                className="primary-action"
-                onClick={() => void handlePrimaryAction()}
-                disabled={savingPlayer || preparingInstallation || launchingGame}
+              <div
+                className="window-bar__controls"
+                aria-label="Ovládání okna"
+                data-window-control="true"
+                data-tauri-drag-region="false"
               >
-                {savingPlayer || preparingInstallation || launchingGame ? (
-                  <LoaderCircle size={18} className="spin" />
-                ) : (
-                  <Play size={18} />
-                )}
-                <span>{primaryButtonLabel}</span>
-              </button>
+                <button
+                  type="button"
+                  className="window-icon-button"
+                  aria-label="Minimalizovat okno"
+                  data-tauri-drag-region="false"
+                  onClick={() => runWindowAction((appWindow) => appWindow.minimize())}
+                >
+                  <Minimize2 size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="window-icon-button window-icon-button--close"
+                  aria-label="Zavřít okno"
+                  data-tauri-drag-region="false"
+                  onClick={() => runWindowAction((appWindow) => appWindow.close())}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </header>
 
-              <div className="hero-stage__status">
-                <span className="hero-stage__status-label">
+            <section className="hero-panel">
+              <div className="hero-copy">
+                <p className="hero-eyebrow">Nekara Launcher</p>
+                <h1 id="launcher-title">Nekara</h1>
+                <p className="hero-subtitle">Jedna hra. Jeden klient. Jedna cesta do světa.</p>
+              </div>
+
+              <div className="hero-actions">
+                <button
+                  type="button"
+                  className="primary-action"
+                  onClick={() => void handlePrimaryAction()}
+                  disabled={savingPlayer || preparingInstallation || launchingGame}
+                >
+                  {savingPlayer || preparingInstallation || launchingGame ? (
+                    <LoaderCircle size={18} className="spin" />
+                  ) : (
+                    <Play size={18} />
+                  )}
+                  <span>{primaryButtonLabel}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="icon-action"
+                  onClick={() => setShowSettings(true)}
+                  aria-label="Otevřít nastavení launcheru"
+                >
+                  <Settings2 size={18} />
+                </button>
+              </div>
+
+              <div className="hero-status">
+                <span className="hero-status__label">
                   {primaryStatus === "Připraveno ke spuštění" ? (
                     <ShieldCheck size={14} />
                   ) : (
-                    <LoaderCircle size={14} className="spin" />
+                    <LoaderCircle size={14} className={preparingInstallation ? "spin" : ""} />
                   )}
                   {primaryStatus}
                 </span>
                 <p>{primaryHint}</p>
-                {preparingInstallation && installationProgressLabel && (
-                  <p>{installationProgressLabel}</p>
-                )}
               </div>
-            </div>
+            </section>
 
-            {actionMessage && <p className="hero-action-note">{actionMessage}</p>}
+            <section className="command-panel">
+              <div className="command-panel__player">
+                <div className="panel-heading">
+                  <UserRound size={18} />
+                  <span>Hráč</span>
+                </div>
+                <label className="player-field">
+                  <span className="player-field__label">Offline jméno</span>
+                  <input
+                    type="text"
+                    maxLength={16}
+                    value={playerNameInput}
+                    onChange={(event) => setPlayerNameInput(event.target.value)}
+                    placeholder="Zadej jméno"
+                  />
+                </label>
+                <div className="player-field__actions">
+                  <button
+                    type="button"
+                    className="inline-action"
+                    onClick={() => void handleSaveOfflinePlayer()}
+                    disabled={savingPlayer}
+                  >
+                    Uložit
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-action inline-action--muted"
+                    onClick={() => void handleClearOfflinePlayer()}
+                    disabled={savingPlayer}
+                  >
+                    Vymazat
+                  </button>
+                </div>
+              </div>
 
-            <div className="progress-panel" aria-label="Příprava launcheru">
+              <div className="command-panel__status">
+                <div className="status-grid">
+                  <div className="status-tile">
+                    <span>Profil</span>
+                    <strong>{playerSummary}</strong>
+                  </div>
+                  <div className="status-tile">
+                    <span>Klient</span>
+                    <strong>{installSummary}</strong>
+                  </div>
+                  <div className="status-tile">
+                    <span>Java</span>
+                    <strong>{javaSummary}</strong>
+                  </div>
+                  <div className="status-tile">
+                    <span>Release</span>
+                    <strong>{updateSummary}</strong>
+                  </div>
+                </div>
+
+                <div className="status-story">
+                  <p className="status-story__tag">{progressPanelLabel}</p>
+                  <h2>{statusPanelTitle}</h2>
+                  <p>{statusPanelText}</p>
+                  {preparingInstallation && installationProgressLabel && (
+                    <p className="status-story__meta">{installationProgressLabel}</p>
+                  )}
+                </div>
+
+                <div className="command-actions">
+                  <button
+                    type="button"
+                    className="secondary-action"
+                    onClick={() =>
+                      updateAvailable
+                        ? void handleInstallLauncherUpdate()
+                        : void handleCheckLauncherUpdate()
+                    }
+                    disabled={checkingUpdate || installingUpdate}
+                  >
+                    <Download size={16} />
+                    <span>
+                      {checkingUpdate
+                        ? "Kontroluji..."
+                        : installingUpdate
+                          ? "Instaluji..."
+                          : secondaryActionLabel}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-action secondary-action--muted"
+                    onClick={() => setShowSettings(true)}
+                  >
+                    <CircleAlert size={16} />
+                    <span>Detaily</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section className="progress-panel" aria-label="Příprava launcheru">
               <div className="progress-panel__header">
                 <span>{progressPanelLabel}</span>
                 <span>{progressPanelValue}</span>
@@ -1015,109 +1161,8 @@ function App() {
                   style={{ width: `${progressPanelPercent}%` }}
                 />
               </div>
-            </div>
-          </section>
-
-          <aside className="utility-rail" aria-label="Hráč a menu">
-            <section className="profile-card">
-              <div className="profile-card__avatar" aria-hidden="true">
-                <UserRound size={32} />
-              </div>
-              <div className="profile-card__body">
-                <p className="eyebrow">Offline hráč</p>
-                <h3>
-                  {playerState.kind === "loading"
-                    ? "Kontroluji profil"
-                    : offlinePlayer?.playerName ?? "Offline profil"}
-                </h3>
-                <p>
-                  {playerState.kind === "ready"
-                    ? playerState.value.message
-                    : playerState.kind === "error"
-                      ? playerState.message
-                      : "Kontroluji offline hráčský profil."}
-                </p>
-
-                <label className="profile-card__field">
-                  <span>Jméno hráče</span>
-                  <input
-                    type="text"
-                    maxLength={16}
-                    value={playerNameInput}
-                    onChange={(event) => setPlayerNameInput(event.target.value)}
-                    placeholder="Zadej offline jméno"
-                  />
-                </label>
-
-                <div className="profile-card__actions">
-                  <button
-                    type="button"
-                    className="text-action"
-                    onClick={() => void handleSaveOfflinePlayer()}
-                    disabled={savingPlayer}
-                  >
-                    Uložit
-                  </button>
-                  <button
-                    type="button"
-                    className="text-action"
-                    onClick={() => void handleClearOfflinePlayer()}
-                    disabled={savingPlayer}
-                  >
-                    Vymazat
-                  </button>
-                </div>
-              </div>
             </section>
-
-            <section className="menu-card">
-              <div className="menu-card__header">
-                <div>
-                  <p className="eyebrow">Menu</p>
-                  <h3>Zkratky</h3>
-                </div>
-              </div>
-
-              <div className="menu-list">
-                <button
-                  type="button"
-                  className="menu-button"
-                  onClick={() => setShowSettings(true)}
-                  aria-label="Otevřít nastavení"
-                >
-                  <Settings2 size={18} />
-                  <span>Nastavení</span>
-                </button>
-                <button
-                  type="button"
-                  className="menu-button"
-                  onClick={() => setShowSettings(true)}
-                  aria-label="Otevřít aktualizace"
-                >
-                  <Download size={18} />
-                  <span>Aktualizace</span>
-                </button>
-                <button
-                  type="button"
-                  className="menu-button"
-                  onClick={() => setShowSettings(true)}
-                  aria-label="Otevřít úložiště"
-                >
-                  <HardDriveDownload size={18} />
-                  <span>Úložiště</span>
-                </button>
-                <button
-                  type="button"
-                  className="menu-button"
-                  onClick={() => setShowSettings(true)}
-                  aria-label="Otevřít diagnostiku"
-                >
-                  <CircleAlert size={18} />
-                  <span>Diagnostika</span>
-                </button>
-              </div>
-            </section>
-          </aside>
+          </div>
         </section>
       </div>
 

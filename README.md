@@ -126,8 +126,8 @@ Launcher self-updates are wired to signed GitHub Releases. The updater checks a
 release endpoint at startup and can install a newer build from the settings
 drawer once release assets are published.
 
-Static UI assets are organized under `src/assets/` with separate folders for
-backgrounds, logos, fonts, and icons.
+Brand source assets are organized under `brand/`, while generated Tauri app
+icons live under `src-tauri/icons/`.
 
 Known local prerequisite status:
 
