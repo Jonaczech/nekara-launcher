@@ -11,7 +11,7 @@ modpack browser, server list, marketplace, forum, or community portal.
 The launcher should let a player:
 
 1. Start the launcher.
-2. Sign in with Microsoft or enter an offline player name.
+2. Enter an offline player name.
 3. Wait while the Nekara game installation is checked or prepared.
 4. Press Play.
 
@@ -40,8 +40,7 @@ The current scaffold already includes:
   from official metadata plus the Fabric loader profile and monitors its
   status,
 - an offline player profile flow that stores the local player name in launcher
-  data plus an in-memory Microsoft device-code sign-in flow for Minecraft Java
-  ownership checks,
+  data for the launch session,
 - a frameless React launcher shell that renders the current readiness state.
 
 ## Non-Goals
@@ -129,8 +128,7 @@ Nekara launcher data directory, in a dedicated `logs` folder, so update and
 launch failures can be reviewed after the fact.
 
 Launcher self-updates are wired to signed GitHub Releases. The updater checks a
-release endpoint at startup and can install a newer build from the settings
-drawer once release assets are published.
+release endpoint automatically at startup once release assets are published.
 
 Brand source assets are organized under `brand/`, while generated Tauri app
 icons live under `src-tauri/icons/`.
@@ -177,13 +175,3 @@ Visual Studio developer command prompt with `~/.cargo/bin` on PATH.
 
 The current pnpm workspace explicitly approves the `esbuild` install script,
 which is required by Vite.
-
-Microsoft sign-in requires a public client ID that is allowed to use desktop
-authorization-code flow with a loopback redirect. The current implementation
-reads it from the build/runtime environment variable
-`NEKARA_MICROSOFT_CLIENT_ID`. The corresponding Microsoft app registration
-must allow the redirect URI `http://localhost:39231/auth/callback`.
-
-If the variable is missing, the launcher keeps the Microsoft account section
-visible but reports that the flow is not configured yet, while offline launch
-remains available.

@@ -199,13 +199,11 @@ code {
 .panel-heading span,
 .player-field__label,
 .progress-panel__header,
-.settings-meta dt,
 .settings-diagnostics dt,
 .settings-checkline__value,
 .settings-slider-field span,
 .settings-number-field span,
-.settings-path-field span,
-.home-summary dt {
+.settings-path-field span {
   margin: 0;
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.74rem;
@@ -215,18 +213,13 @@ code {
 }
 
 .hero-subtitle,
-.hero-status p,
-.hero-status__meta,
 .home-card__lead,
 .home-card p,
 .settings-card__lead,
 .settings-helper-text,
-.settings-release-notes__body,
 .settings-error-note,
 .settings-checkline__label,
 .settings-diagnostics dd,
-.settings-meta dd,
-.home-summary dd,
 .settings-page__lead {
   color: var(--text-soft);
 }
@@ -280,32 +273,6 @@ code {
   cursor: not-allowed;
 }
 
-.hero-status {
-  display: grid;
-  gap: 6px;
-  max-width: 58ch;
-}
-
-.hero-status__label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #f3e2a6;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.hero-status p,
-.hero-status__meta {
-  margin: 0;
-}
-
-.hero-status__meta {
-  color: #f3e2a6;
-}
-
 .progress-panel {
   display: grid;
   gap: 10px;
@@ -339,7 +306,7 @@ code {
 
 .home-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 460px);
   gap: 16px;
   align-self: end;
 }
@@ -355,10 +322,6 @@ code {
 
 .home-card--player {
   background: rgba(8, 8, 10, 0.72);
-}
-
-.home-card--account {
-  background: rgba(10, 10, 12, 0.78);
 }
 
 .home-card__lead,
@@ -421,26 +384,12 @@ code {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.home-summary,
-.settings-meta,
 .settings-diagnostics,
 .settings-checklist {
   margin: 16px 0 0;
   padding: 0;
 }
 
-.home-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.home-summary--single {
-  grid-template-columns: 1fr;
-}
-
-.home-summary div,
-.settings-meta div,
 .settings-diagnostics div,
 .settings-checkline,
 .settings-release-notes {
@@ -450,20 +399,9 @@ code {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.home-summary dd,
-.settings-meta dd,
 .settings-diagnostics dd {
   margin: 6px 0 0;
   word-break: break-word;
-}
-
-.home-code {
-  letter-spacing: 0.08em;
-  font-weight: 700;
-}
-
-.home-link {
-  font-size: 0.9rem;
 }
 
 .settings-page {
@@ -508,18 +446,6 @@ code {
   margin-top: 14px;
 }
 
-.settings-meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.settings-update-state,
-.settings-release-notes {
-  display: grid;
-  gap: 8px;
-}
-
 .settings-inline-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 140px;
@@ -560,24 +486,13 @@ code {
 }
 
 .settings-helper-text,
-.settings-error-note,
-.settings-release-notes__body {
+.settings-error-note {
   margin: 0;
   font-size: 0.92rem;
 }
 
 .settings-error-note {
   color: #ffb3af;
-}
-
-.settings-release-notes__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-transform: uppercase;
 }
 
 .settings-checklist {

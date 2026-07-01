@@ -1,46 +1,37 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import {
-  Copy,
-  ExternalLink,
   House,
   LoaderCircle,
   Minimize2,
   Play,
   Settings2,
-  ShieldCheck,
   UserRound,
   X,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import packageInfo from "../package.json";
-import launcherIcon from "../brand/icons/ikona.png";
+import launcherIcon from "../src-tauri/icons/64x64.png";
 import launcherWallpaper from "../brand/wallpapers/pozadi.png";
 import "./App.css";
 import {
-  beginMicrosoftDeviceLogin,
   checkJavaRuntime,
   clearOfflinePlayerProfile,
   ensureNekaraGameDirectory,
   getGameLaunchStatus,
   getLauncherSettings,
   getMinecraftInstallationStatus,
-  getMicrosoftAccountStatus,
   getOfflinePlayerStatus,
   launchMinecraft,
-  pollMicrosoftDeviceLogin,
   prepareMinecraftInstallation,
   saveLauncherSettings,
   saveOfflinePlayerProfile,
-  signOutMicrosoftAccount,
 } from "./services/launcher";
-import { checkLauncherUpdate, installLauncherUpdate } from "./services/updater";
+import { checkLauncherUpdate } from "./services/updater";
 import type {
   GameDirectoryInfo,
   GameLaunchStatus,
   JavaRuntimeCheck,
   LauncherSettings,
-  LauncherUpdateStatus,
-  MicrosoftAccountStatus,
   MinecraftInstallationStatus,
   OfflinePlayerStatus,
 } from "./types/launcher";
@@ -68,13 +59,7 @@ function App() {
   const [launcherSettingsState, setLauncherSettingsState] = useState<
     LoadState<LauncherSettings>
   >({ kind: "loading" });
-  const [launcherUpdateState, setLauncherUpdateState] = useState<
-    LoadState<LauncherUpdateStatus>
-  >({ kind: "loading" });
   const [playerState, setPlayerState] = useState<LoadState<OfflinePlayerStatus>>({
-    kind: "loading",
-  });
-  const [microsoftState, setMicrosoftState] = useState<LoadState<MicrosoftAccountStatus>>({
     kind: "loading",
   });
   const [playerNameInput, setPlayerNameInput] = useState("");
@@ -83,14 +68,10 @@ function App() {
   const [gameDirectoryPathInput, setGameDirectoryPathInput] = useState("");
   const [savingPlayer, setSavingPlayer] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-  const [checkingUpdate, setCheckingUpdate] = useState(false);
-  const [installingUpdate, setInstallingUpdate] = useState(false);
   const [preparingInstallation, setPreparingInstallation] = useState(false);
   const [launchingGame, setLaunchingGame] = useState(false);
-  const [startingMicrosoftLogin, setStartingMicrosoftLogin] = useState(false);
-  const [signingOutMicrosoft, setSigningOutMicrosoft] = useState(false);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<"home" | "settings">("home");
+  const [wallpaperReady, setWallpaperReady] = useState(false);
 
   function updateRamInput(value: number) {
     if (!Number.isNaN(value)) {
@@ -125,14 +106,17 @@ function App() {
     try {
       const check = await checkJavaRuntime();
       setJavaState({ kind: "ready", value: check });
+      return check;
     } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Detekce Java runtime není k dispozici.";
       setJavaState({
         kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Detekce Java runtime není k dispozici.",
+        message,
       });
+      throw new Error(message);
     }
   }
 
@@ -140,14 +124,17 @@ function App() {
     try {
       const status = await getMinecraftInstallationStatus();
       setInstallationState({ kind: "ready", value: status });
+      return status;
     } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Stav instalace Minecraftu není k dispozici.";
       setInstallationState({
         kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Stav instalace Minecraftu není k dispozici.",
+        message,
       });
+      throw new Error(message);
     }
   }
 
@@ -185,20 +172,7 @@ function App() {
   }
 
   async function refreshLauncherUpdateStatus() {
-    try {
-      const update = await checkLauncherUpdate();
-      setLauncherUpdateState({ kind: "ready", value: update });
-      return update;
-    } catch (error: unknown) {
-      setLauncherUpdateState({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Stav aktualizace launcheru není k dispozici.",
-      });
-      throw error;
-    }
+    return checkLauncherUpdate();
   }
 
   async function refreshOfflinePlayerStatus() {
@@ -217,71 +191,96 @@ function App() {
     }
   }
 
-  async function refreshMicrosoftStatus() {
-    try {
-      const status = await getMicrosoftAccountStatus();
-      setMicrosoftState({ kind: "ready", value: status });
-      return status;
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Stav Microsoft přihlášení není k dispozici.";
-      setMicrosoftState({ kind: "error", message });
-      throw error;
+  function scheduleBackgroundWork(callback: () => void, timeoutMs: number) {
+    if (typeof window === "undefined") {
+      return () => undefined;
     }
+
+    const browserWindow = window as Window & typeof globalThis;
+
+    if (typeof browserWindow.requestIdleCallback === "function") {
+      const idleId = browserWindow.requestIdleCallback(callback, { timeout: timeoutMs });
+      return () => browserWindow.cancelIdleCallback(idleId);
+    }
+
+    const timer = browserWindow.setTimeout(callback, timeoutMs);
+    return () => browserWindow.clearTimeout(timer);
   }
 
   useEffect(() => {
-    void refreshOfflinePlayerStatus();
-    void refreshMicrosoftStatus();
+    let animationFrameId = 0;
+    const timers: number[] = [];
+    const cleanups: Array<() => void> = [];
 
-    const directoryTimer = window.setTimeout(() => {
-      void refreshDirectoryInfo();
-    }, 80);
-
-    const settingsTimer = window.setTimeout(() => {
-      void refreshLauncherSettings();
-    }, 250);
-
-    const gameStatusTimer = window.setTimeout(() => {
-      void refreshGameLaunchStatus();
-    }, 700);
-
-    const javaTimer = window.setTimeout(() => {
-      void refreshJavaRuntime();
-    }, 1200);
-
-    const installTimer = window.setTimeout(() => {
-      void refreshInstallationStatus();
-    }, 1800);
-
-    const updateTimer = window.setTimeout(() => {
-      void refreshLauncherUpdateStatus().catch(() => undefined);
-    }, 3200);
+    animationFrameId = window.requestAnimationFrame(() => {
+      timers.push(
+        window.setTimeout(() => {
+          void refreshOfflinePlayerStatus();
+        }, 120),
+      );
+      timers.push(
+        window.setTimeout(() => {
+          void refreshGameLaunchStatus();
+        }, 360),
+      );
+      timers.push(
+        window.setTimeout(() => {
+          void refreshLauncherSettings();
+        }, 760),
+      );
+      cleanups.push(
+        scheduleBackgroundWork(() => {
+          setWallpaperReady(true);
+        }, 900),
+      );
+      cleanups.push(
+        scheduleBackgroundWork(() => {
+          void refreshDirectoryInfo();
+        }, 1400),
+      );
+      cleanups.push(
+        scheduleBackgroundWork(() => {
+          void refreshJavaRuntime();
+        }, 2600),
+      );
+      cleanups.push(
+        scheduleBackgroundWork(() => {
+          void refreshInstallationStatus();
+        }, 3600),
+      );
+      cleanups.push(
+        scheduleBackgroundWork(() => {
+          void refreshLauncherUpdateStatus().catch(() => undefined);
+        }, 5200),
+      );
+    });
 
     return () => {
-      window.clearTimeout(directoryTimer);
-      window.clearTimeout(settingsTimer);
-      window.clearTimeout(gameStatusTimer);
-      window.clearTimeout(javaTimer);
-      window.clearTimeout(installTimer);
-      window.clearTimeout(updateTimer);
+      window.cancelAnimationFrame(animationFrameId);
+      for (const timer of timers) {
+        window.clearTimeout(timer);
+      }
+      for (const cleanup of cleanups) {
+        cleanup();
+      }
     };
   }, []);
 
   useEffect(() => {
-    if (microsoftState.kind !== "ready" || microsoftState.value.state !== "pending") {
+    if (
+      gameLaunchState.kind !== "ready" ||
+      (gameLaunchState.value.state !== "running" &&
+        gameLaunchState.value.state !== "launching")
+    ) {
       return;
     }
 
-    const delaySeconds = Math.max(microsoftState.value.pollIntervalSeconds ?? 5, 5);
-    const timer = window.setTimeout(() => {
-      void handlePollMicrosoftLogin();
-    }, delaySeconds * 1000);
+    const timer = window.setInterval(() => {
+      void refreshGameLaunchStatus();
+    }, 2000);
 
-    return () => window.clearTimeout(timer);
-  }, [microsoftState]);
+    return () => window.clearInterval(timer);
+  }, [gameLaunchState]);
 
   const gameDirectory = directoryState.kind === "ready" ? directoryState.value : null;
   const javaRuntime = javaState.kind === "ready" ? javaState.value : null;
@@ -290,14 +289,9 @@ function App() {
   const gameLaunch = gameLaunchState.kind === "ready" ? gameLaunchState.value : null;
   const launcherSettings =
     launcherSettingsState.kind === "ready" ? launcherSettingsState.value : null;
-  const launcherUpdate =
-    launcherUpdateState.kind === "ready" ? launcherUpdateState.value : null;
   const offlinePlayer = playerState.kind === "ready" ? playerState.value : null;
-  const microsoftAccount = microsoftState.kind === "ready" ? microsoftState.value : null;
-
-  const microsoftReady = microsoftAccount?.state === "ready";
   const offlinePlayerReady = offlinePlayer?.state === "ready";
-  const identityReady = microsoftReady || offlinePlayerReady;
+  const identityReady = offlinePlayerReady;
   const installationReady = installationStatus?.state === "ready";
   const metadataAvailable =
     installationStatus != null && installationStatus.state !== "blocked";
@@ -306,9 +300,6 @@ function App() {
       ? javaRuntime?.detected ?? false
       : (javaRuntime?.majorVersion ?? 0) >= installationStatus.requiredJavaMajor;
   const gameRunning = gameLaunch?.state === "running" || gameLaunch?.state === "launching";
-  const gameFailed = gameLaunch?.state === "failed";
-  const gameExitedWithError =
-    gameLaunch?.state === "exited" && (gameLaunch.exitCode ?? 0) !== 0;
 
   const readiness = useMemo(
     () => ({
@@ -329,10 +320,6 @@ function App() {
 
   const readinessCount = Object.values(readiness).filter(Boolean).length;
   const readinessPercent = Math.round((readinessCount / 5) * 100);
-  const installationProgressLabel =
-    installationStatus == null
-      ? null
-      : `${installationStatus.libraryCountReady}/${installationStatus.libraryCountTotal} libraries, ${installationStatus.assetCountReady}/${installationStatus.assetCountTotal} assets, ${installationStatus.modCountReady}/${installationStatus.modCountTotal} mods`;
   const installOperationTotalUnits =
     installationStatus == null
       ? 0
@@ -366,45 +353,6 @@ function App() {
       ? installOperationPercent
       : readinessPercent;
 
-  const primaryStatus = gameRunning
-    ? "Minecraft běží"
-    : launchingGame
-      ? "Spouštím Minecraft"
-      : preparingInstallation
-        ? "Připravuji Fabric klienta"
-        : readinessCount === 5
-          ? "Připraveno ke spuštění"
-          : "Připravuji Nekaru";
-
-  const installationErrorMessage =
-    installationState.kind === "error" ? installationState.message : null;
-  const primaryHint =
-    installationErrorMessage != null
-      ? installationErrorMessage
-      : !identityReady
-        ? "Přihlas se přes Microsoft nebo vyplň offline jméno hráče."
-        : gameRunning
-          ? gameLaunch?.message ?? "Minecraft právě běží z launcheru."
-          : gameFailed || gameExitedWithError
-            ? gameLaunch?.diagnosticSummary ??
-              gameLaunch?.suggestedFix ??
-              gameLaunch?.message ??
-              "Minecraft nenaběhl správně."
-            : launchingGame
-              ? "Launcher skládá příkaz ke spuštění a startuje proces Minecraftu."
-              : preparingInstallation
-                ? installationProgressLabel == null
-                  ? "Launcher stahuje a ověřuje Fabric klientské soubory, knihovny a assety."
-                  : `Launcher stahuje a ověřuje Fabric klientské soubory. Aktuální průběh: ${installationProgressLabel}.`
-                : !installationReady
-                  ? installationStatus?.message ??
-                    "Fabric klientské soubory je ještě potřeba připravit."
-                  : readinessCount === 5
-                    ? "Vše potřebné pro spuštění Nekary je připravené."
-                    : !javaCompatible
-                      ? "Fabric klientské soubory jsou připravené. Zbývá už jen kompatibilní Java runtime."
-                      : "Launcher ještě kontroluje zbývající runtime detaily.";
-
   const primaryButtonLabel = !identityReady
     ? "Uložit jméno hráče"
     : gameRunning
@@ -437,25 +385,7 @@ function App() {
   const launcherSettingsDirty =
     ramSettingsDirty || javaSettingsDirty || gameDirectorySettingsDirty;
   const ramInputLabel = `${ramInputMb} MB`;
-  const updateAvailable = launcherUpdate?.available ?? false;
   const currentVersionLabel = `v${appVersion}`;
-  const updateSummary =
-    launcherUpdateState.kind === "error"
-      ? "Update chyba"
-      : updateAvailable
-        ? `Update ${launcherUpdate?.version ?? ""}`.trim()
-        : "Aktuální build";
-  const releaseStatusLabel =
-    launcherUpdateState.kind === "loading"
-      ? "Kontroluji..."
-      : launcherUpdateState.kind === "error"
-        ? "Nedostupné"
-        : updateAvailable
-          ? `Dostupná aktualizace ${launcherUpdate?.version}`
-          : "Aktuální build";
-  const secondaryActionLabel = updateAvailable
-    ? "Nainstalovat update"
-    : "Zkontrolovat update";
 
   function runWindowAction(
     action: (appWindow: ReturnType<typeof getCurrentWindow>) => Promise<void>,
@@ -481,14 +411,12 @@ function App() {
   }
 
   async function handleSaveOfflinePlayer() {
-    setActionMessage(null);
     setSavingPlayer(true);
 
     try {
       const status = await saveOfflinePlayerProfile(playerNameInput);
       setPlayerState({ kind: "ready", value: status });
       setPlayerNameInput(status.playerName ?? "");
-      setActionMessage(status.message);
     } catch (error: unknown) {
       setPlayerState({
         kind: "error",
@@ -503,14 +431,12 @@ function App() {
   }
 
   async function handleClearOfflinePlayer() {
-    setActionMessage(null);
     setSavingPlayer(true);
 
     try {
       const status = await clearOfflinePlayerProfile();
       setPlayerState({ kind: "ready", value: status });
       setPlayerNameInput("");
-      setActionMessage("Offline hráčský profil byl vymazán.");
     } catch (error: unknown) {
       setPlayerState({
         kind: "error",
@@ -525,14 +451,12 @@ function App() {
   }
 
   async function handlePrepareInstallation() {
-    setActionMessage(null);
     setPreparingInstallation(true);
 
     try {
       const status = await prepareMinecraftInstallation();
       setInstallationState({ kind: "ready", value: status });
       await refreshInstallationStatus();
-      setActionMessage(status.message);
     } catch (error: unknown) {
       setInstallationState({
         kind: "error",
@@ -547,7 +471,6 @@ function App() {
   }
 
   async function handleSaveLauncherSettings() {
-    setActionMessage(null);
     setSavingSettings(true);
 
     try {
@@ -566,69 +489,27 @@ function App() {
         refreshInstallationStatus(),
         refreshJavaRuntime(),
       ]);
-      setActionMessage(settings.message);
     } catch (error: unknown) {
       const message =
         error instanceof Error
           ? error.message
           : "Nastavení launcheru se nepodařilo uložit.";
       setLauncherSettingsState({ kind: "error", message });
-      setActionMessage(message);
     } finally {
       setSavingSettings(false);
     }
   }
 
-  async function handleCheckLauncherUpdate() {
-    setActionMessage(null);
-    setCheckingUpdate(true);
-
-    try {
-      const update = await refreshLauncherUpdateStatus();
-      setActionMessage(update.message);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Stav aktualizace launcheru není k dispozici.";
-      setActionMessage(message);
-    } finally {
-      setCheckingUpdate(false);
-    }
-  }
-
-  async function handleInstallLauncherUpdate() {
-    setActionMessage(null);
-    setInstallingUpdate(true);
-
-    try {
-      const update = await installLauncherUpdate();
-      setLauncherUpdateState({ kind: "ready", value: update });
-      setActionMessage(update.message);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Aktualizaci launcheru se nepodařilo nainstalovat.";
-      setActionMessage(message);
-    } finally {
-      setInstallingUpdate(false);
-    }
-  }
-
   async function handleLaunchMinecraft() {
-    setActionMessage(null);
     setLaunchingGame(true);
 
     try {
       const status = await launchMinecraft();
       setGameLaunchState({ kind: "ready", value: status });
-      setActionMessage(status.message);
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Minecraft se nepodařilo spustit.";
       setGameLaunchState({ kind: "error", message });
-      setActionMessage(message);
     } finally {
       setLaunchingGame(false);
     }
@@ -640,104 +521,38 @@ function App() {
       return;
     }
 
-    if (!installationReady) {
+    let effectiveInstallationStatus = installationStatus;
+    if (installationState.kind === "loading") {
+      effectiveInstallationStatus = await refreshInstallationStatus();
+    }
+
+    if (effectiveInstallationStatus?.state !== "ready") {
       await handlePrepareInstallation();
       return;
     }
 
     if (gameRunning) {
-      setActionMessage(gameLaunch?.message ?? "Minecraft už běží.");
       return;
     }
 
-    if (readinessCount === 5) {
+    let effectiveJavaCompatible = javaCompatible;
+    if (!javaCompatible && (javaState.kind === "loading" || javaState.kind === "error")) {
+      const refreshedJava = await refreshJavaRuntime();
+      effectiveJavaCompatible =
+        effectiveInstallationStatus?.requiredJavaMajor == null
+          ? refreshedJava.detected
+          : (refreshedJava.majorVersion ?? 0) >=
+            effectiveInstallationStatus.requiredJavaMajor;
+    }
+
+    if (!effectiveJavaCompatible) {
+      return;
+    }
+
+    if (readinessCount === 5 || effectiveInstallationStatus?.state === "ready") {
       await handleLaunchMinecraft();
       return;
     }
-
-    if (!javaCompatible) {
-      setActionMessage(
-        installationStatus?.requiredJavaMajor == null
-          ? "Fabric klientské soubory jsou připravené. Nainstaluj nebo zpřístupni Javu v PATH a můžeš pokračovat ke spuštění."
-          : `Fabric klientské soubory jsou připravené, ale je stále potřeba Java ${installationStatus.requiredJavaMajor} nebo novější.`,
-      );
-      return;
-    }
-
-    setActionMessage("Launcher stále připravuje izolovanou instalaci.");
-  }
-
-  async function handleBeginMicrosoftLogin() {
-    setActionMessage(null);
-    setStartingMicrosoftLogin(true);
-
-    try {
-      const status = await beginMicrosoftDeviceLogin();
-      setMicrosoftState({ kind: "ready", value: status });
-      setActionMessage(status.message);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Microsoft přihlášení se nepodařilo zahájit.";
-      setMicrosoftState({ kind: "error", message });
-      setActionMessage(message);
-    } finally {
-      setStartingMicrosoftLogin(false);
-    }
-  }
-
-  async function handlePollMicrosoftLogin() {
-    try {
-      const status = await pollMicrosoftDeviceLogin();
-      setMicrosoftState({ kind: "ready", value: status });
-      setActionMessage(status.message);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Microsoft přihlášení se nepodařilo dokončit.";
-      setMicrosoftState({ kind: "error", message });
-      setActionMessage(message);
-    }
-  }
-
-  async function handleSignOutMicrosoft() {
-    setActionMessage(null);
-    setSigningOutMicrosoft(true);
-
-    try {
-      const status = await signOutMicrosoftAccount();
-      setMicrosoftState({ kind: "ready", value: status });
-      setActionMessage("Microsoft účet byl odhlášen.");
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Microsoft účet se nepodařilo odhlásit.";
-      setActionMessage(message);
-    } finally {
-      setSigningOutMicrosoft(false);
-    }
-  }
-
-  async function handleCopyMicrosoftCode(value: string | null) {
-    if (!value) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(value);
-      setActionMessage("Microsoft kód byl zkopírován do schránky.");
-    } catch {
-      setActionMessage("Kód nešlo zkopírovat automaticky. Zkopíruj ho ručně.");
-    }
-  }
-
-  function handleOpenMicrosoftVerification(url: string | null) {
-    if (!url) {
-      return;
-    }
-
-    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -747,7 +562,9 @@ function App() {
           className="launcher-stage"
           aria-labelledby="launcher-title"
           style={{
-            backgroundImage: `linear-gradient(90deg, rgba(8, 8, 10, 0.96) 0%, rgba(8, 8, 10, 0.8) 32%, rgba(8, 8, 10, 0.2) 66%, rgba(8, 8, 10, 0.62) 100%), linear-gradient(180deg, rgba(8, 8, 10, 0.18), rgba(8, 8, 10, 0.82)), url(${launcherWallpaper})`,
+            backgroundImage: wallpaperReady
+              ? `linear-gradient(90deg, rgba(8, 8, 10, 0.96) 0%, rgba(8, 8, 10, 0.8) 32%, rgba(8, 8, 10, 0.2) 66%, rgba(8, 8, 10, 0.62) 100%), linear-gradient(180deg, rgba(8, 8, 10, 0.18), rgba(8, 8, 10, 0.82)), url(${launcherWallpaper})`
+              : "linear-gradient(135deg, rgba(10, 10, 12, 0.98) 0%, rgba(22, 18, 12, 0.92) 42%, rgba(10, 10, 12, 0.98) 100%)",
           }}
         >
           <aside className="launcher-rail" aria-label="Navigace launcheru">
@@ -845,20 +662,6 @@ function App() {
                     </section>
                   </div>
 
-                  <div className="hero-status">
-                    <span className="hero-status__label">
-                      {primaryStatus === "Připraveno ke spuštění" ? (
-                        <ShieldCheck size={14} />
-                      ) : (
-                        <LoaderCircle size={14} className={preparingInstallation ? "spin" : ""} />
-                      )}
-                      {primaryStatus}
-                    </span>
-                    <p>{actionMessage ?? primaryHint}</p>
-                    {preparingInstallation && installationProgressLabel && (
-                      <p className="hero-status__meta">{installationProgressLabel}</p>
-                    )}
-                  </div>
                 </section>
 
                 <section className="home-grid">
@@ -868,7 +671,7 @@ function App() {
                       <span>Hráč</span>
                     </div>
                     <p className="home-card__lead">
-                      Lokální profil pro první spuštění klienta nebo fallback bez Microsoft účtu.
+                      Lokální profil pro první spuštění klienta i běžné používání launcheru.
                     </p>
                     <label className="player-field">
                       <span className="player-field__label">Offline jméno</span>
@@ -899,99 +702,6 @@ function App() {
                       </button>
                     </div>
                   </section>
-
-                  <section className="home-card home-card--account">
-                    <div className="panel-heading">
-                      <ShieldCheck size={18} />
-                      <span>Minecraft účet</span>
-                    </div>
-                    <p className="home-card__lead">
-                      Přímé Microsoft přihlášení pro ověření Minecraft Java účtu.
-                    </p>
-
-                    <div className="home-summary home-summary--single">
-                      <div>
-                        <dt>Stav účtu</dt>
-                        <dd>
-                          {microsoftState.kind === "loading"
-                            ? "Načítám..."
-                            : microsoftState.kind === "error"
-                              ? microsoftState.message
-                              : microsoftAccount?.message ?? "Microsoft účet není dostupný."}
-                        </dd>
-                      </div>
-
-                      {microsoftAccount?.state === "ready" && (
-                        <div>
-                          <dt>Aktivní profil</dt>
-                          <dd>{microsoftAccount.playerName}</dd>
-                        </div>
-                      )}
-
-                      {microsoftAccount?.state === "pending" && (
-                        <>
-                          <div>
-                            <dt>Kód</dt>
-                            <dd className="home-code">{microsoftAccount.userCode}</dd>
-                          </div>
-                          <div>
-                            <dt>Ověřovací stránka</dt>
-                            <dd className="home-link">{microsoftAccount.verificationUri}</dd>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="profile-card__actions">
-                      {microsoftAccount?.state === "ready" ? (
-                        <button
-                          type="button"
-                          className="text-action"
-                          onClick={() => void handleSignOutMicrosoft()}
-                          disabled={signingOutMicrosoft}
-                        >
-                          {signingOutMicrosoft ? "Odhlašuji..." : "Odhlásit Microsoft účet"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="text-action"
-                          onClick={() => void handleBeginMicrosoftLogin()}
-                          disabled={startingMicrosoftLogin}
-                        >
-                          {startingMicrosoftLogin ? "Zahajuji..." : "Přihlásit přes Microsoft"}
-                        </button>
-                      )}
-
-                      {microsoftAccount?.state === "pending" && (
-                        <>
-                          <button
-                            type="button"
-                            className="text-action"
-                            onClick={() => handleOpenMicrosoftVerification(microsoftAccount.verificationUri)}
-                          >
-                            <ExternalLink size={16} />
-                            Otevřít ověření
-                          </button>
-                          <button
-                            type="button"
-                            className="text-action"
-                            onClick={() => void handleCopyMicrosoftCode(microsoftAccount.userCode)}
-                          >
-                            <Copy size={16} />
-                            Kopírovat kód
-                          </button>
-                          <button
-                            type="button"
-                            className="text-action"
-                            onClick={() => void handlePollMicrosoftLogin()}
-                          >
-                            Zkontrolovat přihlášení
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </section>
                 </section>
               </>
             ) : (
@@ -1002,85 +712,11 @@ function App() {
                     <h2>Ovládání launcheru</h2>
                   </div>
                   <p className="settings-page__lead">
-                    Sekundární volby a aktualizace bez rušivých diagnostických bloků.
+                    Sekundární volby bez rušivých diagnostických bloků.
                   </p>
                 </div>
 
                 <div className="settings-grid">
-                  <section className="settings-card">
-                    <div className="settings-card__header">
-                      <h4>Aktualizace launcheru</h4>
-                    </div>
-                    <p className="settings-card__lead">
-                      Launcher kontroluje podepsané artefakty z GitHub Releases a aktualizace instaluje na vyžádání.
-                    </p>
-                    <div className="settings-control-stack">
-                      <dl className="settings-meta">
-                        <div>
-                          <dt>Verze launcheru</dt>
-                          <dd>{currentVersionLabel}</dd>
-                        </div>
-                        <div>
-                          <dt>Aktuální build</dt>
-                          <dd>{updateSummary}</dd>
-                        </div>
-                        <div>
-                          <dt>Release stav</dt>
-                          <dd>{releaseStatusLabel}</dd>
-                        </div>
-                        <div>
-                          <dt>Kanál</dt>
-                          <dd>GitHub Releases</dd>
-                        </div>
-                      </dl>
-
-                      <div className="settings-update-state">
-                        <span className="settings-value-chip">{releaseStatusLabel}</span>
-                        <p className="settings-helper-text">
-                          {launcherUpdateState.kind === "loading"
-                            ? "Kontroluji release endpoint kvůli novější verzi launcheru."
-                            : launcherUpdateState.kind === "error"
-                              ? launcherUpdateState.message
-                              : launcherUpdate?.message ?? "Launcher je aktuální."}
-                        </p>
-                      </div>
-
-                      {updateAvailable && launcherUpdate != null && (
-                        <div className="settings-release-notes">
-                          <div className="settings-release-notes__header">
-                            <span>Poznámky k vydání</span>
-                            <span>{launcherUpdate.version}</span>
-                          </div>
-                          {launcherUpdate.date && (
-                            <p className="settings-helper-text">{launcherUpdate.date}</p>
-                          )}
-                          {launcherUpdate.body && (
-                            <p className="settings-release-notes__body">{launcherUpdate.body}</p>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="profile-card__actions">
-                        <button
-                          type="button"
-                          className="text-action"
-                          onClick={() => void handleCheckLauncherUpdate()}
-                          disabled={checkingUpdate || installingUpdate}
-                        >
-                          {checkingUpdate ? "Kontroluji..." : secondaryActionLabel}
-                        </button>
-                        <button
-                          type="button"
-                          className="text-action"
-                          onClick={() => void handleInstallLauncherUpdate()}
-                          disabled={checkingUpdate || installingUpdate || !updateAvailable}
-                        >
-                          {installingUpdate ? "Instaluji..." : "Nainstalovat aktualizaci"}
-                        </button>
-                      </div>
-                    </div>
-                  </section>
-
                   <section className="settings-card">
                     <div className="settings-card__header">
                       <h4>Instalace klienta</h4>
@@ -1115,6 +751,11 @@ function App() {
                             Prázdné pole použije výchozí adresář launcheru v AppData. Vyplněná
                             cesta musí být absolutní.
                           </span>
+                        </div>
+
+                        <div className="settings-inline-meta">
+                          <span className="settings-value-chip">Verze launcheru</span>
+                          <span className="settings-helper-text">{currentVersionLabel}</span>
                         </div>
 
                         {gameDirectory?.minecraftDir && (
