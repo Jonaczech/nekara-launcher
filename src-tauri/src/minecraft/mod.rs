@@ -1,6 +1,7 @@
 use std::fs;
 use std::fs::OpenOptions;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use serde::Serialize;
 use sha1::{Digest, Sha1};
@@ -282,9 +283,14 @@ fn write_text_file(path: &Path, contents: &str) -> Result<(), String> {
         .map_err(|error| format!("Unable to write {}: {error}", path.display()))
 }
 
+fn log_prepare_step(message: &str) {
+    let _ = logging::append_launcher_log_entry("minecraft", message);
+}
+
 async fn download_verified_bytes(url: &str, expected_sha1: &str) -> Result<Vec<u8>, String> {
     let client = reqwest::Client::builder()
         .user_agent(config::PRODUCT_NAME)
+        .timeout(Duration::from_secs(config::HTTP_REQUEST_TIMEOUT_SECS))
         .build()
         .map_err(|error| format!("Failed to create HTTP client: {error}"))?;
 
@@ -347,33 +353,33 @@ fn build_missing_summary(snapshot: &InstallationSnapshot) -> String {
     let mut parts = Vec::new();
 
     if !snapshot.version_json_ready {
-        parts.push("version metadata".to_string());
+        parts.push("metadata verze".to_string());
     }
 
     if !snapshot.client_jar_ready {
-        parts.push("client jar".to_string());
+        parts.push("client `.jar`".to_string());
     }
 
     if !snapshot.fabric_profile_ready {
-        parts.push("Fabric profile".to_string());
+        parts.push("Fabric profil".to_string());
     }
 
     if !snapshot.asset_index_ready {
-        parts.push("asset index".to_string());
+        parts.push("index assetů".to_string());
     }
 
     let missing_libraries = snapshot
         .library_count_total
         .saturating_sub(snapshot.library_count_ready);
     if missing_libraries > 0 {
-        parts.push(format!("{missing_libraries} libraries"));
+        parts.push(format!("{missing_libraries} knihoven"));
     }
 
     let missing_assets = snapshot
         .asset_count_total
         .saturating_sub(snapshot.asset_count_ready);
     if missing_assets > 0 {
-        parts.push(format!("{missing_assets} asset objects"));
+        parts.push(format!("{missing_assets} objektů assetů"));
     }
 
     if parts.is_empty() {
@@ -543,7 +549,7 @@ pub async fn get_minecraft_installation_plan() -> Result<MinecraftInstallationPl
         asset_index_url: Some(base_details.asset_index.url.clone()),
         library_count: Some(base_details.libraries.len() + fabric_details.libraries.len()),
         message: format!(
-            "Fabric loader {} is available for {} and local install paths are prepared.",
+            "Fabric loader {} je pro {} dostupný a lokální instalační cesty jsou připravené.",
             fabric_details.loader_version,
             config::MINECRAFT_VERSION
         ),
@@ -583,12 +589,12 @@ pub async fn get_minecraft_installation_status() -> Result<MinecraftInstallation
         MinecraftInstallationState::Ready
     ) {
         format!(
-            "Fabric client files for {} are prepared.",
+            "Fabric klientské soubory pro {} jsou připravené.",
             config::MINECRAFT_VERSION
         )
     } else {
         format!(
-            "Fabric client files still need preparation: {}.",
+            "Fabric klientské soubory je ještě potřeba připravit: {}.",
             build_missing_summary(&snapshot)
         )
     };
@@ -604,14 +610,14 @@ pub async fn get_minecraft_installation_status() -> Result<MinecraftInstallation
 
 #[tauri::command]
 pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationStatus, String> {
-    let _ = logging::append_launcher_log_entry(
-        "minecraft",
-        "Preparing Fabric client files for the Nekara launcher.",
-    );
+    log_prepare_step("Připravuji Fabric klientské soubory pro launcher Nekara.");
+    log_prepare_step("Načítám oficiální metadata verze Minecraftu.");
     let base_details = manifests::fetch_official_minecraft_version_details().await?;
+    log_prepare_step("Načítám metadata instalace Fabricu.");
     let fabric_details = fabric::fetch_fabric_installation_details().await?;
     let _installation_lock = acquire_installation_lock()?;
     let paths = installation_paths(&fabric_details.profile_id)?;
+    log_prepare_step("Načítám oficiální index assetů.");
     let asset_index_contents =
         manifests::fetch_official_asset_index_contents(&base_details.asset_index).await?;
 
@@ -621,7 +627,7 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
 
     if !text_matches(&paths.version_json_path, &base_details.version_json)? {
         write_text_file(&paths.version_json_path, &base_details.version_json)?;
-        changed_parts.push("version metadata");
+        changed_parts.push("metadata verze");
     }
 
     if !sha1_matches(&paths.client_jar_path, &base_details.client_download_sha1)? {
@@ -631,21 +637,22 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
             &base_details.client_download_sha1,
         )
         .await?;
-        changed_parts.push("client jar");
+        changed_parts.push("client `.jar`");
     }
 
     if !text_matches(&paths.fabric_profile_json_path, &fabric_details.profile_json)? {
         write_text_file(&paths.fabric_profile_json_path, &fabric_details.profile_json)?;
-        changed_parts.push("Fabric profile");
+        changed_parts.push("Fabric profil");
     }
 
     let asset_index_path = asset_index_path(&paths, &base_details.asset_index.id);
     if !sha1_matches(&asset_index_path, &base_details.asset_index.sha1)? {
         write_text_file(&asset_index_path, &asset_index_contents.raw_json)?;
-        changed_parts.push("asset index");
+        changed_parts.push("index assetů");
     }
 
     let mut downloaded_libraries = 0usize;
+    log_prepare_step("Ověřuji a stahuji oficiální knihovny.");
     for library in &base_details.libraries {
         let local_path = library_path(&paths, library);
         if sha1_matches(&local_path, &library.sha1)? {
@@ -657,10 +664,11 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
     }
 
     if downloaded_libraries > 0 {
-        changed_parts.push("libraries");
+        changed_parts.push("knihovny");
     }
 
     let mut downloaded_fabric_libraries = 0usize;
+    log_prepare_step("Ověřuji a stahuji Fabric knihovny.");
     for library in &fabric_details.libraries {
         let local_path = library_path(&paths, library);
         if sha1_matches(&local_path, &library.sha1)? {
@@ -672,10 +680,11 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
     }
 
     if downloaded_fabric_libraries > 0 {
-        changed_parts.push("Fabric libraries");
+        changed_parts.push("Fabric knihovny");
     }
 
     let mut downloaded_assets = 0usize;
+    log_prepare_step("Ověřuji a stahuji objekty assetů.");
     for asset in &asset_index_contents.objects {
         let local_path = asset_object_path(&paths, &asset.hash);
         if file_size_matches(&local_path, asset.size)? {
@@ -693,13 +702,13 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
     }
 
     if downloaded_assets > 0 {
-        changed_parts.push("asset objects");
+        changed_parts.push("objekty assetů");
     }
 
     let snapshot = collect_installation_snapshot(&paths, &base_details, &fabric_details).await?;
     let message = if changed_parts.is_empty() {
         format!(
-            "Fabric client files for {} were already up to date.",
+            "Fabric klientské soubory pro {} už byly aktuální.",
             config::MINECRAFT_VERSION
         )
     } else {
@@ -713,20 +722,17 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
 
         if all_ready {
             format!(
-                "Fabric client files prepared successfully: {}.",
+                "Fabric klientské soubory byly úspěšně připraveny: {}.",
                 changed_parts.join(", ")
             )
         } else {
             format!(
-                "Fabric preparation finished, but some files still need attention: {missing_summary}."
+                "Příprava Fabricu skončila, ale některé soubory ještě potřebují pozornost: {missing_summary}."
             )
         }
     };
 
-    let _ = logging::append_launcher_log_entry(
-        "minecraft",
-        &format!("Minecraft preparation finished: {message}"),
-    );
+    log_prepare_step(&format!("Příprava Minecraftu dokončena: {message}"));
 
     Ok(build_installation_status(
         &paths,

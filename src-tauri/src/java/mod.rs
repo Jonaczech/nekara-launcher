@@ -153,14 +153,14 @@ pub fn check_java_runtime() -> Result<JavaRuntimeCheck, String> {
         major_version: resolved.major_version,
         message: if detected {
             if resolved.source == "Custom path" {
-                "Configured Java runtime is ready.".to_string()
+                "Nastavený Java runtime je připraven.".to_string()
             } else {
-                "A compatible Java runtime was detected.".to_string()
+                "Byl nalezen kompatibilní Java runtime.".to_string()
             }
         } else if resolved.source == "Custom path" {
-            "Configured Java executable could not be started.".to_string()
+            "Nastavený Java spustitelný soubor se nepodařilo spustit.".to_string()
         } else {
-            "Java runtime was not detected on this system yet.".to_string()
+            "Na tomto systému zatím nebyl nalezen Java runtime.".to_string()
         },
     })
 }

@@ -6,3 +6,4 @@ pub const MINECRAFT_VERSION_MANIFEST_URL: &str =
 pub const OFFLINE_PLAYER_PROFILE_FILE: &str = "offline-player-profile.json";
 pub const INSTALL_LOCK_FILE: &str = "minecraft-install.lock";
 pub const LAUNCHER_SETTINGS_FILE: &str = "launcher-settings.json";
+pub const HTTP_REQUEST_TIMEOUT_SECS: u64 = 45;

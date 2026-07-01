@@ -32,16 +32,14 @@ fn offline_player_profile_path() -> Result<PathBuf, String> {
 fn validate_player_name(player_name: &str) -> Result<String, String> {
     let normalized = player_name.trim();
     if normalized.len() < 3 || normalized.len() > 16 {
-        return Err("Offline player name must be between 3 and 16 characters.".to_string());
+        return Err("Jméno offline hráče musí mít 3 až 16 znaků.".to_string());
     }
 
     if !normalized
         .chars()
         .all(|character| character.is_ascii_alphanumeric() || character == '_')
     {
-        return Err(
-            "Offline player name can only contain letters, numbers, and underscores.".to_string(),
-        );
+        return Err("Jméno offline hráče může obsahovat pouze písmena, čísla a podtržítka.".to_string());
     }
 
     Ok(normalized.to_string())
@@ -74,12 +72,12 @@ pub fn resolve_offline_player_status() -> Result<OfflinePlayerStatus, String> {
     match read_offline_player_profile()? {
         Some(profile) => Ok(OfflinePlayerStatus {
             state: OfflinePlayerState::Ready,
-            message: format!("Offline player {} is ready.", profile.player_name),
+            message: format!("Offline hráč {} je připraven.", profile.player_name),
             player_name: Some(profile.player_name),
         }),
         None => Ok(OfflinePlayerStatus {
             state: OfflinePlayerState::Missing,
-            message: "Choose an offline player name to continue.".to_string(),
+            message: "Pro pokračování zadej jméno offline hráče.".to_string(),
             player_name: None,
         }),
     }
@@ -110,7 +108,7 @@ pub fn save_offline_player_profile(player_name: String) -> Result<OfflinePlayerS
     Ok(OfflinePlayerStatus {
         state: OfflinePlayerState::Ready,
         player_name: Some(validated_player_name.clone()),
-        message: format!("Offline player {} is ready.", validated_player_name),
+        message: format!("Offline hráč {} je připraven.", validated_player_name),
     })
 }
 
@@ -129,6 +127,6 @@ pub fn clear_offline_player_profile() -> Result<OfflinePlayerStatus, String> {
     Ok(OfflinePlayerStatus {
         state: OfflinePlayerState::Missing,
         player_name: None,
-        message: "Choose an offline player name to continue.".to_string(),
+        message: "Pro pokračování zadej jméno offline hráče.".to_string(),
     })
 }

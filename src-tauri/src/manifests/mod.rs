@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
@@ -183,6 +184,7 @@ pub struct MinecraftMetadataCheck {
 fn build_http_client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .user_agent(config::PRODUCT_NAME)
+        .timeout(Duration::from_secs(config::HTTP_REQUEST_TIMEOUT_SECS))
         .build()
         .map_err(|error| format!("Failed to create HTTP client: {error}"))
 }
@@ -452,7 +454,7 @@ pub async fn check_minecraft_version_metadata() -> Result<MinecraftMetadataCheck
             library_count: Some(details.libraries.len()),
             available: true,
             message: format!(
-                "Official metadata contains target version {}.",
+                "Oficiální metadata obsahují cílovou verzi {}.",
                 config::MINECRAFT_VERSION
             ),
         }),

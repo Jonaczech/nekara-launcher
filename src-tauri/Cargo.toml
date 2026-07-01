@@ -1,6 +1,6 @@
 [package]
 name = "nekara-launcher"
-version = "0.1.6"
+version = "0.1.7"
 description = "Custom desktop launcher for the Nekara Minecraft server"
 authors = ["Nekara"]
 edition = "2021"

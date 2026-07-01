@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   CircleAlert,
   Download,
@@ -52,9 +52,9 @@ type LoadState<T> =
   | { kind: "error"; message: string };
 
 const checkStateLabel: Record<LauncherCheck["state"], string> = {
-  ready: "Ready",
-  pending: "Pending",
-  blocked: "Blocked",
+  ready: "Připraveno",
+  pending: "Čeká",
+  blocked: "Blokováno",
 };
 
 const appVersion = packageInfo.version;
@@ -98,6 +98,7 @@ function App() {
   const [launchingGame, setLaunchingGame] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const autoPrepareTriggeredRef = useRef(false);
 
   function updateRamInput(value: number) {
     if (Number.isNaN(value)) {
@@ -121,7 +122,7 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Launcher status is not available.",
+            : "Stav launcheru není k dispozici.",
       });
     }
   }
@@ -136,7 +137,7 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Minecraft installation status is not available.",
+            : "Stav instalace Minecraftu není k dispozici.",
       });
     }
   }
@@ -151,7 +152,7 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Minecraft launch status is not available.",
+            : "Stav spuštění Minecraftu není k dispozici.",
       });
     }
   }
@@ -165,8 +166,8 @@ function App() {
         kind: "error",
         message:
           error instanceof Error
-            ? error.message
-            : "Java runtime detection is not available.",
+          ? error.message
+            : "Detekce Java runtime není k dispozici.",
       });
     }
   }
@@ -183,7 +184,7 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Launcher settings are not available.",
+            : "Nastavení launcheru není k dispozici.",
       });
     }
   }
@@ -198,8 +199,8 @@ function App() {
         kind: "error",
         message:
           error instanceof Error
-            ? error.message
-            : "Launcher update status is not available.",
+          ? error.message
+            : "Stav aktualizace launcheru není k dispozici.",
       });
       throw error;
     }
@@ -221,7 +222,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Launcher status is not available.",
+                : "Stav launcheru není k dispozici.",
           });
         }
       });
@@ -239,7 +240,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Game directory preparation is not available.",
+                : "Příprava herního adresáře není k dispozici.",
           });
         }
       });
@@ -257,7 +258,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Java runtime detection is not available.",
+                : "Detekce Java runtime není k dispozici.",
           });
         }
       });
@@ -275,7 +276,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Minecraft installation status is not available.",
+                : "Stav instalace Minecraftu není k dispozici.",
           });
         }
       });
@@ -294,7 +295,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Offline player status is not available.",
+                : "Stav offline hráče není k dispozici.",
           });
         }
       });
@@ -312,7 +313,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Minecraft launch status is not available.",
+                : "Stav spuštění Minecraftu není k dispozici.",
           });
         }
       });
@@ -332,7 +333,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Launcher settings are not available.",
+                : "Nastavení launcheru není k dispozici.",
           });
         }
       });
@@ -350,7 +351,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Launcher log location is not available.",
+                : "Umístění logu launcheru není k dispozici.",
           });
         }
       });
@@ -368,7 +369,7 @@ function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "Launcher update status is not available.",
+                : "Stav aktualizace launcheru není k dispozici.",
           });
         }
       });
@@ -403,6 +404,28 @@ function App() {
       window.clearInterval(intervalId);
     };
   }, [preparingInstallation]);
+
+  useEffect(() => {
+    if (autoPrepareTriggeredRef.current) {
+      return;
+    }
+
+    if (installationState.kind !== "ready") {
+      return;
+    }
+
+    if (installationState.value.state === "ready") {
+      autoPrepareTriggeredRef.current = true;
+      return;
+    }
+
+    if (preparingInstallation || launchingGame) {
+      return;
+    }
+
+    autoPrepareTriggeredRef.current = true;
+    void handlePrepareInstallation();
+  }, [installationState, launchingGame, preparingInstallation]);
 
   const launcherStatus =
     launcherState.kind === "ready" ? launcherState.value : null;
@@ -474,61 +497,61 @@ function App() {
       : Math.round((installOperationReadyUnits / installOperationTotalUnits) * 100);
   const progressPanelLabel =
     preparingInstallation || (installationStatus != null && !installationReady)
-      ? "Fabric client progress"
-      : "Preparation progress";
+      ? "Průběh Fabric klienta"
+      : "Průběh přípravy";
   const progressPanelValue =
     preparingInstallation || (installationStatus != null && !installationReady)
       ? `${installOperationPercent}%`
-      : `${readinessCount}/5 ready`;
+      : `${readinessCount}/5 připraveno`;
   const progressPanelPercent =
     preparingInstallation || (installationStatus != null && !installationReady)
       ? installOperationPercent
       : readinessPercent;
   const primaryStatus = gameRunning
-    ? "Minecraft is running"
+    ? "Minecraft běží"
     : launchingGame
-      ? "Launching Minecraft"
-    : preparingInstallation
-    ? "Preparing Fabric client"
+      ? "Spouštím Minecraft"
+      : preparingInstallation
+    ? "Připravuji Fabric klienta"
     : readinessCount === 5
-      ? "Ready to launch"
-      : "Preparing Nekara";
+      ? "Připraveno ke spuštění"
+      : "Připravuji Nekaru";
   const primaryHint = !offlinePlayerReady
-    ? "Choose a local player name to unlock the launch flow."
+    ? "Zadej lokální jméno hráče, aby se odemklo spuštění."
     : gameRunning
-      ? gameLaunch?.message ?? "Minecraft is currently running from the launcher."
+      ? gameLaunch?.message ?? "Minecraft právě běží z launcheru."
       : gameFailed || gameExitedWithError
         ? gameLaunch?.diagnosticSummary ??
           gameLaunch?.suggestedFix ??
           gameLaunch?.message ??
-          "Minecraft did not start cleanly. Open diagnostics for the latest log details."
+          "Minecraft nenaběhl správně. Otevři diagnostiku a podívej se na poslední log."
       : launchingGame
-        ? "The launcher is building the launch command and starting the Minecraft process."
+        ? "Launcher skládá příkaz ke spuštění a startuje proces Minecraftu."
     : preparingInstallation
       ? installationProgressLabel == null
-        ? "The launcher is downloading and verifying Fabric client files, libraries, and assets."
-        : `The launcher is downloading and verifying Fabric client files. Current progress: ${installationProgressLabel}.`
+        ? "Launcher stahuje a ověřuje Fabric klientské soubory, knihovny a assety."
+        : `Launcher stahuje a ověřuje Fabric klientské soubory. Aktuální průběh: ${installationProgressLabel}.`
       : !installationReady
         ? installationStatus?.message ??
-          "Fabric client files still need to be prepared."
+          "Fabric klientské soubory je ještě potřeba připravit."
         : readinessCount === 5
-          ? "Everything required for the first offline launch is in place."
+          ? "Vše potřebné pro první offline spuštění je připravené."
           : !javaCompatible
-            ? "Fabric client files are ready. The remaining blocker is a compatible Java runtime."
-            : "The launcher is checking the remaining runtime details.";
+            ? "Fabric klientské soubory jsou připravené. Zbývá už jen kompatibilní Java runtime."
+            : "Launcher ještě kontroluje zbývající runtime detaily.";
   const primaryButtonLabel = !offlinePlayerReady
-    ? "Save player name"
+    ? "Uložit jméno hráče"
     : gameRunning
-      ? "Running"
+      ? "Běží"
       : launchingGame
-        ? "Launching..."
+        ? "Spouštím..."
     : preparingInstallation
-      ? "Preparing files..."
+      ? "Připravuji soubory..."
       : !installationReady
-        ? "Prepare client"
+        ? "Připravit klienta"
       : readinessCount === 5
-          ? "Play"
-          : "Installation ready";
+          ? "Hrát"
+          : "Instalace připravena";
   const ramMinMb = launcherSettings?.minRamMb ?? 2048;
   const ramMaxMb = launcherSettings?.maxAllowedRamMb ?? 12288;
   const ramStepMb = launcherSettings?.ramStepMb ?? 512;
@@ -549,91 +572,91 @@ function App() {
   const diagnosticRows = [
     {
       label: "Fabric loader",
-      value: installationStatus?.fabricLoaderVersion ?? "Unavailable",
+      value: installationStatus?.fabricLoaderVersion ?? "Nedostupné",
     },
     {
-      label: "Fabric profile",
-      value: installationStatus?.fabricProfileId ?? "Unavailable",
+      label: "Fabric profil",
+      value: installationStatus?.fabricProfileId ?? "Nedostupné",
     },
     {
-      label: "Minecraft dir",
-      value: gameDirectory?.minecraftDir ?? "Unavailable",
+      label: "Adresář Minecraftu",
+      value: gameDirectory?.minecraftDir ?? "Nedostupné",
     },
     {
-      label: "Launcher data",
-      value: gameDirectory?.launcherDataDir ?? "Unavailable",
+      label: "Data launcheru",
+      value: gameDirectory?.launcherDataDir ?? "Nedostupné",
     },
     {
-      label: "Launcher log dir",
-      value: launcherLog?.logDir ?? "Unavailable",
+      label: "Adresář logů launcheru",
+      value: launcherLog?.logDir ?? "Nedostupné",
     },
     {
-      label: "Launcher log file",
-      value: launcherLog?.logFile ?? "Unavailable",
+      label: "Soubor logu launcheru",
+      value: launcherLog?.logFile ?? "Nedostupné",
     },
     {
-      label: "Install status",
-      value: installationStatus?.message ?? "Unavailable",
+      label: "Stav instalace",
+      value: installationStatus?.message ?? "Nedostupné",
     },
     {
-      label: "Version JSON ready",
+      label: "JSON verze připraven",
       value:
         installationStatus == null
-          ? "Unavailable"
+          ? "Nedostupné"
           : installationStatus.versionJsonReady
-            ? "Yes"
-            : "No",
+            ? "Ano"
+            : "Ne",
     },
     {
-      label: "Fabric profile ready",
+      label: "Fabric profil připraven",
       value:
         installationStatus == null
-          ? "Unavailable"
+          ? "Nedostupné"
           : installationStatus.fabricProfileReady
-            ? "Yes"
-            : "No",
+            ? "Ano"
+            : "Ne",
     },
     {
-      label: "Libraries ready",
+      label: "Knihovny připraveny",
       value:
         installationStatus == null
-          ? "Unavailable"
+          ? "Nedostupné"
           : `${installationStatus.libraryCountReady}/${installationStatus.libraryCountTotal} + ${installationStatus.fabricLibraryCountReady}/${installationStatus.fabricLibraryCountTotal}`,
     },
     {
-      label: "Assets ready",
+      label: "Assety připraveny",
       value:
         installationStatus == null
-          ? "Unavailable"
+          ? "Nedostupné"
           : `${installationStatus.assetCountReady}/${installationStatus.assetCountTotal}`,
     },
     {
-      label: "Java compatibility",
-      value: javaCompatible ? "Compatible" : "Upgrade Java for this version",
+      label: "Kompatibilita Javy",
+      value: javaCompatible ? "Kompatibilní" : "Aktualizuj Javu pro tuto verzi",
     },
     {
-      label: "Java executable",
-      value: javaRuntime?.executablePath ?? "Not detected yet.",
+      label: "Spustitelný soubor Javy",
+      value: javaRuntime?.executablePath ?? "Zatím nezjištěno.",
     },
     {
-      label: "Game status",
-      value: gameLaunch?.message ?? "Unavailable",
+      label: "Stav hry",
+      value: gameLaunch?.message ?? "Nedostupné",
     },
     {
-      label: "Launch diagnosis",
-      value: gameLaunch?.diagnosticSummary ?? "No diagnosis captured.",
+      label: "Diagnostika spuštění",
+      value: gameLaunch?.diagnosticSummary ?? "Žádná diagnostika nebyla zachycena.",
     },
     {
-      label: "Suggested fix",
-      value: gameLaunch?.suggestedFix ?? "No fix suggested yet.",
+      label: "Navržená oprava",
+      value: gameLaunch?.suggestedFix ?? "Zatím nebyla navržena žádná oprava.",
     },
     {
-      label: "Game log",
-      value: gameLaunch?.logPath ?? "Unavailable",
+      label: "Log hry",
+      value: gameLaunch?.logPath ?? "Nedostupné",
     },
     {
-      label: "Log excerpt",
-      value: gameLaunch?.logExcerpt ?? "No log excerpt captured yet.",
+      label: "Úryvek z logu",
+      value: gameLaunch?.logExcerpt ?? "Zatím nebyl zachycen žádný úryvek logu.",
     },
   ];
 
@@ -641,7 +664,7 @@ function App() {
     ...(launcherStatus?.checks ?? []),
     {
       id: "minecraft-installation",
-      label: "Fabric client files",
+      label: "Fabric klientské soubory",
       state:
         installationState.kind === "error"
           ? "blocked"
@@ -649,7 +672,7 @@ function App() {
     },
     {
       id: "minecraft-process",
-      label: "Minecraft process",
+      label: "Proces Minecraftu",
       state:
         gameLaunch?.state === "running"
           ? "ready"
@@ -698,7 +721,7 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Offline player profile could not be saved.",
+            : "Offline hráčský profil se nepodařilo uložit.",
       });
     } finally {
       setSavingPlayer(false);
@@ -714,14 +737,14 @@ function App() {
       setPlayerState({ kind: "ready", value: status });
       setPlayerNameInput("");
       await refreshLauncherStatus();
-      setActionMessage("Offline player profile cleared.");
+      setActionMessage("Offline hráčský profil byl vymazán.");
     } catch (error: unknown) {
       setPlayerState({
         kind: "error",
         message:
           error instanceof Error
             ? error.message
-            : "Offline player profile could not be cleared.",
+            : "Offline hráčský profil se nepodařilo vymazat.",
       });
     } finally {
       setSavingPlayer(false);
@@ -743,7 +766,7 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Minecraft installation could not be prepared.",
+            : "Minecraft instalaci se nepodařilo připravit.",
       });
     } finally {
       setPreparingInstallation(false);
@@ -770,12 +793,12 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Launcher settings could not be saved.",
+            : "Nastavení launcheru se nepodařilo uložit.",
       });
       setActionMessage(
         error instanceof Error
           ? error.message
-          : "Launcher settings could not be saved.",
+          : "Nastavení launcheru se nepodařilo uložit.",
       );
     } finally {
       setSavingSettings(false);
@@ -795,12 +818,12 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Launcher update status is not available.",
+            : "Stav aktualizace launcheru není k dispozici.",
       });
       setActionMessage(
         error instanceof Error
           ? error.message
-          : "Launcher update status is not available.",
+          : "Stav aktualizace launcheru není k dispozici.",
       );
     } finally {
       setCheckingUpdate(false);
@@ -821,12 +844,12 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Launcher update could not be installed.",
+            : "Aktualizaci launcheru se nepodařilo nainstalovat.",
       });
       setActionMessage(
         error instanceof Error
           ? error.message
-          : "Launcher update could not be installed.",
+          : "Aktualizaci launcheru se nepodařilo nainstalovat.",
       );
     } finally {
       setInstallingUpdate(false);
@@ -847,10 +870,10 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Minecraft could not be launched.",
+            : "Minecraft se nepodařilo spustit.",
       });
       setActionMessage(
-        error instanceof Error ? error.message : "Minecraft could not be launched.",
+        error instanceof Error ? error.message : "Minecraft se nepodařilo spustit.",
       );
     } finally {
       setLaunchingGame(false);
@@ -869,7 +892,7 @@ function App() {
     }
 
     if (gameRunning) {
-      setActionMessage(gameLaunch?.message ?? "Minecraft is already running.");
+      setActionMessage(gameLaunch?.message ?? "Minecraft už běží.");
       return;
     }
 
@@ -881,13 +904,13 @@ function App() {
     if (!javaCompatible) {
       setActionMessage(
         installationStatus?.requiredJavaMajor == null
-          ? "Fabric client files are ready. Install or expose Java in PATH to continue toward launch."
-          : `Fabric client files are ready, but Java ${installationStatus.requiredJavaMajor} or newer is still required.`,
+          ? "Fabric klientské soubory jsou připravené. Nainstaluj nebo zpřístupni Javu v PATH a můžeš pokračovat ke spuštění."
+          : `Fabric klientské soubory jsou připravené, ale je stále potřeba Java ${installationStatus.requiredJavaMajor} nebo novější.`,
       );
       return;
     }
 
-    setActionMessage("The launcher is still preparing the isolated installation.");
+    setActionMessage("Launcher stále připravuje izolovanou instalaci.");
   }
 
   return (
@@ -905,21 +928,21 @@ function App() {
               N
             </div>
             <div className="window-bar__copy">
-              <p className="eyebrow">Nekara Launcher</p>
+            <p className="eyebrow">Nekara Launcher</p>
               <h1>Nekara</h1>
             </div>
           </div>
 
           <div
             className="window-bar__controls"
-            aria-label="Window controls"
+            aria-label="Ovládání okna"
             data-window-control="true"
             data-tauri-drag-region="false"
           >
             <button
               type="button"
               className="window-icon-button"
-              aria-label="Minimize window"
+              aria-label="Minimalizovat okno"
               data-tauri-drag-region="false"
               onClick={() => runWindowAction((appWindow) => appWindow.minimize())}
             >
@@ -928,7 +951,7 @@ function App() {
             <button
               type="button"
               className="window-icon-button window-icon-button--close"
-              aria-label="Close window"
+              aria-label="Zavřít okno"
               data-tauri-drag-region="false"
               onClick={() => runWindowAction((appWindow) => appWindow.close())}
             >
@@ -940,11 +963,11 @@ function App() {
         <section className="launcher-body">
           <section className="hero-stage" aria-labelledby="launcher-title">
             <div className="hero-stage__copy">
-              <p className="eyebrow">One game. One Fabric profile.</p>
+              <p className="eyebrow">Jedna hra. Jeden Fabric profil.</p>
               <h2 id="launcher-title">Launcher</h2>
               <p className="hero-text">
-                Pick a local player name, prepare the Nekara Fabric client, and
-                keep the launch path focused on the game, not on setup noise.
+                Zadej lokální jméno hráče, připrav Fabric klienta Nekary a
+                soustřeď se na hru, ne na zbytečné nastavování.
               </p>
             </div>
 
@@ -965,7 +988,7 @@ function App() {
 
               <div className="hero-stage__status">
                 <span className="hero-stage__status-label">
-                  {primaryStatus === "Ready to launch" ? (
+                  {primaryStatus === "Připraveno ke spuštění" ? (
                     <ShieldCheck size={14} />
                   ) : (
                     <LoaderCircle size={14} className="spin" />
@@ -981,7 +1004,7 @@ function App() {
 
             {actionMessage && <p className="hero-action-note">{actionMessage}</p>}
 
-            <div className="progress-panel" aria-label="Launcher preparation">
+            <div className="progress-panel" aria-label="Příprava launcheru">
               <div className="progress-panel__header">
                 <span>{progressPanelLabel}</span>
                 <span>{progressPanelValue}</span>
@@ -995,34 +1018,34 @@ function App() {
             </div>
           </section>
 
-          <aside className="utility-rail" aria-label="Player and menu">
+          <aside className="utility-rail" aria-label="Hráč a menu">
             <section className="profile-card">
               <div className="profile-card__avatar" aria-hidden="true">
                 <UserRound size={32} />
               </div>
               <div className="profile-card__body">
-                <p className="eyebrow">Offline player</p>
+                <p className="eyebrow">Offline hráč</p>
                 <h3>
                   {playerState.kind === "loading"
-                    ? "Checking profile"
-                    : offlinePlayer?.playerName ?? "Offline profile"}
+                    ? "Kontroluji profil"
+                    : offlinePlayer?.playerName ?? "Offline profil"}
                 </h3>
                 <p>
                   {playerState.kind === "ready"
                     ? playerState.value.message
                     : playerState.kind === "error"
                       ? playerState.message
-                      : "Checking offline player profile."}
+                      : "Kontroluji offline hráčský profil."}
                 </p>
 
                 <label className="profile-card__field">
-                  <span>Player name</span>
+                  <span>Jméno hráče</span>
                   <input
                     type="text"
                     maxLength={16}
                     value={playerNameInput}
                     onChange={(event) => setPlayerNameInput(event.target.value)}
-                    placeholder="Enter offline name"
+                    placeholder="Zadej offline jméno"
                   />
                 </label>
 
@@ -1033,7 +1056,7 @@ function App() {
                     onClick={() => void handleSaveOfflinePlayer()}
                     disabled={savingPlayer}
                   >
-                    Save
+                    Uložit
                   </button>
                   <button
                     type="button"
@@ -1041,7 +1064,7 @@ function App() {
                     onClick={() => void handleClearOfflinePlayer()}
                     disabled={savingPlayer}
                   >
-                    Clear
+                    Vymazat
                   </button>
                 </div>
               </div>
@@ -1051,7 +1074,7 @@ function App() {
               <div className="menu-card__header">
                 <div>
                   <p className="eyebrow">Menu</p>
-                  <h3>Shortcuts</h3>
+                  <h3>Zkratky</h3>
                 </div>
               </div>
 
@@ -1060,37 +1083,37 @@ function App() {
                   type="button"
                   className="menu-button"
                   onClick={() => setShowSettings(true)}
-                  aria-label="Open settings"
+                  aria-label="Otevřít nastavení"
                 >
                   <Settings2 size={18} />
-                  <span>Settings</span>
+                  <span>Nastavení</span>
                 </button>
                 <button
                   type="button"
                   className="menu-button"
                   onClick={() => setShowSettings(true)}
-                  aria-label="Open update settings"
+                  aria-label="Otevřít aktualizace"
                 >
                   <Download size={18} />
-                  <span>Updates</span>
+                  <span>Aktualizace</span>
                 </button>
                 <button
                   type="button"
                   className="menu-button"
                   onClick={() => setShowSettings(true)}
-                  aria-label="Open installation settings"
+                  aria-label="Otevřít úložiště"
                 >
                   <HardDriveDownload size={18} />
-                  <span>Storage</span>
+                  <span>Úložiště</span>
                 </button>
                 <button
                   type="button"
                   className="menu-button"
                   onClick={() => setShowSettings(true)}
-                  aria-label="Open diagnostics"
+                  aria-label="Otevřít diagnostiku"
                 >
                   <CircleAlert size={18} />
-                  <span>Diagnostics</span>
+                  <span>Diagnostika</span>
                 </button>
               </div>
             </section>
@@ -1101,8 +1124,8 @@ function App() {
       <aside className={`settings-drawer ${showSettings ? "settings-drawer--open" : ""}`}>
         <div className="settings-drawer__header">
           <div>
-            <p className="eyebrow">Settings</p>
-            <h3>Launcher controls</h3>
+            <p className="eyebrow">Nastavení</p>
+            <h3>Ovládání launcheru</h3>
           </div>
           <button
             type="button"
@@ -1111,27 +1134,27 @@ function App() {
             onClick={() => setShowSettings(false)}
           >
             <X size={14} />
-            Hide
+            Skrýt
           </button>
         </div>
 
         <div className="settings-grid">
           <section className="settings-card">
             <div className="settings-card__header">
-              <h4>Launcher update</h4>
+              <h4>Aktualizace launcheru</h4>
             </div>
             <p className="settings-card__lead">
-              The launcher checks signed GitHub Releases artifacts and installs
-              updates on demand.
+              Launcher kontroluje podepsané artefakty z GitHub Releases a
+              aktualizace instaluje na vyžádání.
             </p>
             <div className="settings-control-stack">
               <dl className="settings-meta">
                 <div>
-                  <dt>Current version</dt>
+                  <dt>Aktuální verze</dt>
                   <dd>{currentVersionLabel}</dd>
                 </div>
                 <div>
-                  <dt>Channel</dt>
+                  <dt>Kanál</dt>
                   <dd>GitHub Releases</dd>
                 </div>
               </dl>
@@ -1139,26 +1162,26 @@ function App() {
               <div className="settings-update-state">
                 <span className="settings-value-chip">
                   {launcherUpdateState.kind === "loading"
-                    ? "Checking..."
+                    ? "Kontroluji..."
                     : launcherUpdateState.kind === "error"
-                      ? "Unavailable"
+                      ? "Nedostupné"
                       : updateAvailable
-                        ? `Update ${launcherUpdate?.version} available`
-                        : "Up to date"}
+                        ? `Dostupná aktualizace ${launcherUpdate?.version}`
+                        : "Aktuální"}
                 </span>
                 <p className="settings-helper-text">
                   {launcherUpdateState.kind === "loading"
-                    ? "Checking the release endpoint for a newer launcher build."
+                    ? "Kontroluji release endpoint kvůli novější verzi launcheru."
                     : launcherUpdateState.kind === "error"
                       ? launcherUpdateState.message
-                      : launcherUpdate?.message ?? "Launcher is up to date."}
+                      : launcherUpdate?.message ?? "Launcher je aktuální."}
                 </p>
               </div>
 
               {updateAvailable && launcherUpdate != null && (
                 <div className="settings-release-notes">
                   <div className="settings-release-notes__header">
-                    <span>Release notes</span>
+                    <span>Poznámky k vydání</span>
                     <span>{launcherUpdate.version}</span>
                   </div>
                   {launcherUpdate.date && (
@@ -1177,7 +1200,7 @@ function App() {
                   onClick={() => void handleCheckLauncherUpdate()}
                   disabled={checkingUpdate || installingUpdate}
                 >
-                  {checkingUpdate ? "Checking..." : "Check for updates"}
+                  {checkingUpdate ? "Kontroluji..." : "Zkontrolovat aktualizace"}
                 </button>
                 <button
                   type="button"
@@ -1189,7 +1212,7 @@ function App() {
                     !updateAvailable
                   }
                 >
-                  {installingUpdate ? "Installing..." : "Install update"}
+                  {installingUpdate ? "Instaluji..." : "Nainstalovat aktualizaci"}
                 </button>
               </div>
             </div>
@@ -1199,8 +1222,8 @@ function App() {
             <div className="settings-card__header">
               <h4>RAM</h4>
             </div>
-            <p className="settings-card__lead">
-              Memory allocation belongs here instead of the main screen.
+              <p className="settings-card__lead">
+              Přidělení paměti patří sem, ne na hlavní obrazovku.
             </p>
             {launcherSettingsState.kind === "error" ? (
               <p className="settings-error-note">{launcherSettingsState.message}</p>
@@ -1208,7 +1231,7 @@ function App() {
               <div className="settings-control-stack">
                 <div className="settings-inline-fields">
                   <label className="settings-slider-field">
-                    <span>Memory limit</span>
+                    <span>Limit paměti</span>
                     <input
                       className="settings-slider"
                       type="range"
@@ -1224,7 +1247,7 @@ function App() {
                   </label>
 
                   <label className="settings-number-field">
-                    <span>Current value</span>
+                    <span>Aktuální hodnota</span>
                     <input
                       type="number"
                       min={ramMinMb}
@@ -1242,7 +1265,7 @@ function App() {
                 <div className="settings-inline-meta">
                   <span className="settings-value-chip">{ramInputLabel}</span>
                   <span className="settings-helper-text">
-                    Launches Minecraft with the selected `-Xmx` limit.
+                    Spouští Minecraft s vybraným limitem `-Xmx`.
                   </span>
                 </div>
 
@@ -1257,7 +1280,7 @@ function App() {
                       !launcherSettingsDirty
                     }
                   >
-                    {savingSettings ? "Saving..." : "Save RAM"}
+                    {savingSettings ? "Ukládám..." : "Uložit RAM"}
                   </button>
                   <button
                     type="button"
@@ -1271,7 +1294,7 @@ function App() {
                     }}
                     disabled={savingSettings}
                   >
-                    Reset
+                    Obnovit
                   </button>
                 </div>
               </div>
@@ -1283,16 +1306,15 @@ function App() {
               <h4>Java runtime</h4>
             </div>
             <p className="settings-card__lead">
-              Leave this blank to use the first `java` found in PATH, or point it
-              to a custom `java.exe` when you want the launcher to stick to one
-              known runtime.
+              Nech to prázdné, pokud chceš použít první `java` z PATH, nebo sem
+              vlož vlastní `java.exe`, když chceš používat jen jeden známý runtime.
             </p>
             {launcherSettingsState.kind === "error" ? (
               <p className="settings-error-note">{launcherSettingsState.message}</p>
             ) : (
               <div className="settings-control-stack">
                 <label className="settings-path-field">
-                  <span>Java executable path</span>
+                  <span>Cesta ke spustitelnému souboru Javy</span>
                   <input
                     type="text"
                     value={javaPathInput}
@@ -1304,11 +1326,11 @@ function App() {
 
                 <div className="settings-inline-meta">
                   <span className="settings-value-chip">
-                    {javaPathNormalized.length > 0 ? "Custom path" : "System PATH"}
+                    {javaPathNormalized.length > 0 ? "Vlastní cesta" : "Systémová PATH"}
                   </span>
                   <span className="settings-helper-text">
-                    The launcher will try this executable before falling back to the
-                    system lookup.
+                    Launcher zkusí tento soubor dřív, než přejde na systémové
+                    hledání.
                   </span>
                 </div>
 
@@ -1323,7 +1345,7 @@ function App() {
                       !launcherSettingsDirty
                     }
                   >
-                    {savingSettings ? "Saving..." : "Save runtime"}
+                    {savingSettings ? "Ukládám..." : "Uložit runtime"}
                   </button>
                   <button
                     type="button"
@@ -1337,7 +1359,7 @@ function App() {
                     }}
                     disabled={savingSettings}
                   >
-                    Reset
+                    Obnovit
                   </button>
                 </div>
               </div>
@@ -1346,7 +1368,7 @@ function App() {
 
           <section className="settings-card">
             <div className="settings-card__header">
-              <h4>Readiness</h4>
+              <h4>Připravenost</h4>
             </div>
             <ul className="settings-checklist">
               {readinessChecks.map((check) => (
@@ -1359,8 +1381,8 @@ function App() {
               ))}
               {readinessChecks.length === 0 && (
                 <li className="settings-checkline settings-checkline--pending">
-                  <span className="settings-checkline__label">Loading launcher state</span>
-                  <span className="settings-checkline__value">Pending</span>
+                  <span className="settings-checkline__label">Načítám stav launcheru</span>
+                  <span className="settings-checkline__value">Čeká</span>
                 </li>
               )}
             </ul>
@@ -1368,7 +1390,7 @@ function App() {
 
           <section className="settings-card settings-card--wide">
             <div className="settings-card__header">
-              <h4>Client diagnostics</h4>
+              <h4>Diagnostika klienta</h4>
             </div>
             <dl className="settings-diagnostics">
               {diagnosticRows.map((row) => (

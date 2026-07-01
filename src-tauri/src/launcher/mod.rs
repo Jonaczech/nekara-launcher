@@ -46,27 +46,27 @@ pub fn get_launcher_status() -> LauncherStatus {
         checks: vec![
             LauncherCheck {
                 id: "configuration",
-                label: "Single Nekara configuration",
+                label: "Jedna konfigurace Nekara",
                 state: CheckState::Ready,
             },
             LauncherCheck {
                 id: "minecraft-version",
-                label: "Target Minecraft version locked",
+                label: "Cílová verze Minecraftu je pevně daná",
                 state: CheckState::Ready,
             },
             LauncherCheck {
                 id: "metadata-resolution",
-                label: "Fabric client metadata available",
+                label: "Metadata Fabric klienta jsou dostupná",
                 state: CheckState::Ready,
             },
             LauncherCheck {
                 id: "runtime",
-                label: "Java runtime detection",
+                label: "Detekce Java runtime",
                 state: CheckState::Pending,
             },
             LauncherCheck {
                 id: "offline-player",
-                label: "Offline player profile",
+                label: "Offline hráčský profil",
                 state: if matches!(
                     player_status.as_ref().map(|status| status.state),
                     Some(auth::OfflinePlayerState::Ready)

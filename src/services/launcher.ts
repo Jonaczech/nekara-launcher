@@ -24,27 +24,27 @@ const browserPreviewLauncherStatus: LauncherStatus = {
   checks: [
     {
       id: "configuration",
-      label: "Single Nekara configuration",
+      label: "Jedna konfigurace Nekara",
       state: "ready",
     },
     {
       id: "minecraft-version",
-      label: "Target Minecraft version locked",
+      label: "Cílová verze Minecraftu je pevně daná",
       state: "ready",
     },
     {
       id: "metadata-resolution",
-      label: "Minecraft metadata available",
+      label: "Metadata Minecraftu jsou dostupná",
       state: "pending",
     },
     {
       id: "runtime",
-      label: "Java runtime detection",
+      label: "Detekce Java runtime",
       state: "blocked",
     },
     {
       id: "offline-player",
-      label: "Offline player profile",
+      label: "Offline hráčský profil",
       state: "blocked",
     },
   ],
@@ -68,7 +68,7 @@ const browserPreviewMetadataCheck: MinecraftMetadataCheck = {
   libraryCount: null,
   available: false,
   message:
-    "Browser preview fallback is active. Run the app inside Tauri for live metadata verification.",
+    "Je aktivní náhradní režim pro prohlížeč. Pro živé ověření metadat spusť aplikaci uvnitř Tauri.",
 };
 
 const browserPreviewGameDirectoryInfo: GameDirectoryInfo = {
@@ -78,7 +78,7 @@ const browserPreviewGameDirectoryInfo: GameDirectoryInfo = {
   exists: false,
   created: false,
   message:
-    "Browser preview fallback is active. Run the app inside Tauri to create the Nekara game directory.",
+    "Je aktivní náhradní režim pro prohlížeč. Pro vytvoření herního adresáře Nekara spusť aplikaci uvnitř Tauri.",
 };
 
 const browserPreviewJavaRuntimeCheck: JavaRuntimeCheck = {
@@ -90,7 +90,7 @@ const browserPreviewJavaRuntimeCheck: JavaRuntimeCheck = {
   javaVersion: null,
   majorVersion: null,
   message:
-    "Browser preview fallback is active. Run the app inside Tauri to detect Java.",
+    "Je aktivní náhradní režim pro prohlížeč. Pro detekci Javy spusť aplikaci uvnitř Tauri.",
 };
 
 const browserPreviewMinecraftInstallationPlan: MinecraftInstallationPlan = {
@@ -113,7 +113,7 @@ const browserPreviewMinecraftInstallationPlan: MinecraftInstallationPlan = {
   assetIndexUrl: null,
   libraryCount: null,
   message:
-    "Browser preview fallback is active. Run the app inside Tauri to prepare install paths.",
+    "Je aktivní náhradní režim pro prohlížeč. Pro přípravu instalačních cest spusť aplikaci uvnitř Tauri.",
 };
 
 const browserPreviewMinecraftInstallationStatus: MinecraftInstallationStatus = {
@@ -151,14 +151,14 @@ const browserPreviewMinecraftInstallationStatus: MinecraftInstallationStatus = {
   assetIndexUrl: null,
   assetIndexTotalSize: null,
   message:
-    "Browser preview fallback is active. Run the app inside Tauri to prepare Fabric client files.",
+    "Je aktivní náhradní režim pro prohlížeč. Pro přípravu Fabric klientských souborů spusť aplikaci uvnitř Tauri.",
 };
 
 const browserPreviewOfflinePlayerStatus: OfflinePlayerStatus = {
   state: "missing",
   playerName: null,
   message:
-    "Browser preview fallback is active. Run the app inside Tauri to save an offline player profile.",
+    "Je aktivní náhradní režim pro prohlížeč. Pro uložení offline hráčského profilu spusť aplikaci uvnitř Tauri.",
 };
 
 const browserPreviewGameLaunchStatus: GameLaunchStatus = {
@@ -181,7 +181,7 @@ const browserPreviewGameLaunchStatus: GameLaunchStatus = {
   suggestedFix: null,
   logExcerpt: null,
   message:
-    "Browser preview fallback is active. Run the app inside Tauri to launch Minecraft.",
+    "Je aktivní náhradní režim pro prohlížeč. Pro spuštění Minecraftu spusť aplikaci uvnitř Tauri.",
 };
 
 const browserPreviewLauncherSettings: LauncherSettings = {
@@ -190,7 +190,7 @@ const browserPreviewLauncherSettings: LauncherSettings = {
   minRamMb: 2048,
   maxAllowedRamMb: 12288,
   ramStepMb: 512,
-  message: "Browser preview fallback uses 4096 MB as the RAM limit.",
+  message: "Náhradní režim pro prohlížeč používá limit RAM 4096 MB.",
 };
 
 const browserPreviewLauncherLogInfo: LauncherLogInfo = {
@@ -253,7 +253,7 @@ export function prepareMinecraftInstallation() {
       state: "ready" as const,
       versionJsonReady: true,
       clientJarReady: true,
-      message: "Browser preview fallback simulated a prepared installation.",
+      message: "Náhradní režim pro prohlížeč nasimuloval připravenou instalaci.",
     });
   }
 
@@ -281,7 +281,7 @@ export function launchMinecraft() {
     return Promise.resolve({
       ...browserPreviewGameLaunchStatus,
       state: "running" as const,
-      message: "Browser preview fallback simulated a running Minecraft session.",
+      message: "Náhradní režim pro prohlížeč nasimuloval běžící relaci Minecraftu.",
     });
   }
 
@@ -305,7 +305,7 @@ export function saveLauncherSettings(
       ...browserPreviewLauncherSettings,
       maxRamMb,
       javaExecutablePath,
-      message: `Browser preview fallback saved ${maxRamMb} MB as the RAM limit.`,
+      message: `Náhradní režim pro prohlížeč uložil ${maxRamMb} MB jako limit RAM.`,
     });
   }
 
@@ -320,7 +320,7 @@ export function saveOfflinePlayerProfile(playerName: string) {
     return Promise.resolve({
       state: "ready" as const,
       playerName,
-      message: `Offline player ${playerName} is ready.`,
+      message: `Offline hráč ${playerName} je připraven.`,
     });
   }
 

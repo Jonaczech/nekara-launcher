@@ -114,6 +114,10 @@ failure hints plus a captured log excerpt available after unsuccessful starts.
 It also accepts an optional custom Java executable path so the runtime can be
 pinned instead of relying only on the system `PATH`.
 
+The player-facing UI and launcher diagnostics are localized to Czech, and the
+launcher now auto-starts client preparation when the Fabric-backed installation
+is still missing files.
+
 Launcher-side diagnostic logs are written under the user profile inside the
 Nekara launcher data directory, in a dedicated `logs` folder, so update and
 launch failures can be reviewed after the fact.

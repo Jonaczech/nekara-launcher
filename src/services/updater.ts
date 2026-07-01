@@ -16,7 +16,7 @@ const browserPreviewUpdateStatus: LauncherUpdateStatus = {
   date: null,
   body: null,
   message:
-    "Browser preview fallback is active. Run the app inside Tauri to check launcher updates.",
+    "Je aktivní náhradní režim pro prohlížeč. Pro kontrolu aktualizací launcheru spusť aplikaci uvnitř Tauri.",
 };
 
 function toUpdateStatus(update: Awaited<ReturnType<typeof check>>): LauncherUpdateStatus {
@@ -26,7 +26,7 @@ function toUpdateStatus(update: Awaited<ReturnType<typeof check>>): LauncherUpda
       version: null,
       date: null,
       body: null,
-      message: "Launcher is up to date.",
+      message: "Launcher je aktuální.",
     };
   }
 
@@ -35,7 +35,7 @@ function toUpdateStatus(update: Awaited<ReturnType<typeof check>>): LauncherUpda
     version: update.version,
     date: update.date ?? null,
     body: update.body ?? null,
-    message: `Launcher update ${update.version} is available.`,
+    message: `Dostupná aktualizace launcheru ${update.version}.`,
   };
 }
 
@@ -68,22 +68,22 @@ export async function checkLauncherUpdate() {
     return browserPreviewUpdateStatus;
   }
 
-  await logUpdate("updater", "Checking for launcher updates.");
+  await logUpdate("updater", "Kontroluji aktualizace launcheru.");
 
   try {
     const update = await check();
     await logUpdate(
       "updater",
       update == null
-        ? "No launcher update is available."
-        : `Launcher update ${update.version} is available.`,
+        ? "Žádná aktualizace launcheru není dostupná."
+        : `Dostupná aktualizace launcheru ${update.version}.`,
     );
     return toUpdateStatus(update);
   } catch (error: unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown updater failure.";
-    await logUpdate("updater", `Launcher update check failed: ${errorMessage}`);
-    throw new Error(`Launcher update check failed: ${errorMessage}`);
+      error instanceof Error ? error.message : "Neznámá chyba aktualizátoru.";
+    await logUpdate("updater", `Kontrola aktualizace launcheru selhala: ${errorMessage}`);
+    throw new Error(`Kontrola aktualizace launcheru selhala: ${errorMessage}`);
   }
 }
 
@@ -92,7 +92,7 @@ export async function installLauncherUpdate() {
     return {
       ...browserPreviewUpdateStatus,
       message:
-        "Browser preview fallback cannot install updates. Run the app inside Tauri.",
+        "Náhradní režim pro prohlížeč neumí instalovat aktualizace. Spusť aplikaci uvnitř Tauri.",
     };
   }
 
@@ -103,32 +103,32 @@ export async function installLauncherUpdate() {
     if (update == null) {
       await logUpdate(
         "updater",
-        "Update installation requested, but no update was available.",
+        "Byla vyžádána instalace aktualizace, ale žádná nebyla dostupná.",
       );
       return {
         available: false,
         version: null,
         date: null,
         body: null,
-        message: "Launcher is already up to date.",
+        message: "Launcher je už aktuální.",
       };
     }
 
-    await logUpdate("updater", "Clearing stale updater cache before install.");
+    await logUpdate("updater", "Před instalací čistím zastaralou mezipaměť aktualizátoru.");
     await clearLauncherUpdaterCache();
-    await logUpdate("updater", `Downloading launcher update ${update.version}.`);
+    await logUpdate("updater", `Stahuji aktualizaci launcheru ${update.version}.`);
     await update.downloadAndInstall();
-    await logUpdate("updater", `Launcher update ${update.version} installed successfully. Relaunching.`);
+    await logUpdate("updater", `Aktualizace launcheru ${update.version} byla úspěšně nainstalována. Spouštím znovu.`);
     await relaunch();
   } catch (error: unknown) {
     const errorMessage = formatUpdaterError(error);
     await logUpdate(
       "updater",
-      update == null
-        ? `Launcher update installation failed before download started: ${errorMessage}`
-        : `Launcher update ${update.version} failed: ${errorMessage}`,
+        update == null
+        ? `Instalace aktualizace launcheru selhala ještě před zahájením stahování: ${errorMessage}`
+        : `Aktualizace launcheru ${update.version} selhala: ${errorMessage}`,
     );
-    throw new Error(`Launcher update failed: ${errorMessage}`);
+    throw new Error(`Aktualizace launcheru selhala: ${errorMessage}`);
   }
 
   return toUpdateStatus(update);

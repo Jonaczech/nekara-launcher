@@ -35,13 +35,13 @@ fn launcher_settings_path() -> Result<PathBuf, String> {
 fn normalize_max_ram_mb(max_ram_mb: u32) -> Result<u32, String> {
     if !(MIN_MAX_RAM_MB..=MAX_MAX_RAM_MB).contains(&max_ram_mb) {
         return Err(format!(
-            "RAM allocation must stay between {} MB and {} MB.",
+            "Přidělení RAM musí zůstat mezi {} MB a {} MB.",
             MIN_MAX_RAM_MB, MAX_MAX_RAM_MB
         ));
     }
 
     if !max_ram_mb.is_multiple_of(RAM_STEP_MB) {
-        return Err(format!("RAM allocation must use {} MB steps.", RAM_STEP_MB));
+        return Err(format!("Přidělení RAM musí používat kroky po {} MB.", RAM_STEP_MB));
     }
 
     Ok(max_ram_mb)
@@ -89,11 +89,11 @@ pub fn resolve_launcher_settings() -> Result<LauncherSettings, String> {
     let java_executable_path = resolve_java_executable_path()?;
     let message = if let Some(java_executable_path) = java_executable_path.as_deref() {
         format!(
-            "Launcher RAM limit is set to {} MB and a custom Java path is configured at {}.",
+            "Limit RAM launcheru je nastaven na {} MB a vlastní cesta k Javě je nastavena na {}.",
             max_ram_mb, java_executable_path
         )
     } else {
-        format!("Launcher RAM limit is set to {} MB.", max_ram_mb)
+        format!("Limit RAM launcheru je nastaven na {} MB.", max_ram_mb)
     };
 
     Ok(LauncherSettings {

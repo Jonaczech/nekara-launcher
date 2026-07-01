@@ -226,7 +226,7 @@ fn initial_game_launch_status() -> GameLaunchStatus {
         diagnostic_summary: None,
         suggested_fix: None,
         log_excerpt: None,
-        message: "Minecraft is not running.".to_string(),
+        message: "Minecraft neběží.".to_string(),
     }
 }
 
@@ -239,13 +239,13 @@ fn read_game_status() -> Result<GameLaunchStatus, String> {
     game_status_store()
         .lock()
         .map(|status| status.clone())
-        .map_err(|_| "Unable to read game launch status.".to_string())
+        .map_err(|_| "Stav spuštění hry se nepodařilo načíst.".to_string())
 }
 
 fn write_game_status(status: GameLaunchStatus) -> Result<(), String> {
     let mut current_status = game_status_store()
         .lock()
-        .map_err(|_| "Unable to update game launch status.".to_string())?;
+        .map_err(|_| "Stav spuštění hry se nepodařilo aktualizovat.".to_string())?;
     *current_status = status;
     Ok(())
 }
@@ -452,7 +452,7 @@ fn launch_paths(fabric_profile_id: &str) -> Result<LaunchPaths, String> {
 
 fn ensure_directory(path: &Path) -> Result<(), String> {
     fs::create_dir_all(path)
-        .map_err(|error| format!("Unable to create directory at {}: {error}", path.display()))
+        .map_err(|error| format!("Adresář se nepodařilo vytvořit na {}: {error}", path.display()))
 }
 
 fn read_log_tail(path: &Path, max_lines: usize) -> Option<String> {
@@ -575,7 +575,7 @@ fn classpath_separator() -> &'static str {
 
 fn parse_launch_manifest(version_json: &str) -> Result<LaunchVersionManifest, String> {
     serde_json::from_str(version_json)
-        .map_err(|error| format!("Unable to decode Minecraft launch metadata: {error}"))
+        .map_err(|error| format!("Metadata spuštění Minecraftu se nepodařilo dekódovat: {error}"))
 }
 
 fn ensure_launch_requirements(
@@ -584,15 +584,15 @@ fn ensure_launch_requirements(
     fabric_details: &fabric::FabricInstallationDetails,
 ) -> Result<(), String> {
     if !paths.version_json_path.exists() {
-        return Err("Minecraft version metadata is missing. Prepare the client first.".to_string());
+        return Err("Chybí metadata verze Minecraftu. Nejprve připrav klienta.".to_string());
     }
 
     if !paths.client_jar_path.exists() {
-        return Err("Minecraft client jar is missing. Prepare the client first.".to_string());
+        return Err("Chybí client `.jar` soubor Minecraftu. Nejprve připrav klienta.".to_string());
     }
 
     if !paths.fabric_profile_json_path.exists() {
-        return Err("Fabric profile metadata is missing. Prepare the client first.".to_string());
+        return Err("Chybí metadata Fabric profilu. Nejprve připrav klienta.".to_string());
     }
 
     let asset_index_path = paths
@@ -600,14 +600,14 @@ fn ensure_launch_requirements(
         .join("indexes")
         .join(format!("{}.json", base_details.asset_index.id));
     if !asset_index_path.exists() {
-        return Err("Minecraft asset index is missing. Prepare the client first.".to_string());
+        return Err("Chybí index assetů Minecraftu. Nejprve připrav klienta.".to_string());
     }
 
     for library in &base_details.libraries {
         let library_path = paths.libraries_dir.join(&library.path);
         if !library_path.exists() {
             return Err(format!(
-                "A required library is missing: {}. Prepare the client first.",
+                "Chybí požadovaná knihovna: {}. Nejprve připrav klienta.",
                 library_path.display()
             ));
         }
@@ -617,7 +617,7 @@ fn ensure_launch_requirements(
         let library_path = paths.libraries_dir.join(&library.path);
         if !library_path.exists() {
             return Err(format!(
-                "A required Fabric library is missing: {}. Prepare the client first.",
+                "Chybí požadovaná Fabric knihovna: {}. Nejprve připrav klienta.",
                 library_path.display()
             ));
         }
@@ -708,7 +708,7 @@ fn build_launch_failure_status(context: LaunchFailureContext) -> GameLaunchStatu
         diagnostic_summary: Some(context.diagnostic_summary),
         suggested_fix: Some(context.suggested_fix),
         log_excerpt: None,
-        message: "Minecraft launch failed before the game process started.".to_string(),
+        message: "Spuštění Minecraftu selhalo ještě před startem herního procesu.".to_string(),
     }
 }
 
@@ -728,18 +728,18 @@ fn start_game_monitor(mut child: std::process::Child, mut status: GameLaunchStat
                 status.message = if exit_status.success() {
                     status.diagnostic_summary = None;
                     status.suggested_fix = None;
-                    "Minecraft exited normally.".to_string()
+                    "Minecraft skončil normálně.".to_string()
                 } else {
                     status.diagnostic_summary = Some(
-                        "Minecraft exited with a non-zero code and the launcher captured the latest log excerpt."
+                        "Minecraft skončil s nenulovým kódem a launcher zachytil poslední úryvek logu."
                             .to_string(),
                     );
                     status.suggested_fix = Some(
-                    "Open the game log in settings, check the latest lines, and confirm Java compatibility plus prepared client files."
+                    "Otevři herní log v nastavení, zkontroluj poslední řádky a ověř kompatibilitu Javy i připravené klientské soubory."
                             .to_string(),
                     );
                     format!(
-                        "Minecraft exited with code {}.",
+                        "Minecraft skončil s kódem {}.",
                         exit_status
                             .code()
                             .map(|code| code.to_string())
@@ -749,7 +749,7 @@ fn start_game_monitor(mut child: std::process::Child, mut status: GameLaunchStat
                 let _ = logging::append_launcher_log_entry(
                     "game",
                     &format!(
-                        "Minecraft process finished with exit code {:?}. Log file: {}",
+                        "Proces Minecraftu skončil s kódem {:?}. Soubor logu: {}",
                         status.exit_code,
                         status.log_path.as_deref().unwrap_or("unavailable")
                     ),
@@ -759,17 +759,17 @@ fn start_game_monitor(mut child: std::process::Child, mut status: GameLaunchStat
                 status.state = GameLaunchState::Failed;
                 status.finished_at_unix_ms = Some(current_timestamp_ms());
                 status.diagnostic_summary = Some(
-                    "The launcher could not monitor the Minecraft process to completion."
+                    "Launcher nedokázal sledovat proces Minecraftu až do konce."
                         .to_string(),
                 );
                 status.suggested_fix = Some(
-                    "Try launching again and, if the problem repeats, inspect the stored game log path."
+                    "Zkus spustit znovu a pokud se problém opakuje, otevři uloženou cestu k hernímu logu."
                         .to_string(),
                 );
-                status.message = format!("Minecraft process monitoring failed: {error}");
+                status.message = format!("Sledování procesu Minecraftu selhalo: {error}");
                 let _ = logging::append_launcher_log_entry(
                     "game",
-                    &format!("Minecraft process monitoring failed: {error}"),
+                    &format!("Sledování procesu Minecraftu selhalo: {error}"),
                 );
             }
         }
@@ -790,18 +790,18 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         current_status.state,
         GameLaunchState::Launching | GameLaunchState::Running
     ) {
-        return Err("Minecraft is already running from this launcher session.".to_string());
+        return Err("Minecraft už běží v této relaci launcheru.".to_string());
     }
 
     let offline_player = auth::resolve_offline_player_status()?;
     let player_name = offline_player
         .player_name
-        .ok_or_else(|| "Choose an offline player name before launching.".to_string())?;
+        .ok_or_else(|| "Před spuštěním zadej jméno offline hráče.".to_string())?;
     let launcher_settings = settings::resolve_launcher_settings()?;
     let _ = logging::append_launcher_log_entry(
         "game",
         &format!(
-            "Launch requested for player {player_name} with configured RAM {} MB.",
+            "Požadováno spuštění pro hráče {player_name} s nastavenou RAM {} MB.",
             launcher_settings.max_ram_mb
         ),
     );
@@ -812,7 +812,7 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
     if let Err(error) = ensure_launch_requirements(&paths, &base_details, &fabric_details) {
         let _ = logging::append_launcher_log_entry(
             "game",
-            &format!("Launch prerequisites failed: {error}"),
+            &format!("Předpoklady spuštění selhaly: {error}"),
         );
         let failed_status = build_launch_failure_status(LaunchFailureContext {
             player_name: Some(player_name.clone()),
@@ -828,7 +828,7 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
             working_directory: Some(paths.minecraft_dir.display().to_string()),
             log_path: None,
             diagnostic_summary: error,
-            suggested_fix: "Run Prepare client again before trying to launch Minecraft."
+            suggested_fix: "Znovu spusť přípravu klienta, než zkusíš Minecraft spustit."
                 .to_string(),
         });
         let _ = write_game_status(failed_status.clone());
@@ -852,14 +852,14 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
                 configured_max_ram_mb: Some(launcher_settings.max_ram_mb),
                 working_directory: Some(paths.minecraft_dir.display().to_string()),
                 log_path: None,
-                diagnostic_summary: "Java executable was not detected in PATH.".to_string(),
+                diagnostic_summary: "Spustitelný soubor Javy nebyl v PATH nalezen.".to_string(),
                 suggested_fix:
-                    "Install a compatible Java runtime and make sure the `java` command is available in PATH."
+                    "Nainstaluj kompatibilní Java runtime a ověř, že je příkaz `java` dostupný v PATH."
                         .to_string(),
             });
             let _ = logging::append_launcher_log_entry(
                 "game",
-                "Java executable was not detected in PATH.",
+                "Spustitelný soubor Javy nebyl v PATH nalezen.",
             );
             let _ = write_game_status(failed_status.clone());
             return Ok(failed_status);
@@ -876,15 +876,15 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
             Some(major_version) => major_version,
             None => {
                 let diagnostic_summary = if java_runtime.source == "Custom path" {
-                    "Configured Java executable could not be started.".to_string()
+                    "Nastavenou Javu se nepodařilo spustit.".to_string()
                 } else {
-                    "Java was detected, but its major version could not be resolved.".to_string()
+                    "Javu se podařilo detekovat, ale její hlavní verzi se nepodařilo určit.".to_string()
                 };
                 let suggested_fix = if java_runtime.source == "Custom path" {
-                    "Check the configured Java path, make sure the file exists, or clear the custom path to use PATH again."
+                    "Zkontroluj nastavenou cestu k Javě, ověř že soubor existuje, nebo vlastní cestu smaž, aby se znovu použila PATH."
                         .to_string()
                 } else {
-                    "Install a standard JDK or JRE and verify that `java -version` works from the terminal."
+                    "Nainstaluj běžné JDK nebo JRE a ověř, že `java -version` funguje v terminálu."
                         .to_string()
                 };
                 let failed_status = build_launch_failure_status(LaunchFailureContext {
@@ -900,7 +900,7 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
                 });
                 let _ = logging::append_launcher_log_entry(
                     "game",
-                    "Detected Java version could not be resolved.",
+                    "Podařilo se detekovat Javu, ale verzi nebylo možné určit.",
                 );
                 let _ = write_game_status(failed_status.clone());
                 return Ok(failed_status);
@@ -917,20 +917,20 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
                 working_directory: Some(paths.minecraft_dir.display().to_string()),
                 log_path: None,
                 diagnostic_summary: format!(
-                    "Minecraft {} requires Java {} or newer, but only Java {} was detected.",
+                    "Minecraft {} vyžaduje Javu {} nebo novější, ale byla nalezena pouze Java {}.",
                     config::MINECRAFT_VERSION,
                     required_java_major,
                     detected_major
                 ),
                 suggested_fix: format!(
-                    "Install Java {} or newer, then try launching again.",
+                    "Nainstaluj Javu {} nebo novější a pak zkus spuštění znovu.",
                     required_java_major
                 ),
             });
             let _ = logging::append_launcher_log_entry(
                 "game",
                 &format!(
-                    "Java {} is too old for Minecraft {}; required {}.",
+                    "Java {} je pro Minecraft {} příliš stará; je potřeba {}.",
                     detected_major,
                     config::MINECRAFT_VERSION,
                     required_java_major
@@ -946,7 +946,7 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         let _ = logging::append_launcher_log_entry(
             "game",
             &format!(
-                "Fabric profile {} inherits from {:?} instead of {}.",
+                "Fabric profil {} dědí z {:?} místo z {}.",
                 launch_manifest.id,
                 launch_manifest.inherits_from,
                 config::MINECRAFT_VERSION
@@ -1025,13 +1025,13 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         diagnostic_summary: None,
         suggested_fix: None,
         log_excerpt: None,
-        message: "Launching Minecraft.".to_string(),
+        message: "Spouštím Minecraft.".to_string(),
     };
     write_game_status(launching_status)?;
     let _ = logging::append_launcher_log_entry(
         "game",
         &format!(
-            "Launching Minecraft {} from {} with Java {}.",
+            "Spouštím Minecraft {} z {} s Javou {}.",
             config::MINECRAFT_VERSION,
             paths.minecraft_dir.display(),
             java_executable
@@ -1044,13 +1044,13 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         .open(&log_path)
         .map_err(|error| {
             format!(
-                "Unable to open Minecraft log file at {}: {error}",
+                "Soubor logu Minecraftu na {} se nepodařilo otevřít: {error}",
                 log_path.display()
             )
         })?;
     let stderr_log = log_file
         .try_clone()
-        .map_err(|error| format!("Unable to clone Minecraft log file handle: {error}"))?;
+        .map_err(|error| format!("Popisovač souboru logu Minecraftu se nepodařilo zkopírovat: {error}"))?;
 
     let mut command = Command::new(&java_executable);
     command
@@ -1069,7 +1069,7 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         Err(error) => {
             let _ = logging::append_launcher_log_entry(
                 "game",
-                &format!("Unable to start Minecraft process: {error}"),
+                &format!("Proces Minecraftu se nepodařilo spustit: {error}"),
             );
             let failed_status = build_launch_failure_status(LaunchFailureContext {
                 player_name: Some(player_name.clone()),
@@ -1079,9 +1079,9 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
                 configured_max_ram_mb: Some(launcher_settings.max_ram_mb),
                 working_directory: Some(paths.minecraft_dir.display().to_string()),
                 log_path: Some(log_path.display().to_string()),
-                diagnostic_summary: format!("Unable to start Minecraft process: {error}"),
+                diagnostic_summary: format!("Proces Minecraftu se nepodařilo spustit: {error}"),
                 suggested_fix:
-                    "Check that Java is installed correctly, the launcher has file access, and the prepared client files still exist."
+                    "Ověř, že je Java správně nainstalovaná, launcher má přístup k souborům a připravené klientské soubory stále existují."
                         .to_string(),
             });
             let _ = write_game_status(failed_status.clone());
@@ -1108,13 +1108,13 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
         diagnostic_summary: None,
         suggested_fix: None,
         log_excerpt: None,
-        message: "Minecraft is running.".to_string(),
+        message: "Minecraft běží.".to_string(),
     };
 
     write_game_status(running_status.clone())?;
     let _ = logging::append_launcher_log_entry(
         "game",
-        &format!("Minecraft process started with PID {}.", child.id()),
+        &format!("Proces Minecraftu byl spuštěn s PID {}.", child.id()),
     );
     start_game_monitor(child, running_status.clone());
 
