@@ -105,3 +105,45 @@ Exit criteria:
 - Approved mods, configs, and resource packs.
 - Server status and announcements.
 - Advanced repair and support diagnostics.
+
+## Immediate Release Roadmap
+
+This is the shortest practical path from the current repository state to a
+stable launcher release that can update itself.
+
+### 1. Release Recovery
+
+- [x] Align the launcher updater public key with the signing key currently used
+  by GitHub Releases.
+- [x] Fix the Fabric installation readiness state so a prepared client can
+  leave the pending state.
+- [x] Bump the launcher version to `0.1.8`.
+- [ ] Publish `app-v0.1.8` from CI so players can reinstall onto the corrected
+  updater key.
+- [ ] Replace any locally installed pre-`0.1.8` launcher builds with the new
+  installer once the release is published.
+
+### 2. Release Hardening
+
+- [ ] Add a documented release runbook for tagging, CI publish, and smoke
+  verification.
+- [ ] Add a post-release smoke test that checks updater discovery from the
+  previous public build.
+- [ ] Add a clearer updater error surface in the UI when signature validation
+  fails.
+- [ ] Add formatter, lint, and automated desktop smoke checks to reduce release
+  regressions.
+
+### 3. Launcher Readiness
+
+- [ ] Add progress reporting for long download operations instead of only the
+  aggregate readiness bar.
+- [ ] Improve installation diagnostics for blocked metadata, filesystem
+  permissions, and broken local paths.
+- [ ] Decide and implement the Java runtime strategy:
+  - system Java only, or
+  - managed Nekara runtime.
+- [ ] Decide when to reintroduce Microsoft authentication and entitlement
+  checks.
+- [ ] Start the Nekara client package sync layer:
+  approved mods, configs, resource packs, and versioned manifests.

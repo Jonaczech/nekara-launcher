@@ -6,7 +6,7 @@ leaves important follow-up context.
 
 ## Last Updated
 
-2026-06-30
+2026-07-01
 
 ## Current Focus
 
@@ -90,6 +90,15 @@ offline player profile flow in place.
 - ADR 0003 defines GitHub Releases as the intended first launcher self-update
   path and formalizes the no-duplicate-install strategy.
 - The launcher now stores a local offline player name in launcher data.
+- The launcher updater public key has been realigned with the signing key used
+  by the GitHub release workflow. Existing installations that shipped with the
+  old public key need one manual reinstall before future signed updates can be
+  trusted automatically.
+- The Fabric installation readiness calculation now includes Fabric libraries
+  in the total ready library count, so a fully prepared client can leave the
+  pending state.
+- Brand source assets now have a dedicated `brand/` workspace with folders for
+  concepts, icons, logos, and wallpapers.
 - Browser preview fallback is in place so `pnpm dev` renders without Tauri
   runtime errors.
 - Desktop and mobile screenshots were captured successfully from the browser

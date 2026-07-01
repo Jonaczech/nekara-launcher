@@ -64,6 +64,15 @@ The launcher should:
 - The signing private key and its password must be provided to GitHub Actions
   through the `TAURI_SIGNING_PRIVATE_KEY` and
   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets.
+- The launcher-side public key in `src-tauri/tauri.conf.json` must match the
+  public half of the signing key used by GitHub Actions. On 2026-07-01, the
+  local public key at `C:\Users\jonac\.tauri\nekara-launcher.key.pub` was
+  matched to the latest GitHub release signature and copied into
+  `tauri.conf.json`.
+- Builds that already shipped with a different updater public key cannot trust
+  releases signed by the current key. Those installations need a manual
+  reinstall once, then future releases can update normally through the
+  updater.
 - On Windows, the updater JSON should prefer NSIS because the launcher is
   distributed to players through the `setup.exe` installer.
 - The release workflow currently targets Windows only, which matches the

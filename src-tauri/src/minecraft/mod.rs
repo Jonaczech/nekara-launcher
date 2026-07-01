@@ -466,8 +466,10 @@ async fn collect_installation_snapshot(
     let version_json_ready = text_matches(&paths.version_json_path, &base_details.version_json)?;
     let client_jar_ready =
         sha1_matches(&paths.client_jar_path, &base_details.client_download_sha1)?;
-    let fabric_profile_ready =
-        text_matches(&paths.fabric_profile_json_path, &fabric_details.profile_json)?;
+    let fabric_profile_ready = text_matches(
+        &paths.fabric_profile_json_path,
+        &fabric_details.profile_json,
+    )?;
     let asset_index_ready = sha1_matches(&asset_index_path, &base_details.asset_index.sha1)?;
     let local_asset_index_contents = if asset_index_ready {
         read_local_asset_index(&asset_index_path)?
@@ -475,10 +477,10 @@ async fn collect_installation_snapshot(
         None
     };
 
-    let mut library_count_ready = 0usize;
+    let mut official_library_count_ready = 0usize;
     for library in &base_details.libraries {
         if sha1_matches(&library_path(paths, library), &library.sha1)? {
-            library_count_ready += 1;
+            official_library_count_ready += 1;
         }
     }
 
@@ -510,12 +512,107 @@ async fn collect_installation_snapshot(
         fabric_profile_ready,
         asset_index_ready,
         library_count_total: base_details.libraries.len() + fabric_details.libraries.len(),
-        library_count_ready,
+        library_count_ready: official_library_count_ready + fabric_library_count_ready,
         fabric_library_count_total: fabric_details.libraries.len(),
         fabric_library_count_ready,
         asset_count_total,
         asset_count_ready,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+
+    fn test_paths() -> InstallationPaths {
+        let root = PathBuf::from("C:/NekaraTest");
+
+        InstallationPaths {
+            minecraft_dir: root.join(".minecraft"),
+            version_json_path: root.join("versions/26.1.2/26.1.2.json"),
+            client_jar_path: root.join("versions/26.1.2/26.1.2.jar"),
+            fabric_profile_json_path: root.join("versions/fabric/fabric.json"),
+            libraries_dir: root.join("libraries"),
+            assets_dir: root.join("assets"),
+        }
+    }
+
+    fn test_base_details() -> manifests::OfficialMinecraftVersionDetails {
+        manifests::OfficialMinecraftVersionDetails {
+            version_type: "release".to_string(),
+            version_url: "https://example.test/version.json".to_string(),
+            version_json: "{}".to_string(),
+            latest_release: config::MINECRAFT_VERSION.to_string(),
+            latest_snapshot: config::MINECRAFT_VERSION.to_string(),
+            required_java_major: Some(21),
+            client_download_url: "https://example.test/client.jar".to_string(),
+            client_download_sha1: "client-sha1".to_string(),
+            asset_index: manifests::OfficialAssetIndexDownload {
+                id: "asset-index".to_string(),
+                sha1: "asset-index-sha1".to_string(),
+                total_size: 42,
+                url: "https://example.test/assets.json".to_string(),
+            },
+            libraries: vec![
+                manifests::OfficialLibraryDownload {
+                    path: "official/a.jar".to_string(),
+                    url: "https://example.test/official/a.jar".to_string(),
+                    sha1: "official-a".to_string(),
+                },
+                manifests::OfficialLibraryDownload {
+                    path: "official/b.jar".to_string(),
+                    url: "https://example.test/official/b.jar".to_string(),
+                    sha1: "official-b".to_string(),
+                },
+            ],
+        }
+    }
+
+    fn test_fabric_details() -> fabric::FabricInstallationDetails {
+        fabric::FabricInstallationDetails {
+            loader_version: "0.16.14".to_string(),
+            profile_id: "fabric-loader-0.16.14-26.1.2".to_string(),
+            profile_json: "{}".to_string(),
+            min_java_major: 21,
+            libraries: vec![manifests::OfficialLibraryDownload {
+                path: "fabric/loader.jar".to_string(),
+                url: "https://example.test/fabric/loader.jar".to_string(),
+                sha1: "fabric-loader".to_string(),
+            }],
+        }
+    }
+
+    #[test]
+    fn ready_status_counts_fabric_libraries_in_total_ready_libraries() {
+        let snapshot = InstallationSnapshot {
+            asset_index_path: PathBuf::from("C:/NekaraTest/assets/indexes/asset-index.json"),
+            version_json_ready: true,
+            client_jar_ready: true,
+            fabric_profile_ready: true,
+            asset_index_ready: true,
+            library_count_total: 3,
+            library_count_ready: 3,
+            fabric_library_count_total: 1,
+            fabric_library_count_ready: 1,
+            asset_count_total: 2,
+            asset_count_ready: 2,
+        };
+
+        let status = build_installation_status(
+            &test_paths(),
+            &test_base_details(),
+            &test_fabric_details(),
+            snapshot,
+            "ready".to_string(),
+        );
+
+        assert!(matches!(status.state, MinecraftInstallationState::Ready));
+        assert_eq!(status.library_count_total, 3);
+        assert_eq!(status.library_count_ready, 3);
+        assert_eq!(status.fabric_library_count_ready, 1);
+    }
 }
 
 #[tauri::command]
@@ -640,8 +737,14 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
         changed_parts.push("client `.jar`");
     }
 
-    if !text_matches(&paths.fabric_profile_json_path, &fabric_details.profile_json)? {
-        write_text_file(&paths.fabric_profile_json_path, &fabric_details.profile_json)?;
+    if !text_matches(
+        &paths.fabric_profile_json_path,
+        &fabric_details.profile_json,
+    )? {
+        write_text_file(
+            &paths.fabric_profile_json_path,
+            &fabric_details.profile_json,
+        )?;
         changed_parts.push("Fabric profil");
     }
 
