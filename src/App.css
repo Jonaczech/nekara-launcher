@@ -466,6 +466,18 @@ code {
   gap: 8px;
 }
 
+.settings-path-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.settings-picker-button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
 .settings-slider {
   width: 100%;
   accent-color: var(--gold);
@@ -606,7 +618,8 @@ code {
 
   .home-summary,
   .settings-meta,
-  .settings-inline-fields {
+  .settings-inline-fields,
+  .settings-path-picker {
     grid-template-columns: 1fr;
   }
 }

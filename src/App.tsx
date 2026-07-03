@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import {
+  FolderOpen,
   House,
   LoaderCircle,
   Minimize2,
@@ -22,6 +23,7 @@ import {
   getMinecraftInstallationStatus,
   getOfflinePlayerStatus,
   launchMinecraft,
+  pickGameDirectoryPath,
   prepareMinecraftInstallation,
   saveLauncherSettings,
   saveOfflinePlayerProfile,
@@ -71,8 +73,12 @@ function App() {
   const [ramInputMb, setRamInputMb] = useState(4096);
   const [javaPathInput, setJavaPathInput] = useState("");
   const [gameDirectoryPathInput, setGameDirectoryPathInput] = useState("");
+  const [gameDirectoryPickerError, setGameDirectoryPickerError] = useState<
+    string | null
+  >(null);
   const [savingPlayer, setSavingPlayer] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [pickingGameDirectory, setPickingGameDirectory] = useState(false);
   const [preparingInstallation, setPreparingInstallation] = useState(false);
   const [launchingGame, setLaunchingGame] = useState(false);
   const [currentView, setCurrentView] = useState<"home" | "settings">("home");
@@ -89,6 +95,7 @@ function App() {
   }
 
   function updateGameDirectoryPathInput(value: string) {
+    setGameDirectoryPickerError(null);
     setGameDirectoryPathInput(value);
   }
 
@@ -503,6 +510,31 @@ function App() {
     }
   }
 
+  async function handlePickGameDirectory() {
+    setPickingGameDirectory(true);
+    setGameDirectoryPickerError(null);
+
+    try {
+      const selectedPath = await pickGameDirectoryPath(
+        gameDirectoryPathNormalized ||
+          launcherSettings?.gameDirectoryPath ||
+          gameDirectory?.nekaraGameDir,
+      );
+
+      if (selectedPath != null) {
+        setGameDirectoryPathInput(selectedPath);
+      }
+    } catch (error: unknown) {
+      setGameDirectoryPickerError(
+        error instanceof Error
+          ? error.message
+          : "Výběr instalační složky se nepodařilo otevřít.",
+      );
+    } finally {
+      setPickingGameDirectory(false);
+    }
+  }
+
   async function handleLaunchMinecraft() {
     setLaunchingGame(true);
 
@@ -757,21 +789,47 @@ function App() {
                       </p>
                     ) : (
                       <div className="settings-control-stack">
-                        <label className="settings-path-field">
-                          <span>Cílová složka klienta</span>
-                          <input
-                            type="text"
-                            value={gameDirectoryPathInput}
-                            onChange={(event) =>
-                              updateGameDirectoryPathInput(event.target.value)
-                            }
-                            placeholder="D:\\Games\\Nekara"
+                        <div className="settings-path-picker">
+                          <label className="settings-path-field">
+                            <span>Cílová složka klienta</span>
+                            <input
+                              type="text"
+                              value={gameDirectoryPathInput}
+                              onChange={(event) =>
+                                updateGameDirectoryPathInput(event.target.value)
+                              }
+                              placeholder="D:\\Games\\Nekara"
+                              disabled={
+                                launcherSettingsState.kind !== "ready" ||
+                                savingSettings ||
+                                pickingGameDirectory
+                              }
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="text-action settings-picker-button"
+                            onClick={() => void handlePickGameDirectory()}
                             disabled={
                               launcherSettingsState.kind !== "ready" ||
-                              savingSettings
+                              savingSettings ||
+                              pickingGameDirectory
                             }
-                          />
-                        </label>
+                          >
+                            <FolderOpen size={16} />
+                            <span>
+                              {pickingGameDirectory
+                                ? "Otevírám..."
+                                : "Vybrat složku"}
+                            </span>
+                          </button>
+                        </div>
+
+                        {gameDirectoryPickerError && (
+                          <p className="settings-error-note">
+                            {gameDirectoryPickerError}
+                          </p>
+                        )}
 
                         <div className="settings-inline-meta">
                           <span className="settings-value-chip">
@@ -781,7 +839,8 @@ function App() {
                           </span>
                           <span className="settings-helper-text">
                             Prázdné pole použije výchozí adresář launcheru v
-                            AppData. Vyplněná cesta musí být absolutní.
+                            AppData. Vyplněná cesta musí být absolutní a můžeš
+                            ji vybrat i přes Průzkumníka souborů.
                           </span>
                         </div>
 

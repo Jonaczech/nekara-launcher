@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import type {
   GameLaunchStatus,
   GameDirectoryInfo,
@@ -227,6 +228,21 @@ export function ensureNekaraGameDirectory() {
   }
 
   return invoke<GameDirectoryInfo>("ensure_nekara_game_directory");
+}
+
+export async function pickGameDirectoryPath(defaultPath?: string) {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  const selectedPath = await open({
+    title: "Vyber cílovou složku klienta Nekara",
+    directory: true,
+    multiple: false,
+    defaultPath,
+  });
+
+  return typeof selectedPath === "string" ? selectedPath : null;
 }
 
 export function checkJavaRuntime() {
