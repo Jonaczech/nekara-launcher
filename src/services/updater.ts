@@ -1,9 +1,6 @@
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
-import {
-  appendLauncherLogEntry,
-  clearLauncherUpdaterCache,
-} from "./launcher";
+import { appendLauncherLogEntry, clearLauncherUpdaterCache } from "./launcher";
 import type { LauncherUpdateStatus } from "../types/launcher";
 
 function isTauriRuntime() {
@@ -19,7 +16,9 @@ const browserPreviewUpdateStatus: LauncherUpdateStatus = {
     "Je aktivní náhradní režim pro prohlížeč. Pro kontrolu aktualizací launcheru spusť aplikaci uvnitř Tauri.",
 };
 
-function toUpdateStatus(update: Awaited<ReturnType<typeof check>>): LauncherUpdateStatus {
+function toUpdateStatus(
+  update: Awaited<ReturnType<typeof check>>,
+): LauncherUpdateStatus {
   if (update == null) {
     return {
       available: false,
@@ -82,7 +81,10 @@ export async function checkLauncherUpdate() {
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Neznámá chyba aktualizátoru.";
-    await logUpdate("updater", `Kontrola aktualizace launcheru selhala: ${errorMessage}`);
+    await logUpdate(
+      "updater",
+      `Kontrola aktualizace launcheru selhala: ${errorMessage}`,
+    );
     throw new Error(`Kontrola aktualizace launcheru selhala: ${errorMessage}`);
   }
 }
@@ -114,17 +116,26 @@ export async function installLauncherUpdate() {
       };
     }
 
-    await logUpdate("updater", "Před instalací čistím zastaralou mezipaměť aktualizátoru.");
+    await logUpdate(
+      "updater",
+      "Před instalací čistím zastaralou mezipaměť aktualizátoru.",
+    );
     await clearLauncherUpdaterCache();
-    await logUpdate("updater", `Stahuji aktualizaci launcheru ${update.version}.`);
+    await logUpdate(
+      "updater",
+      `Stahuji aktualizaci launcheru ${update.version}.`,
+    );
     await update.downloadAndInstall();
-    await logUpdate("updater", `Aktualizace launcheru ${update.version} byla úspěšně nainstalována. Spouštím znovu.`);
+    await logUpdate(
+      "updater",
+      `Aktualizace launcheru ${update.version} byla úspěšně nainstalována. Spouštím znovu.`,
+    );
     await relaunch();
   } catch (error: unknown) {
     const errorMessage = formatUpdaterError(error);
     await logUpdate(
       "updater",
-        update == null
+      update == null
         ? `Instalace aktualizace launcheru selhala ještě před zahájením stahování: ${errorMessage}`
         : `Aktualizace launcheru ${update.version} selhala: ${errorMessage}`,
     );

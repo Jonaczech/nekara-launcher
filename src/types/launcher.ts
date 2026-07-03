@@ -135,31 +135,8 @@ export interface OfflinePlayerStatus {
   message: string;
 }
 
-export type MicrosoftAccountState =
-  | "unconfigured"
-  | "signedOut"
-  | "pending"
-  | "ready"
-  | "error";
-
-export interface MicrosoftAccountStatus {
-  state: MicrosoftAccountState;
-  configured: boolean;
-  playerName: string | null;
-  playerUuid: string | null;
-  verificationUri: string | null;
-  userCode: string | null;
-  expiresAtUnixMs: number | null;
-  pollIntervalSeconds: number | null;
-  message: string;
-}
-
 export type GameLaunchState =
-  | "idle"
-  | "launching"
-  | "running"
-  | "exited"
-  | "failed";
+  "idle" | "launching" | "running" | "exited" | "failed";
 
 export interface GameLaunchStatus {
   state: GameLaunchState;

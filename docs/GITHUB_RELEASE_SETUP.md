@@ -1,91 +1,84 @@
-# GitHub Release Setup
+# Nastavení GitHub Release
 
-This file captures the minimum setup required to move Nekara Launcher toward
-automatic self-updates through GitHub Releases.
+Tento soubor shrnuje minimum kroků potřebných k tomu, aby Nekara Launcher mohl
+automaticky aktualizovat přes GitHub Releases.
 
-The repository is now connected to GitHub and includes the updater plugin plus
-an initial release workflow. The remaining steps below are the production setup
-that must exist before clients can receive updates automatically.
+Repozitář je už připojený k GitHubu a obsahuje updater plugin i úvodní release
+pracovní postup. Zbývající kroky níže popisují produkční nastavení, které je potřeba
+dokončit před ostrým použitím.
 
-## Goal
+Po jednorázovém nastavení by mělo být možné release publikovat z CI a launcher
+by měl být schopný automaticky objevit novější podepsané verze.
 
-After the one-time setup is complete, a release should be publishable from CI
-and the launcher should be able to discover newer signed versions automatically.
+## Požadované kroky
 
-## Required Setup
-
-1. Create a GitHub repository for the launcher source.
-2. Decide the release channel strategy:
-   - `stable`
-3. Generate and safely store the updater signing key pair.
-4. Store the private signing key in GitHub Actions secrets.
-5. Decide where the updater metadata JSON will be hosted:
+1. Vytvoř GitHub repozitář pro zdrojový kód launcheru.
+2. Rozhodni strategii release kanálů:
+   - `stable` jako výchozí kanál.
+3. Vygeneruj a bezpečně ulož signing key pair pro updater.
+4. Ulož soukromý podpisový klíč do GitHub Actions secrets.
+5. Rozhodni, kde bude hostované updater metadata JSON:
    - GitHub Releases
    - GitHub Pages
-   - a dedicated static bucket
-   - another static HTTPS endpoint
-6. Publish desktop artifacts and updater metadata on every tagged release.
+6. Publikuj desktop artefakty a updater metadata při každém tagovaném release.
 
-## Recommended Secrets
+## Očekávané artefakty
 
-The final names can vary, but the release pipeline should expect at least:
+Konečná jména se mohou lišit, ale release pipeline by měla očekávat alespoň:
 
-```text
-TAURI_SIGNING_PRIVATE_KEY
-TAURI_SIGNING_PRIVATE_KEY_PASSWORD
-```
+- instalační balíček pro Windows,
+- updater metadata JSON,
+- podpisy pro release artefakty,
+- kontrolní soubory nebo metadata potřebná pro ověření integrity.
 
-If release automation uploads metadata to a separate endpoint, add the
-necessary deployment secret for that host as well.
+Pokud release automatizace nahrává metadata na samostatný endpoint, přidej
+odkaz na tento endpoint i do dokumentace release procesu.
 
-## Release Artifacts
+## Co má release publikovat
 
-Each release should publish:
+Každý release by měl obsahovat:
 
-- Windows installer
-- Windows updater bundle
-- updater metadata JSON for the release channel
+- podepsaný Windows installer,
+- updater metadata JSON pro daný release kanál,
+- podpisy a další artefakty potřebné pro ověření.
 
-## Launcher-side Behavior
+## Chování launcheru
 
-The launcher should:
+Launcher by měl:
 
-1. Start and show the shell quickly.
-2. Check for updates in the background.
-3. Offer manual update control in settings.
-4. Download verified update artifacts.
-5. Apply the update on restart or user confirmation.
+1. Spustit se a rychle zobrazit shell.
+2. Kontrolovat aktualizace na pozadí.
+3. Nabídnout ruční kontrolu aktualizace v nastaveních.
+4. Stahovat ověřené update artefakty.
+5. Aplikovat aktualizaci po restartu nebo po potvrzení uživatelem.
 
-## Current Implementation Notes
+## Současný stav
 
-- The updater endpoint currently points to the GitHub Releases `latest`
-  download for `latest.json`.
-- The release workflow is triggered by tags that match `app-v*`.
-- The signing private key and its password must be provided to GitHub Actions
-  through the `TAURI_SIGNING_PRIVATE_KEY` and
-  `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets.
-- The launcher-side public key in `src-tauri/tauri.conf.json` must match the
-  public half of the signing key used by GitHub Actions. On 2026-07-01, the
-  local public key at `C:\Users\jonac\.tauri\nekara-launcher.key.pub` was
-  matched to the latest GitHub release signature and copied into
-  `tauri.conf.json`.
-- Builds that already shipped with a different updater public key cannot trust
-  releases signed by the current key. Those installations need a manual
-  reinstall once, then future releases can update normally through the
-  updater.
-- On Windows, the updater JSON should prefer NSIS because the launcher is
-  distributed to players through the `setup.exe` installer.
-- The release workflow currently targets Windows only, which matches the
-  supported launcher platform for now.
+- Updater endpoint aktuálně míří na GitHub Releases `latest`.
+- Release pracovní postup se spouští na tagy, které odpovídají `app-v*`.
+- Podepisovací soukromý klíč a jeho heslo musí být v GitHub Actions dostupné
+  přes `TAURI_SIGNING_PRIVATE_KEY` a `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+- Veřejný klíč v `src-tauri/tauri.conf.json` musí odpovídat veřejné části
+  signing key, který používá GitHub Actions. K 2026-07-01 byl lokální veřejný
+  klíč `C:\Users\jonac\.tauri\nekara-launcher.key.pub` spárovaný s posledním
+  podepsaným GitHub releasem a zkopírovaný do konfigurace launcheru.
+- Instalace, které byly vydané se starým veřejným klíčem updateru, už
+  nepřimějí podpisy z aktuálního klíče. Tyto instalace potřebují jednorázovou
+  manuální reinstalaci, pak už se budou aktualizovat normálně.
+- Na Windows má updater JSON preferovat NSIS, protože launcher se hráčům
+  distribuuje přes `setup.exe` instalátor.
+- Release pracovní postup je zatím jen pro Windows, což odpovídá současné podporované
+  platformě launcheru.
 
-## Relationship To Client Installation
+## Oddělení odpovědností
 
-Launcher self-update and Minecraft client preparation must stay separate:
+Samoupdatování launcheru a příprava Minecraft klienta musí zůstat oddělené:
 
-- launcher update:
-  updates the desktop app itself
-- client preparation:
-  updates the isolated Minecraft files, libraries, assets, and later Java
+- update launcheru:
+  aktualizuje samotnou desktopovou aplikaci
+- update Minecraft klienta:
+  aktualizuje izolované Minecraft soubory, knihovny, assety a později Java
+  runtime
 
-This separation is important so the launcher does not reinstall the Minecraft
-client unnecessarily when only the launcher binary changes.
+Toto oddělení je důležité proto, aby launcher zbytečně neinstaloval Minecraft
+klienta znovu pokaždé, když se změní jen binárka launcheru.

@@ -451,8 +451,12 @@ fn launch_paths(fabric_profile_id: &str) -> Result<LaunchPaths, String> {
 }
 
 fn ensure_directory(path: &Path) -> Result<(), String> {
-    fs::create_dir_all(path)
-        .map_err(|error| format!("Adresář se nepodařilo vytvořit na {}: {error}", path.display()))
+    fs::create_dir_all(path).map_err(|error| {
+        format!(
+            "Adresář se nepodařilo vytvořit na {}: {error}",
+            path.display()
+        )
+    })
 }
 
 fn read_log_tail(path: &Path, max_lines: usize) -> Option<String> {
@@ -562,7 +566,9 @@ fn merge_launch_manifests(
 
     LaunchVersionManifest {
         id: fabric_manifest.id,
-        inherits_from: fabric_manifest.inherits_from.or(base_manifest.inherits_from),
+        inherits_from: fabric_manifest
+            .inherits_from
+            .or(base_manifest.inherits_from),
         assets: fabric_manifest.assets.or(base_manifest.assets),
         version_type: fabric_manifest.version_type,
         main_class: fabric_manifest.main_class,
@@ -657,7 +663,11 @@ fn build_classpath(
         .collect();
 
     for library in &fabric_details.libraries {
-        let entry = paths.libraries_dir.join(&library.path).display().to_string();
+        let entry = paths
+            .libraries_dir
+            .join(&library.path)
+            .display()
+            .to_string();
         if !entries.contains(&entry) {
             entries.push(entry);
         }
@@ -751,10 +761,8 @@ fn start_game_monitor(mut child: std::process::Child, mut status: GameLaunchStat
             Err(error) => {
                 status.state = GameLaunchState::Failed;
                 status.finished_at_unix_ms = Some(current_timestamp_ms());
-                status.diagnostic_summary = Some(
-                    "Launcher nedokázal sledovat proces Minecraftu až do konce."
-                        .to_string(),
-                );
+                status.diagnostic_summary =
+                    Some("Launcher nedokázal sledovat proces Minecraftu až do konce.".to_string());
                 status.suggested_fix = Some(
                     "Zkus spustit znovu a pokud se problém opakuje, otevři uloženou cestu k hernímu logu."
                         .to_string(),
@@ -777,9 +785,7 @@ pub fn get_game_launch_status() -> Result<GameLaunchStatus, String> {
 }
 
 #[tauri::command]
-pub async fn launch_minecraft(
-    auth_state: tauri::State<'_, auth::AppAuthState>,
-) -> Result<GameLaunchStatus, String> {
+pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
     let current_status = read_game_status()?;
     if matches!(
         current_status.state,
@@ -788,7 +794,7 @@ pub async fn launch_minecraft(
         return Err("Minecraft už běží v této relaci launcheru.".to_string());
     }
 
-    let launch_identity = auth::resolve_launch_identity(&auth_state)?;
+    let launch_identity = auth::resolve_launch_identity()?;
     let player_name = launch_identity.player_name.clone();
     let launcher_settings = settings::resolve_launcher_settings()?;
     let _ = logging::append_launcher_log_entry(
@@ -871,7 +877,8 @@ pub async fn launch_minecraft(
                 let diagnostic_summary = if java_runtime.source == "Custom path" {
                     "Nastavenou Javu se nepodařilo spustit.".to_string()
                 } else {
-                    "Javu se podařilo detekovat, ale její hlavní verzi se nepodařilo určit.".to_string()
+                    "Javu se podařilo detekovat, ale její hlavní verzi se nepodařilo určit."
+                        .to_string()
                 };
                 let suggested_fix = if java_runtime.source == "Custom path" {
                     "Zkontroluj nastavenou cestu k Javě, ověř že soubor existuje, nebo vlastní cestu smaž, aby se znovu použila PATH."
@@ -1042,9 +1049,9 @@ pub async fn launch_minecraft(
                 log_path.display()
             )
         })?;
-    let stderr_log = log_file
-        .try_clone()
-        .map_err(|error| format!("Popisovač souboru logu Minecraftu se nepodařilo zkopírovat: {error}"))?;
+    let stderr_log = log_file.try_clone().map_err(|error| {
+        format!("Popisovač souboru logu Minecraftu se nepodařilo zkopírovat: {error}")
+    })?;
 
     let mut command = Command::new(&java_executable);
     command
@@ -1150,7 +1157,10 @@ mod tests {
 
         let merged = merge_launch_manifests(base_manifest, fabric_manifest);
 
-        assert_eq!(merged.main_class, "net.fabricmc.loader.impl.launch.knot.KnotClient");
+        assert_eq!(
+            merged.main_class,
+            "net.fabricmc.loader.impl.launch.knot.KnotClient"
+        );
         let merged_jvm_args = resolve_argument_entries(
             &merged.arguments.jvm,
             &LaunchContext {
@@ -1173,15 +1183,11 @@ mod tests {
         );
 
         assert!(merged_jvm_args.iter().any(|arg| arg == "-cp"));
-        assert!(
-            merged_jvm_args
-                .iter()
-                .any(|arg| arg == "fabric-loader.jar;client.jar")
-        );
-        assert!(
-            merged_jvm_args
-                .iter()
-                .any(|arg| arg.contains("net.minecraft.client.main.Main"))
-        );
+        assert!(merged_jvm_args
+            .iter()
+            .any(|arg| arg == "fabric-loader.jar;client.jar"));
+        assert!(merged_jvm_args
+            .iter()
+            .any(|arg| arg.contains("net.minecraft.client.main.Main")));
     }
 }

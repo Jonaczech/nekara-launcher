@@ -207,7 +207,9 @@ fn maven_coordinate_to_path(name: &str) -> Result<String, String> {
 
     let parts: Vec<&str> = coordinate.split(':').collect();
     if parts.len() < 3 {
-        return Err(format!("Invalid Maven coordinate in Fabric metadata: {name}"));
+        return Err(format!(
+            "Invalid Maven coordinate in Fabric metadata: {name}"
+        ));
     }
 
     let group = parts[0].replace('.', "/");
@@ -271,10 +273,14 @@ async fn resolve_library_download(
     let artifact_url = format!("{normalized_base_url}{path}");
     let sha1 = match entry.sha1 {
         Some(sha1) if !sha1.trim().is_empty() => sha1,
-        _ => read_text(client, &format!("{artifact_url}.sha1"), "Fabric library checksum")
-            .await?
-            .trim()
-            .to_string(),
+        _ => read_text(
+            client,
+            &format!("{artifact_url}.sha1"),
+            "Fabric library checksum",
+        )
+        .await?
+        .trim()
+        .to_string(),
     };
 
     Ok(Some(manifests::OfficialLibraryDownload {
@@ -308,7 +314,11 @@ fn profile_json_url(loader_version: &str) -> String {
 }
 
 pub fn fabric_profile_id(loader_version: &str) -> String {
-    format!("fabric-loader-{}-{}", loader_version, config::MINECRAFT_VERSION)
+    format!(
+        "fabric-loader-{}-{}",
+        loader_version,
+        config::MINECRAFT_VERSION
+    )
 }
 
 pub async fn fetch_fabric_installation_details() -> Result<FabricInstallationDetails, String> {
@@ -320,7 +330,9 @@ pub async fn fetch_fabric_installation_details() -> Result<FabricInstallationDet
         config::MINECRAFT_VERSION
     );
 
-    log_fabric_step(&format!("Requesting Fabric loader metadata from {loader_list_url}."));
+    log_fabric_step(&format!(
+        "Requesting Fabric loader metadata from {loader_list_url}."
+    ));
     let raw_loader_list = read_text(&client, &loader_list_url, "Fabric loader metadata").await?;
     let loader_summaries: Vec<LoaderSummary> =
         serde_json::from_str(&raw_loader_list).map_err(|error| {
@@ -343,7 +355,9 @@ pub async fn fetch_fabric_installation_details() -> Result<FabricInstallationDet
         loader_version,
         selected_loader.launcher_meta.min_java_version.unwrap_or(0)
     ));
-    log_fabric_step(&format!("Requesting Fabric profile metadata from {profile_url}."));
+    log_fabric_step(&format!(
+        "Requesting Fabric profile metadata from {profile_url}."
+    ));
     let profile_json = read_text(&client, &profile_url, "Fabric profile metadata").await?;
     let profile_document: FabricProfileDocument =
         serde_json::from_str(&profile_json).map_err(|error| {

@@ -50,8 +50,8 @@ struct ApprovedModSource {
 }
 
 pub fn load_approved_client_package() -> Result<ApprovedClientPackage, String> {
-    let document: ApprovedClientPackageDocument =
-        serde_json::from_str(APPROVED_MODS_MANIFEST).map_err(|error| {
+    let document: ApprovedClientPackageDocument = serde_json::from_str(APPROVED_MODS_MANIFEST)
+        .map_err(|error| {
             format!(
                 "Unable to decode approved client package manifest {}: {error}",
                 config::APPROVED_MODS_MANIFEST_FILE

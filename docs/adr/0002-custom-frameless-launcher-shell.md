@@ -1,54 +1,52 @@
-# ADR 0002: Custom Frameless Launcher Shell
+# ADR 0002: Vlastní frameless shell launcheru
 
-## Status
+## Stav
 
-Accepted
+Přijato
 
-## Date
+## Datum
 
 2026-06-30
 
-## Context
+## Kontext
 
-Nekara Launcher is a single-purpose desktop launcher for one supported game
-configuration. The product should feel like a polished launcher for players,
-not like a technical dashboard or a generic utility window.
+Nekara Launcher je jednoúčelový desktopový launcher pro jednu podporovanou
+herní konfiguraci. Produkt má působit jako uhlazený launcher pro hráče, ne jako
+technický dashboard nebo obecné utilitní okno.
 
-The reference direction for the UI is a composition-focused launcher shell with
-custom chrome, a prominent brand area, a primary action, and concise readiness
-status.
+Směr UI je kompozičně orientovaný launcher shell s vlastním chrome, výraznou
+brand zónou, primární akcí a stručným stavem připravenosti.
 
-## Decision
+## Rozhodnutí
 
-Use a frameless Tauri window with a React-rendered custom window bar and a
-composition-first launcher layout.
+Použij frameless Tauri window s Reactem renderovaným custom window barem a
+layoutem zaměřeným na kompozici.
 
-The shell should:
+Shell má:
 
-- keep the native window controls inside the application UI,
-- use layered gradients and geometry instead of copied wallpaper assets,
-- keep technical diagnostics out of the main visual hierarchy,
-- present the player flow as the primary experience.
+- držet nativní window controls uvnitř aplikace,
+- používat vrstvené gradienty a geometrii místo kopírovaných wallpaper assetů,
+- držet technickou diagnostiku mimo hlavní vizuální hierarchii,
+- prezentovat hráčský průchod jako hlavní zkušenost.
 
-## Rationale
+## Odůvodnění
 
-A frameless shell gives the launcher a more coherent visual identity and keeps
-the layout under our control across Windows and future platforms.
+Frameless shell dává launcheru soudržnější vizuální identitu a nechává layout
+pod naší kontrolou na Windows i v budoucích platformách.
 
-It also reduces the amount of OS chrome competing with the launcher's brand
-composition and makes it easier to keep the UI focused on the player flow:
+Také snižuje množství OS chrome, které soutěží s brand kompozicí launcheru, a
+usnadňuje držet UI soustředěné na hráčský flow:
 
-Start launcher -> sign in -> wait for preparation -> press Play
+Spustit launcher -> přihlásit se -> počkat na přípravu -> stisknout Hrát
 
-## Consequences
+## Důsledky
 
-- The frontend must provide its own minimize, maximize, and close controls.
-- The UI and spacing need to respect draggable regions and custom window
-  controls.
-- Visual polish becomes part of the application code rather than the OS frame.
+- Frontend musí poskytnout vlastní minimize, maximize a close controls.
+- UI a spacing musí respektovat draggable regions a custom window controls.
+- Vizuální polish se stává součástí aplikačního kódu, ne OS frame.
 
-## Follow-Up Work
+## Navazující práce
 
-- Add the temporary offline player profile flow to support early launch work.
-- Add the actual official file download and repair workflow.
-- Keep diagnostics available, but secondary to the main launcher surface.
+- Přidat dočasný offline profil hráče pro podporu rané launch práce.
+- Přidat skutečný workflow stahování a opravy oficiálních souborů.
+- Udržet diagnostiku dostupnou, ale sekundární vůči hlavní launcher surface.

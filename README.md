@@ -1,81 +1,78 @@
 # Nekara Launcher
 
-Nekara Launcher is a custom desktop launcher for the Nekara Minecraft server.
-It is built for one supported game configuration: Nekara.
+Nekara Launcher je vlastní desktopový launcher pro Minecraft server Nekara.
+Je navržen pro jednu podporovanou herní konfiguraci: Nekara.
 
-The launcher is not intended to be a general-purpose Minecraft launcher,
-modpack browser, server list, marketplace, forum, or community portal.
+Launcher není určen jako obecný Minecraft launcher, prohlížeč modpacků,
+seznam serverů, tržiště, fórum ani komunitní portál.
 
-## Product Scope
+## Rozsah produktu
 
-The launcher should let a player:
+Launcher má hráči umožnit:
 
-1. Start the launcher.
-2. Enter an offline player name.
-3. Wait while the Nekara game installation is checked or prepared.
-4. Press Play.
+1. Spustit launcher.
+2. Přihlásit se pomocí lokálního offline jména hráče.
+3. Počkat, až se instalace Nekary zkontroluje nebo připraví.
+4. Stisknout tlačítko Hrát.
 
-The application is responsible for:
+Za aplikaci odpovídá zejména:
 
-- launcher self-update support,
-- player identity for the launch session,
-- isolated Nekara game directory management,
-- official Minecraft base metadata, Fabric profile preparation, and client file integrity checks,
-- Java runtime detection or preparation,
-- file integrity validation and repair,
-- launch command construction,
-- Minecraft process start and monitoring,
-- clear diagnostics when something fails.
+- samoupdatování launcheru,
+- identita hráče pro danou spouštěcí relaci,
+- izolovaná správa herního adresáře Nekary,
+- práce s oficiálními Minecraft metadaty, příprava Fabric profilu a kontrola integrity klientských souborů,
+- detekce nebo příprava Java běhového prostředí,
+- validace a oprava souborů,
+- sestavení spouštěcího příkazu,
+- spuštění a sledování procesu Minecraftu,
+- srozumitelná diagnostika při chybách.
 
-The current scaffold already includes:
+Současná kostra už obsahuje:
 
-- a launcher status command,
-- an official Minecraft base metadata check command,
-- a Java runtime detection command,
-- an installation plan command for the isolated Nekara Fabric client,
-- an installation status command plus a repair action for the resolved
-  `version.json`, client `.jar`, Fabric profile JSON, official libraries,
-  Fabric libraries, asset index, and asset objects,
-- a launch command that builds a real Minecraft process invocation
-  from official metadata plus the Fabric loader profile and monitors its
-  status,
-- an offline player profile flow that stores the local player name in launcher
-  data for the launch session,
-- a frameless React launcher shell that renders the current readiness state.
+- příkaz pro stav launcheru,
+- příkaz pro kontrolu oficiálních Minecraft metadat,
+- příkaz pro detekci Java běhového prostředí,
+- příkaz pro instalační plán izolovaného Fabric klienta Nekary,
+- příkaz pro stav instalace a opravnou akci pro vyhodnocený
+  `version.json`, klientský `.jar`, Fabric profil JSON, oficiální knihovny,
+  Fabric knihovny, index assetů a objekty assetů,
+- příkaz pro spuštění, který skládá skutečné Minecraft spuštění z oficiálních
+  metadat a Fabric profilu a sleduje jeho stav,
+- offline profil hráče, který ukládá lokální jméno hráče pro spouštěcí relaci,
+- bezrámový React shell launcheru, který zobrazuje aktuální stav připravenosti.
 
-## Non-Goals
+## Mimo rozsah
 
-The launcher must not provide:
+Launcher nesmí poskytovat:
 
-- multiple game profiles,
-- user-selectable Minecraft versions,
-- public modpack installation,
-- mod catalog browsing,
-- manual mod management,
-- multiple Minecraft instances,
-- custom server management,
-- community features,
-- forum, store, or web portal features,
-- Minecraft server administration.
+- více herních profilů,
+- výběr Minecraft verzí,
+- instalaci veřejných modpacků,
+- procházení katalogu modů,
+- ruční správu modů,
+- více Minecraft instancí,
+- správu vlastních serverů,
+- komunitní funkce,
+- fórum, obchod nebo webový portál,
+- administraci Minecraft serveru.
 
-## Target Minecraft Version
+## Cílová verze Minecraftu
 
-The supported Minecraft version is centrally defined as:
+Podporovaná verze Minecraftu je definovaná centrálně jako:
 
 ```text
 26.1.2
 ```
 
-Before implementing the installation mechanism, this version must be resolved
-through official Minecraft metadata. Do not invent unofficial URLs or fallback
-metadata.
+Před implementací instalačního mechanismu musí být tato verze dohledaná přes
+oficiální Minecraft metadata. Nevymýšlej neoficiální URL ani náhradní metadata.
 
-As of 2026-06-30, the version was verified in the official Mojang/Piston
-version manifest as a `release`.
+K 2026-06-30 byla tato verze ověřena v oficiálním manifestu Mojang/Piston jako
+`release`.
 
-## Technology Direction
+## Technologický směr
 
-The preferred stack is:
+Preferovaný stack je:
 
 - Tauri 2
 - React
@@ -84,94 +81,119 @@ The preferred stack is:
 - Vite
 - pnpm
 
-See [ADR 0001](docs/adr/0001-launcher-technology-stack.md) for the initial
-technology decision.
+Viz [ADR 0001](docs/adr/0001-launcher-technology-stack.md) pro původní
+technologické rozhodnutí.
 
-See [ADR 0003](docs/adr/0003-github-releases-updater-and-install-integrity.md)
-for the current update and installation integrity direction.
+Viz [ADR 0003](docs/adr/0003-github-releases-updater-and-install-integrity.md)
+pro současný směr aktualizací a integrity instalace.
 
-See [ADR 0004](docs/adr/0004-fabric-client-runtime.md) for the Fabric client
-runtime decision.
+Viz [ADR 0004](docs/adr/0004-fabric-client-runtime.md) pro rozhodnutí o
+Fabric klientském runtime.
 
-## Current Repository Status
+## Aktuální stav repozitáře
 
-This repository is at the project foundation stage. The initial Tauri 2 +
-React + TypeScript scaffold exists, with a player-facing launcher shell and
-the first real runtime checks.
+Repozitář je ve fázi projektového základu. Existuje počáteční kostra Tauri 2 +
+React + TypeScript, hráčsky orientovaný launcher shell a první skutečné
+běhové kontroly.
 
-The launcher can now prepare the first full Fabric-backed client layer inside
-the isolated Nekara directory: the resolved version metadata JSON, official
-client jar, official libraries, Fabric profile JSON, Fabric libraries, asset
-index, asset objects, and the approved Nekara Fabric mods manifest. Downloaded
-files are verified before they are stored locally, launcher-managed mods are
-repaired by SHA-512 and cleaned up when the approved manifest changes, and the
-launcher reports how many libraries, assets, and mods are still missing.
-During preparation, the launcher also writes a preset Nekara multiplayer
-server entry into the client so the server appears directly inside Minecraft.
+Launcher už umí připravit první plnou vrstvu Fabric klienta v izolovaném
+adresáři Nekary: vyhodnocené `version.json`, oficiální klientský `.jar`,
+oficiální knihovny, Fabric profil JSON, Fabric knihovny, asset index, asset
+objekty a schválený manifest modů pro Fabric klienta Nekary. Stažené soubory
+se před uložením ověřují, mody spravované launcherem se opravují pomocí
+SHA-512 a při změně schváleného manifestu se čistí, a launcher hlásí, kolik
+knihoven, assetů a modů ještě chybí. Během přípravy se navíc do klienta zapisuje
+přednastavený multiplayer server Nekary, aby se server zobrazil přímo v
+Minecraftu.
 
-The launcher can also perform a first offline `Play` flow when the Fabric
-client is prepared and a compatible Java runtime is available. The process
-status and log path are surfaced back into the UI for diagnostics. The
-settings drawer now stores the configured Minecraft RAM limit and keeps launch
-failure hints plus a captured log excerpt available after unsuccessful starts.
-It also accepts an optional custom Java executable path so the runtime can be
-pinned instead of relying only on the system `PATH`. The settings page also
-accepts an optional custom game installation directory so the isolated Nekara
-client does not have to live under the default AppData location.
+Launcher také umí první offline průchod `Hrát`, pokud je Fabric klient
+připravený a je k dispozici kompatibilní Java běhové prostředí. Stav procesu a
+cesta k logu se vrací zpět do UI pro diagnostiku. V nastaveních se ukládá limit
+RAM pro Minecraft a po neúspěšném spuštění zůstává k dispozici nápověda k
+opravě i výřez logu. Nastavení navíc přijímá volitelnou vlastní cestu ke
+spustitelnému souboru Javy, takže běhové prostředí lze připnout místo
+spoléhání jen na systémový `PATH`. Stejné nastavení také přijímá volitelný
+vlastní adresář hry, aby izolovaný klient Nekary nemusel ležet pod výchozím
+`AppData`.
 
-The player-facing UI and launcher diagnostics are localized to Czech, and the
-launcher startup now staggers heavier runtime checks so the first window paint
-is less likely to hang on Windows.
+Uživatelské rozhraní i diagnostika launcheru jsou lokalizované do češtiny a
+start aplikace nyní rozkládá těžší běhové kontroly, takže se první vykreslení
+okna na Windows méně zasekává.
 
-Launcher-side diagnostic logs are written under the user profile inside the
-Nekara launcher data directory, in a dedicated `logs` folder, so update and
-launch failures can be reviewed after the fact.
+Diagnostické logy launcheru se zapisují pod uživatelský profil do datového
+adresáře Nekara Launcheru, do samostatné složky `logs`, aby bylo možné zpětně
+procházet chyby aktualizace i spuštění.
 
-Launcher self-updates are wired to signed GitHub Releases. The updater checks a
-release endpoint automatically at startup once release assets are published.
+Samoupdaty launcheru jsou napojené na podepsané GitHub Releases. Updater při
+startu automaticky kontroluje koncový bod releasu, jakmile jsou release
+artefakty dostupné.
 
-Brand source assets are organized under `brand/`, while generated Tauri app
-icons live under `src-tauri/icons/`.
+Zdrojové brand assets jsou organizované v `brand/`, zatímco generované ikony
+aplikace Tauri jsou v `src-tauri/icons/`.
 
-Known local prerequisite status:
+Známý stav lokálních závislostí:
 
-- Node.js: available
-- pnpm: available
-- Rust toolchain: available locally and verified through the Visual Studio
-  developer command prompt
+- Node.js: dostupný
+- pnpm: dostupný
+- Rust toolchain: dostupný lokálně a ověřený přes Visual Studio Developer
+  Command Prompt
 
-## Development Notes
+## Poznámky k vývoji
 
-Install JavaScript dependencies:
+Instalace JavaScriptových závislostí:
 
 ```bash
 pnpm install
 ```
 
-Run frontend typechecking:
+Kontrola TypeScript typů:
 
 ```bash
 pnpm typecheck
 ```
 
-Build the frontend:
+Kontrola formátování:
+
+```bash
+pnpm format:check
+```
+
+Lint:
+
+```bash
+pnpm lint
+```
+
+Testy:
+
+```bash
+pnpm test
+```
+
+Sestavení frontendu:
 
 ```bash
 pnpm build
 ```
 
-Run Tauri commands through:
+Kompletní ověřovací průchod:
+
+```bash
+pnpm check
+```
+
+Spuštění Tauri příkazů:
 
 ```bash
 pnpm tauri
 ```
 
-Desktop development and desktop builds require the Rust toolchain to be
-available in PATH.
+Desktopový vývoj a desktopové buildy vyžadují, aby byl Rust toolchain dostupný
+v `PATH`.
 
-On Windows, Tauri builds also require the Visual Studio C++ build tools
-environment. In this repository, `pnpm tauri build` was verified from the
-Visual Studio developer command prompt with `~/.cargo/bin` on PATH.
+Na Windows Tauri buildy také vyžadují prostředí Visual Studio C++ Build Tools.
+V tomto repozitáři bylo `pnpm tauri build` ověřeno z Visual Studio Developer
+Command Promptu s `~/.cargo/bin` v `PATH`.
 
-The current pnpm workspace explicitly approves the `esbuild` install script,
-which is required by Vite.
+Současný pnpm workspace výslovně schvaluje instalační skript `esbuild`, který
+Vite potřebuje.

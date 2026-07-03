@@ -3,8 +3,8 @@ use std::fs::OpenOptions;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use flate2::Compression;
 use flate2::write::GzEncoder;
+use flate2::Compression;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use sha2::Sha512;
@@ -518,11 +518,7 @@ fn build_servers_dat_payload() -> Result<Vec<u8>, String> {
     payload.push(10);
     payload.extend_from_slice(&1i32.to_be_bytes());
 
-    push_nbt_named_string(
-        &mut payload,
-        "name",
-        config::PRESET_MULTIPLAYER_SERVER_NAME,
-    )?;
+    push_nbt_named_string(&mut payload, "name", config::PRESET_MULTIPLAYER_SERVER_NAME)?;
     push_nbt_named_string(
         &mut payload,
         "ip",
@@ -553,9 +549,8 @@ fn ensure_preset_multiplayer_server(paths: &InstallationPaths) -> Result<bool, S
     let encoded_payload = build_servers_dat_gzip_bytes()?;
 
     if servers_dat_path.exists() {
-        let existing_bytes = fs::read(&servers_dat_path).map_err(|error| {
-            format!("Unable to read {}: {error}", servers_dat_path.display())
-        })?;
+        let existing_bytes = fs::read(&servers_dat_path)
+            .map_err(|error| format!("Unable to read {}: {error}", servers_dat_path.display()))?;
         if existing_bytes == encoded_payload {
             return Ok(false);
         }
@@ -691,7 +686,9 @@ fn build_missing_summary(snapshot: &InstallationSnapshot) -> String {
         parts.push(format!("{missing_assets} objektů assetů"));
     }
 
-    let missing_mods = snapshot.mod_count_total.saturating_sub(snapshot.mod_count_ready);
+    let missing_mods = snapshot
+        .mod_count_total
+        .saturating_sub(snapshot.mod_count_ready);
     if missing_mods > 0 {
         parts.push(format!("{missing_mods} modů"));
     }
@@ -1005,7 +1002,10 @@ mod tests {
             let servers_dat = smoke_root.join(".minecraft").join("servers.dat");
 
             if !mods_dir.exists() {
-                return Err(format!("Smoke test expected mods dir at {}.", mods_dir.display()));
+                return Err(format!(
+                    "Smoke test expected mods dir at {}.",
+                    mods_dir.display()
+                ));
             }
 
             if !servers_dat.exists() {

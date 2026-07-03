@@ -1,4 +1,4 @@
-name: publish
+name: publikace
 
 on:
   push:
@@ -6,32 +6,32 @@ on:
       - "app-v*"
 
 jobs:
-  publish-tauri:
+  publikace-tauri:
     permissions:
       contents: write
     runs-on: windows-latest
 
     steps:
-      - name: checkout
+      - name: stažení kódu
         uses: actions/checkout@v4
 
-      - name: setup pnpm
+      - name: nastavení pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
 
-      - name: setup node
+      - name: nastavení node
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
 
-      - name: install Rust stable
+      - name: instalace stabilního Rustu
         uses: dtolnay/rust-toolchain@stable
 
-      - name: install frontend dependencies
+      - name: instalace frontendových závislostí
         run: pnpm install --frozen-lockfile
 
-      - name: build and publish
+      - name: sestavení a publikace
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -40,7 +40,7 @@ jobs:
         with:
           tagName: app-v__VERSION__
           releaseName: Nekara Launcher v__VERSION__
-          releaseBody: Signed Windows build and updater metadata for Nekara Launcher.
+          releaseBody: Podepsaný Windows build a metadata updateru pro Nekara Launcher.
           releaseDraft: false
           prerelease: false
           updaterJsonPreferNsis: true

@@ -44,7 +44,10 @@ fn normalize_max_ram_mb(max_ram_mb: u32) -> Result<u32, String> {
     }
 
     if !max_ram_mb.is_multiple_of(RAM_STEP_MB) {
-        return Err(format!("Přidělení RAM musí používat kroky po {} MB.", RAM_STEP_MB));
+        return Err(format!(
+            "Přidělení RAM musí používat kroky po {} MB.",
+            RAM_STEP_MB
+        ));
     }
 
     Ok(max_ram_mb)
@@ -106,8 +109,7 @@ pub fn resolve_java_executable_path() -> Result<Option<String>, String> {
 }
 
 pub fn resolve_game_directory_path() -> Result<Option<String>, String> {
-    let path = read_launcher_settings_file()?
-        .and_then(|settings| settings.game_directory_path);
+    let path = read_launcher_settings_file()?.and_then(|settings| settings.game_directory_path);
     normalize_game_directory_path(path)
 }
 

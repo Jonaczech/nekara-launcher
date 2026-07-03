@@ -1,149 +1,144 @@
-# Nekara Launcher Roadmap
+# Roadmapa Nekara Launcheru
 
-This roadmap tracks the initial path from an empty repository to a usable
-custom launcher for the Nekara server.
+Tato roadmapa sleduje počáteční cestu od prázdného repozitáře k použitelnému
+vlastnímu launcheru pro server Nekara.
 
-## Phase 0: Project Foundation
+## Fáze 0: Základ projektu
 
-- [x] Capture project instructions.
-- [x] Document launcher scope and non-goals.
-- [x] Create the initial technology ADR.
-- [x] Create a persistent project state handoff file.
-- [ ] Install or make available the Rust toolchain locally.
-- [x] Scaffold the Tauri 2 + React + TypeScript + Vite + pnpm application.
-- [x] Add initial typecheck and frontend build commands.
-- [ ] Add formatter, lint, and test commands.
+- [x] Zachytit projektové instrukce.
+- [x] Zdokumentovat rozsah launcheru a co do něj nepatří.
+- [x] Vytvořit úvodní technologické ADR.
+- [x] Vytvořit trvalý handoff soubor se stavem projektu.
+- [ ] Nainstalovat nebo lokálně zpřístupnit Rust toolchain.
+- [x] Naskafoldovat aplikaci Tauri 2 + React + TypeScript + Vite + pnpm.
+- [x] Přidat počáteční příkazy pro typecheck a build frontendu.
+- [x] Přidat formatter, lint a test příkazy.
 
-## Phase 1: Walking Skeleton
+## Fáze 1: Walking skeleton
 
-- [x] Create the frontend application shell.
-- [x] Create the Rust/Tauri backend module structure.
-- [x] Define a typed boundary between React and Rust commands.
-- [x] Add a launcher status command.
-- [x] Add a Minecraft version metadata check command.
-- [x] Display launcher status and diagnostics in the UI.
-
-Exit criteria:
-
-- The launcher starts in development mode.
-- The UI calls at least one real Tauri command.
-- The launcher can report whether the configured Minecraft version is present
-  in official metadata.
-
-## Phase 2: Configuration and Local Directories
-
-- [x] Define the central Nekara game configuration.
-- [x] Define the single supported Minecraft version in one place.
-- [x] Resolve platform-specific application and game directories.
-- [x] Create the isolated Nekara game directory.
-- [ ] Add diagnostics for missing permissions or invalid paths.
+- [x] Vytvořit frontendový shell aplikace.
+- [x] Vytvořit Rust/Tauri backend modulovou strukturu.
+- [x] Definovat typizovanou hranici mezi Reactem a Rust příkazy.
+- [x] Přidat příkaz pro stav launcheru.
+- [x] Přidat příkaz pro kontrolu Minecraft version metadata.
+- [x] Zobrazit stav launcheru a diagnostiku v UI.
 
 Exit criteria:
 
-- The launcher can show the configured game directory and create it safely.
-- No user-managed profiles or version selection exist.
+- Launcher se spustí v development módu.
+- UI volá alespoň jeden skutečný Tauri command.
+- Launcher umí říct, jestli je cílová Minecraft verze přítomná v oficiálních
+  metadatech.
 
-## Phase 3: Official Minecraft Metadata and Files
+## Fáze 2: Konfigurace a lokální adresáře
 
-- [x] Download official Minecraft version metadata.
-- [x] Resolve required client files from official metadata.
-- [x] Model isolated installation paths for the Nekara client.
-- [x] Download the first official Minecraft files for the configured client.
-- [ ] Download files with progress reporting.
-- [x] Verify file hashes.
-- [x] Repair missing or corrupted files.
-- [ ] Record clear diagnostics for unavailable or invalid metadata.
-- [x] Prepare official libraries, asset index, and asset objects.
-- [ ] Prepare the remaining runtime files required for launch.
+- [x] Definovat centrální konfiguraci Nekary.
+- [x] Definovat jednu podporovanou Minecraft verzi na jednom místě.
+- [x] Vyřešit platformově specifické aplikační a herní adresáře.
+- [x] Vytvořit izolovaný herní adresář Nekary.
+- [ ] Přidat diagnostiku pro chybějící oprávnění nebo neplatné cesty.
 
 Exit criteria:
 
-- The launcher can prepare official Minecraft files for the configured Nekara
-  version.
+- Launcher umí ukázat nakonfigurovaný herní adresář a bezpečně jej vytvořit.
+- Neexistují žádné uživatelsky spravované profily ani výběr verzí.
 
-## Phase 4: Java Runtime
+## Fáze 3: Oficiální Minecraft metadata a soubory
 
-- [x] Detect compatible local Java runtimes.
-- [ ] Decide whether to manage a bundled runtime.
-- [x] Prepare a runtime compatibility check.
-- [x] Surface actionable diagnostics when Java is missing or incompatible.
-
-Exit criteria:
-
-- The launcher can identify a valid runtime path for launching Minecraft.
-
-## Phase 5: Player Identity
-
-- [x] Add an offline player profile flow.
-- [x] Store the offline player name in launcher data.
-- [ ] Decide when to reintroduce Microsoft authentication.
-- [ ] Define how online entitlement should coexist with offline mode.
-- [ ] Surface player identity and profile diagnostics clearly.
+- [x] Stáhnout oficiální Minecraft version metadata.
+- [x] Získat potřebné client files z oficiálních metadat.
+- [x] Modelovat izolované instalační cesty pro klienta Nekary.
+- [x] Stáhnout první oficiální Minecraft soubory pro nastaveného klienta.
+- [ ] Stahovat soubory s reportováním průběhu.
+- [x] Ověřovat hash souborů.
+- [x] Opravovat chybějící nebo poškozené soubory.
+- [ ] Zapsat jasnou diagnostiku pro nedostupná nebo neplatná metadata.
+- [x] Připravit oficiální knihovny, asset index a asset objekty.
+- [ ] Připravit zbývající runtime soubory potřebné pro spuštění.
 
 Exit criteria:
 
-- A user can set a local player identity and the launcher can use it for a
-  launch session.
+- Launcher umí připravit oficiální Minecraft soubory pro nastavenou verzi
+  Nekary.
 
-## Phase 6: Launch and Process Monitoring
+## Fáze 4: Java runtime
 
-- [x] Build the Minecraft JVM command.
-- [x] Start the Minecraft process.
-- [x] Stream or persist relevant logs.
-- [x] Track running, exited, and crashed states.
-- [x] Show user-readable failure diagnostics.
+- [x] Detekovat kompatibilní lokální Java runtime.
+- [ ] Rozhodnout, zda budeme spravovat přibalený runtime.
+- [x] Připravit kontrolu kompatibility runtime.
+- [x] Zobrazit použitelnou diagnostiku, když Java chybí nebo je nekompatibilní.
 
 Exit criteria:
 
-- A user with a prepared installation can press Play and launch
-  Minecraft.
+- Launcher umí najít platnou runtime cestu pro spuštění Minecraftu.
 
-## Later Phases
+## Fáze 5: Identita hráče
 
-- Launcher self-update flow through signed GitHub Releases.
-- Nekara client package synchronization.
-- Approved mods, configs, and resource packs.
-- Server status and announcements.
-- Advanced repair and support diagnostics.
+- [x] Přidat offline flow pro profil hráče.
+- [x] Ukládat offline jméno hráče do dat launcheru.
+- [ ] Zobrazit identitu hráče a diagnostiku profilu jasněji.
 
-## Immediate Release Roadmap
+Exit criteria:
 
-This is the shortest practical path from the current repository state to a
-stable launcher release that can update itself.
+- Uživatel si umí nastavit lokální identitu a launcher ji umí použít pro
+  spouštěcí relaci.
 
-### 1. Release Recovery
+## Fáze 6: Spuštění a sledování procesu
 
-- [x] Align the launcher updater public key with the signing key currently used
-  by GitHub Releases.
-- [x] Fix the Fabric installation readiness state so a prepared client can
-  leave the pending state.
-- [x] Bump the launcher version to `0.1.11`.
-- [ ] Publish `app-v0.1.11` from CI so players can reinstall onto the corrected
-  updater key.
-- [ ] Replace any locally installed pre-`0.1.8` launcher builds with the new
-  installer once the release is published.
+- [x] Sestavit Minecraft JVM command.
+- [x] Spustit Minecraft proces.
+- [x] Průběžně streamovat nebo ukládat relevantní logy.
+- [x] Sledovat stavy running, exited a crashed.
+- [x] Zobrazovat uživatelsky srozumitelnou diagnostiku chyb.
 
-### 2. Release Hardening
+Exit criteria:
 
-- [x] Add a documented release runbook for tagging, CI publish, and smoke
-  verification.
-- [ ] Add a post-release smoke test that checks updater discovery from the
-  previous public build.
-- [ ] Add a clearer updater error surface in the UI when signature validation
-  fails.
-- [ ] Add formatter, lint, and automated desktop smoke checks to reduce release
-  regressions.
+- Uživatel s připravenou instalací může stisknout Hrát a spustit Minecraft.
 
-### 3. Launcher Readiness
+## Pozdější fáze
 
-- [ ] Add progress reporting for long download operations instead of only the
-  aggregate readiness bar.
-- [ ] Improve installation diagnostics for blocked metadata, filesystem
-  permissions, and broken local paths.
-- [ ] Decide and implement the Java runtime strategy:
-  - system Java only, or
-  - managed Nekara runtime.
-- [ ] Decide when to reintroduce Microsoft authentication and entitlement
-  checks.
-- [ ] Start the Nekara client package sync layer:
-  approved mods, configs, resource packs, and versioned manifests.
+- Self-update launcheru přes podepsané GitHub Releases.
+- Synchronizace klientského balíčku Nekary.
+- Schválené mody, konfigurace a resource packy.
+- Stav serveru a oznámení.
+- Pokročilá oprava a support diagnostika.
+
+## Okamžitá release roadmapa
+
+Toto je nejkratší praktická cesta od současného stavu repozitáře ke stabilnímu
+release launcheru, který se umí aktualizovat sám.
+
+### 1. Obnova releasu
+
+- [x] Zarovnat veřejný klíč updateru launcheru s signing key, který aktuálně
+      používá GitHub Releases.
+- [x] Opravit stav připravenosti Fabric instalace tak, aby připravený klient
+      mohl opustit pending stav.
+- [x] Zvýšit verzi launcheru na `0.1.11`.
+- [ ] Publikovat `app-v0.1.11` z CI, aby si hráči mohli nainstalovat opravený
+      updater key.
+- [ ] Nahradit všechny lokálně nainstalované buildy starší než `0.1.8` novým
+      installerem, jakmile bude release publikovaný.
+
+### 2. Zpevnění releasu
+
+- [x] Přidat zdokumentovaný release runbook pro tagování, CI publikaci a smoke
+      verifikaci.
+- [ ] Přidat post-release smoke test, který ověří objevení updateru z předchozí
+      veřejné verze.
+- [ ] Přidat srozumitelnější updater error surface v UI, když selže validace
+      podpisu.
+- [ ] Přidat automatické desktop smoke checky, aby se snížila
+      regresní chybovost releasů.
+
+### 3. Připravenost launcheru
+
+- [ ] Přidat reportování průběhu pro dlouhé download operace místo jen
+      agregované readiness bar.
+- [ ] Zlepšit instalační diagnostiku pro blokovaná metadata, oprávnění
+      filesystemu a rozbité lokální cesty.
+- [ ] Rozhodnout a implementovat strategii pro Java runtime:
+  - pouze systémová Java, nebo
+  - spravovaný Nekara runtime.
+- [ ] Spustit vrstvu synchronizace klientského balíčku Nekary:
+      schválené mody, konfigurace, resource packy a verzované manifesty.

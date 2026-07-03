@@ -44,7 +44,9 @@ type LoadState<T> =
 const appVersion = packageInfo.version;
 
 function App() {
-  const [directoryState, setDirectoryState] = useState<LoadState<GameDirectoryInfo>>({
+  const [directoryState, setDirectoryState] = useState<
+    LoadState<GameDirectoryInfo>
+  >({
     kind: "loading",
   });
   const [javaState, setJavaState] = useState<LoadState<JavaRuntimeCheck>>({
@@ -53,13 +55,17 @@ function App() {
   const [installationState, setInstallationState] = useState<
     LoadState<MinecraftInstallationStatus>
   >({ kind: "loading" });
-  const [gameLaunchState, setGameLaunchState] = useState<LoadState<GameLaunchStatus>>({
+  const [gameLaunchState, setGameLaunchState] = useState<
+    LoadState<GameLaunchStatus>
+  >({
     kind: "loading",
   });
   const [launcherSettingsState, setLauncherSettingsState] = useState<
     LoadState<LauncherSettings>
   >({ kind: "loading" });
-  const [playerState, setPlayerState] = useState<LoadState<OfflinePlayerStatus>>({
+  const [playerState, setPlayerState] = useState<
+    LoadState<OfflinePlayerStatus>
+  >({
     kind: "loading",
   });
   const [playerNameInput, setPlayerNameInput] = useState("");
@@ -199,7 +205,9 @@ function App() {
     const browserWindow = window as Window & typeof globalThis;
 
     if (typeof browserWindow.requestIdleCallback === "function") {
-      const idleId = browserWindow.requestIdleCallback(callback, { timeout: timeoutMs });
+      const idleId = browserWindow.requestIdleCallback(callback, {
+        timeout: timeoutMs,
+      });
       return () => browserWindow.cancelIdleCallback(idleId);
     }
 
@@ -282,11 +290,13 @@ function App() {
     return () => window.clearInterval(timer);
   }, [gameLaunchState]);
 
-  const gameDirectory = directoryState.kind === "ready" ? directoryState.value : null;
+  const gameDirectory =
+    directoryState.kind === "ready" ? directoryState.value : null;
   const javaRuntime = javaState.kind === "ready" ? javaState.value : null;
   const installationStatus =
     installationState.kind === "ready" ? installationState.value : null;
-  const gameLaunch = gameLaunchState.kind === "ready" ? gameLaunchState.value : null;
+  const gameLaunch =
+    gameLaunchState.kind === "ready" ? gameLaunchState.value : null;
   const launcherSettings =
     launcherSettingsState.kind === "ready" ? launcherSettingsState.value : null;
   const offlinePlayer = playerState.kind === "ready" ? playerState.value : null;
@@ -297,9 +307,11 @@ function App() {
     installationStatus != null && installationStatus.state !== "blocked";
   const javaCompatible =
     installationStatus?.requiredJavaMajor == null
-      ? javaRuntime?.detected ?? false
-      : (javaRuntime?.majorVersion ?? 0) >= installationStatus.requiredJavaMajor;
-  const gameRunning = gameLaunch?.state === "running" || gameLaunch?.state === "launching";
+      ? (javaRuntime?.detected ?? false)
+      : (javaRuntime?.majorVersion ?? 0) >=
+        installationStatus.requiredJavaMajor;
+  const gameRunning =
+    gameLaunch?.state === "running" || gameLaunch?.state === "launching";
 
   const readiness = useMemo(
     () => ({
@@ -339,7 +351,9 @@ function App() {
   const installOperationPercent =
     installOperationTotalUnits === 0
       ? 0
-      : Math.round((installOperationReadyUnits / installOperationTotalUnits) * 100);
+      : Math.round(
+          (installOperationReadyUnits / installOperationTotalUnits) * 100,
+        );
   const progressPanelLabel =
     preparingInstallation || (installationStatus != null && !installationReady)
       ? "Průběh Fabric klienta"
@@ -372,7 +386,8 @@ function App() {
   const ramStepMb = launcherSettings?.ramStepMb ?? 512;
   const javaPathNormalized = javaPathInput.trim();
   const gameDirectoryPathNormalized = gameDirectoryPathInput.trim();
-  const savedJavaPathNormalized = launcherSettings?.javaExecutablePath?.trim() ?? "";
+  const savedJavaPathNormalized =
+    launcherSettings?.javaExecutablePath?.trim() ?? "";
   const savedGameDirectoryPathNormalized =
     launcherSettings?.gameDirectoryPath?.trim() ?? "";
   const ramSettingsDirty =
@@ -477,7 +492,9 @@ function App() {
       const settings = await saveLauncherSettings(
         ramInputMb,
         javaPathInput.trim().length > 0 ? javaPathInput.trim() : null,
-        gameDirectoryPathInput.trim().length > 0 ? gameDirectoryPathInput.trim() : null,
+        gameDirectoryPathInput.trim().length > 0
+          ? gameDirectoryPathInput.trim()
+          : null,
       );
       setLauncherSettingsState({ kind: "ready", value: settings });
       setRamInputMb(settings.maxRamMb);
@@ -508,7 +525,9 @@ function App() {
       setGameLaunchState({ kind: "ready", value: status });
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Minecraft se nepodařilo spustit.";
+        error instanceof Error
+          ? error.message
+          : "Minecraft se nepodařilo spustit.";
       setGameLaunchState({ kind: "error", message });
     } finally {
       setLaunchingGame(false);
@@ -536,7 +555,10 @@ function App() {
     }
 
     let effectiveJavaCompatible = javaCompatible;
-    if (!javaCompatible && (javaState.kind === "loading" || javaState.kind === "error")) {
+    if (
+      !javaCompatible &&
+      (javaState.kind === "loading" || javaState.kind === "error")
+    ) {
       const refreshedJava = await refreshJavaRuntime();
       effectiveJavaCompatible =
         effectiveInstallationStatus?.requiredJavaMajor == null
@@ -549,7 +571,10 @@ function App() {
       return;
     }
 
-    if (readinessCount === 5 || effectiveInstallationStatus?.state === "ready") {
+    if (
+      readinessCount === 5 ||
+      effectiveInstallationStatus?.state === "ready"
+    ) {
       await handleLaunchMinecraft();
       return;
     }
@@ -608,7 +633,9 @@ function App() {
                   className="window-icon-button"
                   aria-label="Minimalizovat okno"
                   data-tauri-drag-region="false"
-                  onClick={() => runWindowAction((appWindow) => appWindow.minimize())}
+                  onClick={() =>
+                    runWindowAction((appWindow) => appWindow.minimize())
+                  }
                 >
                   <Minimize2 size={14} />
                 </button>
@@ -617,7 +644,9 @@ function App() {
                   className="window-icon-button window-icon-button--close"
                   aria-label="Zavřít okno"
                   data-tauri-drag-region="false"
-                  onClick={() => runWindowAction((appWindow) => appWindow.close())}
+                  onClick={() =>
+                    runWindowAction((appWindow) => appWindow.close())
+                  }
                 >
                   <X size={14} />
                 </button>
@@ -630,7 +659,9 @@ function App() {
                   <div className="hero-copy">
                     <p className="hero-eyebrow">Nekara Launcher</p>
                     <h1 id="launcher-title">Nekara</h1>
-                    <p className="hero-subtitle">Jedna hra. Jeden klient. Jedna cesta do světa.</p>
+                    <p className="hero-subtitle">
+                      Jedna hra. Jeden klient. Jedna cesta do světa.
+                    </p>
                   </div>
 
                   <div className="hero-actions hero-actions--stacked">
@@ -638,9 +669,13 @@ function App() {
                       type="button"
                       className="primary-action"
                       onClick={() => void handlePrimaryAction()}
-                      disabled={savingPlayer || preparingInstallation || launchingGame}
+                      disabled={
+                        savingPlayer || preparingInstallation || launchingGame
+                      }
                     >
-                      {savingPlayer || preparingInstallation || launchingGame ? (
+                      {savingPlayer ||
+                      preparingInstallation ||
+                      launchingGame ? (
                         <LoaderCircle size={18} className="spin" />
                       ) : (
                         <Play size={18} />
@@ -648,7 +683,10 @@ function App() {
                       <span>{primaryButtonLabel}</span>
                     </button>
 
-                    <section className="progress-panel progress-panel--hero" aria-label="Průběh přípravy launcheru">
+                    <section
+                      className="progress-panel progress-panel--hero"
+                      aria-label="Průběh přípravy launcheru"
+                    >
                       <div className="progress-panel__header">
                         <span>{progressPanelLabel}</span>
                         <span>{progressPanelValue}</span>
@@ -661,7 +699,6 @@ function App() {
                       </div>
                     </section>
                   </div>
-
                 </section>
 
                 <section className="home-grid">
@@ -671,7 +708,8 @@ function App() {
                       <span>Hráč</span>
                     </div>
                     <p className="home-card__lead">
-                      Lokální profil pro první spuštění klienta i běžné používání launcheru.
+                      Lokální profil pro první spuštění klienta i běžné
+                      používání launcheru.
                     </p>
                     <label className="player-field">
                       <span className="player-field__label">Offline jméno</span>
@@ -679,7 +717,9 @@ function App() {
                         type="text"
                         maxLength={16}
                         value={playerNameInput}
-                        onChange={(event) => setPlayerNameInput(event.target.value)}
+                        onChange={(event) =>
+                          setPlayerNameInput(event.target.value)
+                        }
                         placeholder="Zadej jméno"
                       />
                     </label>
@@ -722,10 +762,13 @@ function App() {
                       <h4>Instalace klienta</h4>
                     </div>
                     <p className="settings-card__lead">
-                      Tady nastavíš, kam se má ukládat Minecraft, Fabric i schválené mody.
+                      Tady nastavíš, kam se má ukládat Minecraft, Fabric i
+                      schválené mody.
                     </p>
                     {launcherSettingsState.kind === "error" ? (
-                      <p className="settings-error-note">{launcherSettingsState.message}</p>
+                      <p className="settings-error-note">
+                        {launcherSettingsState.message}
+                      </p>
                     ) : (
                       <div className="settings-control-stack">
                         <label className="settings-path-field">
@@ -737,7 +780,10 @@ function App() {
                               updateGameDirectoryPathInput(event.target.value)
                             }
                             placeholder="D:\\Games\\Nekara"
-                            disabled={launcherSettingsState.kind !== "ready" || savingSettings}
+                            disabled={
+                              launcherSettingsState.kind !== "ready" ||
+                              savingSettings
+                            }
                           />
                         </label>
 
@@ -748,19 +794,25 @@ function App() {
                               : "Výchozí AppData"}
                           </span>
                           <span className="settings-helper-text">
-                            Prázdné pole použije výchozí adresář launcheru v AppData. Vyplněná
-                            cesta musí být absolutní.
+                            Prázdné pole použije výchozí adresář launcheru v
+                            AppData. Vyplněná cesta musí být absolutní.
                           </span>
                         </div>
 
                         <div className="settings-inline-meta">
-                          <span className="settings-value-chip">Verze launcheru</span>
-                          <span className="settings-helper-text">{currentVersionLabel}</span>
+                          <span className="settings-value-chip">
+                            Verze launcheru
+                          </span>
+                          <span className="settings-helper-text">
+                            {currentVersionLabel}
+                          </span>
                         </div>
 
                         {gameDirectory?.minecraftDir && (
                           <div className="settings-inline-meta">
-                            <span className="settings-value-chip">Aktuální složka</span>
+                            <span className="settings-value-chip">
+                              Aktuální složka
+                            </span>
                             <span className="settings-helper-text">
                               {gameDirectory.minecraftDir}
                             </span>
@@ -809,7 +861,9 @@ function App() {
                       Přidělení paměti patří sem, ne na hlavní obrazovku.
                     </p>
                     {launcherSettingsState.kind === "error" ? (
-                      <p className="settings-error-note">{launcherSettingsState.message}</p>
+                      <p className="settings-error-note">
+                        {launcherSettingsState.message}
+                      </p>
                     ) : (
                       <div className="settings-control-stack">
                         <div className="settings-inline-fields">
@@ -823,9 +877,14 @@ function App() {
                               step={ramStepMb}
                               value={ramInputMb}
                               onChange={(event) =>
-                                updateRamInput(Number.parseInt(event.target.value, 10))
+                                updateRamInput(
+                                  Number.parseInt(event.target.value, 10),
+                                )
                               }
-                              disabled={launcherSettingsState.kind !== "ready" || savingSettings}
+                              disabled={
+                                launcherSettingsState.kind !== "ready" ||
+                                savingSettings
+                              }
                             />
                           </label>
 
@@ -838,17 +897,28 @@ function App() {
                               step={ramStepMb}
                               value={ramInputMb}
                               onChange={(event) =>
-                                updateRamInput(Number.parseInt(event.target.value || "0", 10))
+                                updateRamInput(
+                                  Number.parseInt(
+                                    event.target.value || "0",
+                                    10,
+                                  ),
+                                )
                               }
-                              disabled={launcherSettingsState.kind !== "ready" || savingSettings}
+                              disabled={
+                                launcherSettingsState.kind !== "ready" ||
+                                savingSettings
+                              }
                             />
                           </label>
                         </div>
 
                         <div className="settings-inline-meta">
-                          <span className="settings-value-chip">{ramInputLabel}</span>
+                          <span className="settings-value-chip">
+                            {ramInputLabel}
+                          </span>
                           <span className="settings-helper-text">
-                            Spouští Minecraft s vybraným limitem <code>-Xmx</code>.
+                            Spouští Minecraft s vybraným limitem{" "}
+                            <code>-Xmx</code>.
                           </span>
                         </div>
 
@@ -889,10 +959,14 @@ function App() {
                       <h4>Java runtime</h4>
                     </div>
                     <p className="settings-card__lead">
-                      Nech to prázdné, pokud chceš použít první <code>java</code> z PATH, nebo sem vlož vlastní <code>java.exe</code>.
+                      Nech to prázdné, pokud chceš použít první{" "}
+                      <code>java</code> z PATH, nebo sem vlož vlastní{" "}
+                      <code>java.exe</code>.
                     </p>
                     {launcherSettingsState.kind === "error" ? (
-                      <p className="settings-error-note">{launcherSettingsState.message}</p>
+                      <p className="settings-error-note">
+                        {launcherSettingsState.message}
+                      </p>
                     ) : (
                       <div className="settings-control-stack">
                         <label className="settings-path-field">
@@ -900,18 +974,26 @@ function App() {
                           <input
                             type="text"
                             value={javaPathInput}
-                            onChange={(event) => updateJavaPathInput(event.target.value)}
+                            onChange={(event) =>
+                              updateJavaPathInput(event.target.value)
+                            }
                             placeholder="C:\\Program Files\\Java\\bin\\java.exe"
-                            disabled={launcherSettingsState.kind !== "ready" || savingSettings}
+                            disabled={
+                              launcherSettingsState.kind !== "ready" ||
+                              savingSettings
+                            }
                           />
                         </label>
 
                         <div className="settings-inline-meta">
                           <span className="settings-value-chip">
-                            {javaPathNormalized.length > 0 ? "Vlastní cesta" : "Systémová PATH"}
+                            {javaPathNormalized.length > 0
+                              ? "Vlastní cesta"
+                              : "Systémová PATH"}
                           </span>
                           <span className="settings-helper-text">
-                            Launcher zkusí tento soubor dřív, než přejde na systémové hledání.
+                            Launcher zkusí tento soubor dřív, než přejde na
+                            systémové hledání.
                           </span>
                         </div>
 
@@ -933,7 +1015,9 @@ function App() {
                             className="text-action"
                             onClick={() => {
                               if (launcherSettings != null) {
-                                setJavaPathInput(launcherSettings.javaExecutablePath ?? "");
+                                setJavaPathInput(
+                                  launcherSettings.javaExecutablePath ?? "",
+                                );
                               } else {
                                 void refreshLauncherSettings();
                               }

@@ -61,7 +61,11 @@ code {
   min-height: 100vh;
   color: #f5f1e8;
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 28%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.06),
+      transparent 28%
+    ),
     linear-gradient(180deg, #060607 0%, #0a0b0d 100%);
 }
 
@@ -121,7 +125,10 @@ code {
   color: #f5f1e8;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
 }
 
 .rail-button:hover {

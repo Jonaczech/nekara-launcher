@@ -1,107 +1,106 @@
-# ADR 0003: GitHub Releases Updater And Install Integrity
+# ADR 0003: GitHub Releases updater a integrita instalace
 
-## Status
+## Stav
 
-Accepted
+Přijato
 
-## Context
+## Kontext
 
-Nekara Launcher needs a sustainable distribution path for desktop updates.
-Every new launcher build should be publishable in a way that lets existing
-launcher installations discover and install updates automatically.
+Nekara Launcher potřebuje udržitelnou distribuční cestu pro desktopové
+aktualizace. Každý nový build launcheru by měl být publikovatelný tak, aby
+existující instalace launcheru uměly aktualizace automaticky najít a nainstalovat.
 
-The launcher also prepares a local Minecraft client, official libraries,
-assets, and later a managed Java runtime. These operations must not create
-duplicate installs or let multiple concurrent launcher actions corrupt the same
-installation directory.
+Launcher také připravuje lokální Minecraft klient, oficiální knihovny, assety
+a později spravovaný Java runtime. Tyto operace nesmí vytvářet duplicitní
+instalace ani dovolit, aby více souběžných launcher akcí poškodilo stejný
+instalační adresář.
 
-The project already has a single supported game configuration and one isolated
-game directory. That makes it practical to use one authoritative local install
-root plus strict integrity checks instead of profile-level duplication.
+Projekt už má jednu podporovanou herní konfiguraci a jeden izolovaný herní
+adresář. Díky tomu je praktické použít jeden autoritativní lokální install root
+společně s přísnými kontrolami integrity místo duplikace na úrovni profilů.
 
-## Decision
+## Rozhodnutí
 
-Use the following update and install strategy:
+Použij tuto strategii aktualizací a instalace:
 
-1. Distribute launcher releases through GitHub Releases.
-2. Publish signed updater artifacts for each desktop platform.
-3. Expose a static updater manifest per release channel that the launcher can
-   query at startup and from settings.
-4. Keep one authoritative local Nekara installation root per user profile.
-5. Prevent concurrent install/repair operations with lock files inside launcher
-   data.
-6. Avoid duplicate file downloads by checking for existing files first and
-   verifying integrity before replacement.
-7. When Java runtime management is introduced, store runtimes in a versioned
-   launcher-owned directory and reuse a matching verified runtime instead of
-   reinstalling it.
+1. Distribuuj release launcheru přes GitHub Releases.
+2. Publikuj podepsané updater artefakty pro každou desktopovou platformu.
+3. Vystav statický updater manifest pro každý release channel, který může
+   launcher dotazovat při startu i v nastaveních.
+4. Drž jeden autoritativní lokální Nekara installation root na uživatelský
+   profil.
+5. Zabraň souběžným install/repair operacím pomocí lock files v launcher dat.
+6. Vyhýbej se duplicitnímu stahování souborů tím, že nejdřív zkontroluješ, zda
+   už existují, a integritu ověříš před nahrazením.
+7. Až bude zaveden Java runtime management, ukládej runtime do verzovaného
+   launcher-owned adresáře a znovu používej odpovídající ověřený runtime místo
+   reinstalace.
 
-## Consequences
+## Důsledky
 
-### Positive
+### Pozitivní
 
-- GitHub Releases are sufficient as the first update host for a private or
-  public launcher distribution flow.
-- Release artifacts can stay aligned with the Tauri desktop build pipeline.
-- Existing launcher installs can move forward without manual reinstalls.
-- One isolated local game directory avoids accidental duplicate Minecraft
-  installs for the same launcher configuration.
-- Lock files reduce corruption risk when a user double-clicks actions or opens
-  multiple launcher instances.
-- Integrity-first checks naturally support repair without redownloading files
-  that are already valid.
+- GitHub Releases stačí jako první update host pro privátní i veřejný
+  distribuční flow launcheru.
+- Release artefakty mohou zůstat sladěné s Tauri desktop build pipeline.
+- Existující instalace launcheru mohou pokračovat bez ruční reinstalace.
+- Jeden izolovaný lokální herní adresář zabrání náhodné duplikaci Minecraft
+  instalací pro stejnou launcher konfiguraci.
+- Lock files snižují riziko poškození, když uživatel spustí akci dvakrát nebo
+  otevře více instancí launcheru.
+- Integrity-first kontrola přirozeně podporuje repair bez zbytečného
+  redownloadu už platných souborů.
 
-### Negative
+### Negativní
 
-- Updater support still requires signing keys, release automation, and a stable
-  manifest publishing step.
-- GitHub Releases should not be the final answer if future scale, access
-  control, or regional download performance requires a dedicated distribution
+- Updater podpora stále vyžaduje signing keys, release automatizaci a stabilní
+  krok publikace manifestu.
+- GitHub Releases by neměly být konečná odpověď, pokud budoucí škála, řízení
+  přístupu nebo regionální výkon stahování budou vyžadovat dedikovaný distribuční
   backend.
-- Lock files need stale-lock handling if the launcher is terminated during an
-  install operation.
+- Lock files potřebují stale-lock handling, pokud je launcher ukončený během
+  install operace.
 
-## Implementation Direction
+## Směr implementace
 
 ### Launcher self-update
 
-- Add the Tauri updater plugin once release signing and manifest hosting are
-  ready.
-- Define at least one update channel:
+- Přidej Tauri updater plugin, jakmile bude připravené release signing a hosting
+  manifestu.
+- Definuj alespoň jeden update channel:
   - `stable`
-- Publish release artifacts plus updater metadata from CI.
-- Check for updates:
-  - on launcher startup after the shell is responsive
-  - manually from settings
-- Prefer background download and apply on restart.
+- Publikuj release artefakty a updater metadata z CI.
+- Kontroluj aktualizace:
+  - po startu launcheru, jakmile je shell responzivní
+  - ručně z nastavení
+- Preferuj background download a apply on restart.
 
-### Install integrity
+### Integrita instalace
 
-- Use the existing isolated launcher data root for all managed files.
-- Keep one supported Minecraft version at a time in the active product scope.
-- Check whether files already exist and match expected integrity before any
-  download.
-- Keep install and repair operations behind one launcher-side install lock.
-- Extend the same rule to managed Java runtime installation once it exists.
+- Použij existující izolovaný launcher data root pro všechny spravované soubory.
+- Drž v aktivním produktovém scope vždy jen jednu podporovanou Minecraft verzi.
+- Před každým downloadem zkontroluj, zda soubory už existují a odpovídají
+  očekávané integritě.
+- Drž install a repair operace za jedním launcher-side install lockem.
+- Stejné pravidlo rozšiř na managed Java runtime, jakmile bude existovat.
 
-### Java runtime deduplication
+### Deduplicace Java runtime
 
-- Store managed runtimes under a launcher-owned path such as:
+- Ukládej managed runtime pod launcher-owned cestu například:
 
 ```text
 <launcher data>/runtime/java/<component>-<platform>-<majorVersion>
 ```
 
-- Before downloading Java, check:
-  - whether a compatible local system Java already exists
-  - whether a managed runtime with the required version is already present and
-    verified
-- Only download a runtime if both checks fail.
+- Před stažením Java zkontroluj:
+  - zda už existuje kompatibilní lokální systémová Java
+  - zda už je přítomný a ověřený managed runtime s požadovanou verzí
+- Runtime stahuj pouze tehdy, když obě kontroly selžou.
 
-## Follow-up Work
+## Navazující práce
 
-1. Add explicit updater integration to the Tauri app once signing is prepared.
-2. Add stale install-lock recovery rules.
-3. Add progress and cancellation for long install/update operations.
-4. Introduce managed Java runtime support using the same integrity and lock
-   model.
+1. Přidat explicitní updater integraci do Tauri aplikace, jakmile bude
+   připravené signing.
+2. Přidat pravidla pro obnovu stale install locků.
+3. Přidat progress a cancellation pro dlouhé install/update operace.
+4. Zavést podporu managed Java runtime se stejným integrity a lock modelem.

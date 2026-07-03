@@ -1,63 +1,60 @@
-# Release Runbook
+# Runbook Vydání
 
-This runbook is the operational checklist for publishing Nekara Launcher
-through GitHub Releases.
+Tento runbook je provozní checklist pro publikování Nekara Launcheru přes
+GitHub Releases.
 
-## Current Baseline
+## Výchozí údaje
 
-- Desktop stack: Tauri 2 + React + TypeScript + Rust
-- Current release target after the updater/fabric fixes, startup smoothing, and launcher layout simplification: `0.1.11`
-- Release trigger: Git tag matching `app-v*`
+- Aktuální cílový release po opravách updateru a Fabricu, zklidnění startu a
+  zjednodušení launcher layoutu: `0.1.11`
 - Release workflow: `.github/workflows/release.yml`
 - Updater endpoint: GitHub Releases `latest.json`
 
-## One-Time Setup
+## Příprava před releasem
 
-1. Confirm GitHub Actions secrets exist in the repository:
+1. Ověř, že v repository existují GitHub Actions secrets:
    - `TAURI_SIGNING_PRIVATE_KEY`
    - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
-2. Confirm the public key in `src-tauri/tauri.conf.json` matches the public
-   half of the signing key used by Actions.
-3. Keep the signing private key outside the repository.
-4. Keep a copy of the matching public key in a secure operator location for
-   future verification and incident recovery.
+2. Ověř, že veřejný klíč v `src-tauri/tauri.conf.json` odpovídá veřejné části
+   signing key, který používá Actions.
+3. Uchovávej soukromý podpisový klíč mimo repository.
+4. Uchovávej kopii odpovídajícího veřejného klíče na bezpečném místě pro
+   budoucí ověření a incident recovery.
 
-## Release Steps
+## Publikace releasu
 
-1. Merge or push the intended release commit to GitHub.
-2. Verify local checks:
-   - `cargo test` in `src-tauri/`
-   - `pnpm typecheck`
-   - `pnpm build`
-3. Create the release tag:
+1. Slouč nebo pushni zamýšlený release commit do GitHubu.
+2. Ujisti se, že pracovní strom je čistý.
+3. Vytvoř release tag:
 
 ```bash
 git tag app-v0.1.11
 git push origin app-v0.1.11
 ```
 
-4. Wait for `.github/workflows/release.yml` to finish.
-5. Confirm the release contains:
-   - `latest.json`
-   - NSIS installer
-   - NSIS `.sig`
-   - MSI installer
-   - MSI `.sig`
+4. Počkej, až doběhne `.github/workflows/release.yml`.
+5. Ověř, že release obsahuje:
+   - Windows installer,
+   - updater metadata,
+   - podpisové soubory,
+   - artefakty potřebné pro instalaci a aktualizaci.
 
-## Post-Release Smoke Check
+## Smoke test po releasu
 
-1. Open the published `latest.json`.
-2. Confirm the version matches the release tag.
-3. Confirm the launcher with the matching updater public key sees the release.
-4. Install using the NSIS installer.
-5. Open the launcher and verify:
-   - update check succeeds
-   - Fabric client preparation reaches ready state
-   - Play starts Minecraft successfully
+1. Otevři publikovaný `latest.json`.
+2. Ověř, že verze odpovídá release tagu.
+3. Ověř, že launcher s odpovídajícím veřejným klíčem updateru release vidí.
+4. Nainstaluj launcher přes NSIS installer.
+5. Otevři launcher a ověř:
+   - kontrola aktualizace proběhne úspěšně,
+   - updater nabídne správnou verzi,
+   - podepisovací kontrola projde,
+   - launcher zůstane použitelný po restartu.
 
-## Known Recovery Note
+## Poznámky k migraci starých instalací
 
-Launcher builds that shipped with the old updater public key cannot trust
-releases signed by the corrected key. Those users need one manual reinstall
-onto `0.1.8` or newer before automatic updates can work again. The first
-recommended branded recovery installer is `0.1.11`.
+Launcher buildy vydané se starým veřejným klíčem updateru nedokážou důvěřovat
+releaseům podepsaným opraveným klíčem. Tyto instalace potřebují jednu ruční
+reinstalaci na `0.1.8` nebo novější, než budou automatické aktualizace znovu
+fungovat. První releasy po opravě je vhodné testovat na čisté instalaci i na
+instalaci po migraci.

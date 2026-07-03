@@ -1,103 +1,99 @@
-# ADR 0001: Launcher Technology Stack
+# ADR 0001: Technologický stack launcheru
 
-## Status
+## Stav
 
-Accepted
+Přijato
 
-## Date
+## Datum
 
 2026-06-30
 
-## Context
+## Kontext
 
-Nekara Launcher is a custom desktop application for preparing and launching one
-supported Minecraft configuration: Nekara.
+Nekara Launcher je vlastní desktopová aplikace pro přípravu a spuštění jedné
+podporované Minecraft konfigurace: Nekara.
 
-The launcher needs access to desktop capabilities such as filesystem
-management, process spawning, logging, secure token storage, downloads,
-integrity checks, and platform-specific application directories.
+Launcher potřebuje přístup k desktopovým možnostem, jako je správa souborového
+systému, spouštění procesů, logging, bezpečné ukládání tokenů, stahování,
+kontrola integrity a platformově specifické aplikační adresáře.
 
-The initial target platform is Windows, but the architecture should not
-unnecessarily prevent future Linux or macOS support.
+Počáteční cílová platforma je Windows, ale architektura by neměla zbytečně
+bránit budoucí podpoře Linuxu nebo macOS.
 
-The launcher UI should remain focused on a simple player flow:
+UI launcheru má zůstat soustředěné na jednoduchý hráčský průchod:
 
 ```text
-Start launcher -> sign in -> wait for check or installation -> press Play
+Spustit launcher -> přihlásit se -> počkat na kontrolu nebo instalaci -> stisknout Hrát
 ```
 
-## Decision
+## Rozhodnutí
 
-Use the following stack:
+Použij tento stack:
 
-- Tauri 2 for the desktop application shell and native integration.
-- Rust for trusted backend/system operations.
-- React for the user interface.
-- TypeScript for typed frontend application code.
-- Vite for frontend development and bundling.
-- pnpm for JavaScript package management.
+- Tauri 2 pro desktopový shell aplikace a nativní integraci.
+- Rust pro důvěryhodné backendové a systémové operace.
+- React pro uživatelské rozhraní.
+- TypeScript pro typovaný frontendový aplikační kód.
+- Vite pro frontendový vývoj a bundlování.
+- pnpm pro správu JavaScriptových balíčků.
 
-## Rationale
+## Odůvodnění
 
-Tauri 2 is a strong fit because it provides a small desktop shell, a Rust
-backend, and a clear command boundary between UI code and privileged system
-operations.
+Tauri 2 je silná volba, protože poskytuje malý desktopový shell, Rust backend
+a jasnou hranici příkazů mezi UI kódem a privilegovanými systémovými
+operacemi.
 
-Rust is a good fit for:
+Rust je vhodný pro:
 
-- filesystem operations,
-- downloads and integrity checks,
-- process execution and monitoring,
-- explicit error modeling,
-- cross-platform system boundaries,
-- future security-sensitive token and configuration handling.
+- operace se souborovým systémem,
+- stahování a kontrolu integrity,
+- spouštění a sledování procesů,
+- explicitní modelování chyb,
+- cross-platform systémové hranice,
+- budoucí bezpečnostně citlivé tokenové a konfigurační zpracování.
 
-React and TypeScript provide a productive UI layer while keeping system logic
-out of frontend components.
+React a TypeScript poskytují produktivní UI vrstvu a zároveň drží systémovou
+logiku mimo frontendové komponenty.
 
-Vite and pnpm provide a fast, common frontend toolchain with predictable package
-management.
+Vite a pnpm poskytují rychlý a běžně používaný frontendový toolchain s
+predikovatelnou správou balíčků.
 
-## Alternatives Considered
+## Zvažované alternativy
 
 ### Electron
 
-Electron has a mature ecosystem and broad desktop adoption. It was not chosen
-because it usually ships a larger runtime footprint and encourages a Node.js
-backend model. Nekara Launcher benefits from a smaller native shell and a Rust
-system layer.
+Electron má vyspělý ekosystém a široké desktopové rozšíření. Nebyl vybrán,
+protože obvykle přináší větší runtime footprint a podporuje Node.js backendový
+model. Nekara Launcher těží z menšího nativního shellu a Rust systémové vrstvy.
 
 ### .NET Desktop
 
-.NET can produce robust Windows desktop applications, but it is less aligned
-with the preferred cross-platform frontend stack and would move the project
-away from the requested Tauri/React direction.
+.NET umí vytvářet robustní Windows desktop aplikace, ale méně odpovídá
+preferovanému cross-platform frontend stacku a odvedl by projekt od požadovaného
+směru Tauri/React.
 
 ### JavaFX
 
-JavaFX would reuse the Java ecosystem but is not ideal for a modern custom
-launcher UI and would add friction around packaging, native integration, and
-long-term frontend iteration.
+JavaFX by znovu využil Java ekosystém, ale není ideální pro moderní custom
+launcher UI a přidal by tření kolem balení, nativní integrace a dlouhodobé
+frontendové iterace.
 
 ### Flutter Desktop
 
-Flutter can build cross-platform desktop UIs, but it would introduce a separate
-language and UI ecosystem. The project currently benefits more from React,
-TypeScript, and Rust.
+Flutter umí stavět cross-platform desktopová UI, ale přinesl by samostatný jazyk
+a UI ekosystém. Projekt teď více těží z Reactu, TypeScriptu a Rustu.
 
-## Consequences
+## Důsledky
 
-- The project requires a working Rust toolchain for desktop build and backend
-  verification.
-- Frontend code must not perform privileged launcher operations directly.
-- Tauri command APIs should be typed and treated as the application boundary.
-- Build and test commands must cover both frontend and Rust layers once the
-  scaffold exists.
+- Projekt vyžaduje funkční Rust toolchain pro desktop build a backendovou
+  verifikaci.
+- Frontendový kód nesmí přímo provádět privilegované launcher operace.
+- Tauri command API má být typované a používané jako aplikační hranice.
+- Build a test příkazy musí po vzniku scaffoldu pokrýt frontend i Rust vrstvy.
 
-## Follow-Up Work
+## Navazující práce
 
-- Scaffold the Tauri 2 application.
-- Add the initial frontend and Rust module structure.
-- Define the central Nekara launcher configuration.
-- Add a first Tauri command for launcher status and diagnostics.
-
+- Naskafoldovat aplikaci Tauri 2.
+- Přidat počáteční frontendovou a Rust modulovou strukturu.
+- Definovat centrální konfiguraci Nekara launcheru.
+- Přidat první Tauri command pro stav launcheru a diagnostiku.

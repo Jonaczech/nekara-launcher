@@ -130,8 +130,8 @@ pub fn ensure_nekara_game_directory() -> Result<GameDirectoryInfo, String> {
     let launcher_data_dir = launcher_data_dir()?;
     let game_dir = nekara_game_dir()?;
     let minecraft_dir = game_dir.join(".minecraft");
-    let configured_game_directory_path = configured_game_directory_path()?
-        .map(|path| path.display().to_string());
+    let configured_game_directory_path =
+        configured_game_directory_path()?.map(|path| path.display().to_string());
 
     let existed_before = game_dir.exists() && minecraft_dir.exists();
 

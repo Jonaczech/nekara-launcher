@@ -6,7 +6,6 @@ import type {
   LauncherSettings,
   LauncherLogInfo,
   LauncherStatus,
-  MicrosoftAccountStatus,
   MinecraftInstallationPlan,
   MinecraftInstallationStatus,
   MinecraftMetadataCheck,
@@ -168,19 +167,6 @@ const browserPreviewOfflinePlayerStatus: OfflinePlayerStatus = {
     "Je aktivní náhradní režim pro prohlížeč. Pro uložení offline hráčského profilu spusť aplikaci uvnitř Tauri.",
 };
 
-const browserPreviewMicrosoftAccountStatus: MicrosoftAccountStatus = {
-  state: "unconfigured",
-  configured: false,
-  playerName: null,
-  playerUuid: null,
-  verificationUri: null,
-  userCode: null,
-  expiresAtUnixMs: null,
-  pollIntervalSeconds: null,
-  message:
-    "Microsoft přihlášení není v browser preview dostupné. Spusť launcher uvnitř Tauri.",
-};
-
 const browserPreviewGameLaunchStatus: GameLaunchStatus = {
   state: "idle",
   targetVersion: "26.1.2",
@@ -264,7 +250,9 @@ export function getMinecraftInstallationStatus() {
     return Promise.resolve(browserPreviewMinecraftInstallationStatus);
   }
 
-  return invoke<MinecraftInstallationStatus>("get_minecraft_installation_status");
+  return invoke<MinecraftInstallationStatus>(
+    "get_minecraft_installation_status",
+  );
 }
 
 export function prepareMinecraftInstallation() {
@@ -274,7 +262,8 @@ export function prepareMinecraftInstallation() {
       state: "ready" as const,
       versionJsonReady: true,
       clientJarReady: true,
-      message: "Náhradní režim pro prohlížeč nasimuloval připravenou instalaci.",
+      message:
+        "Náhradní režim pro prohlížeč nasimuloval připravenou instalaci.",
     });
   }
 
@@ -297,44 +286,13 @@ export function getGameLaunchStatus() {
   return invoke<GameLaunchStatus>("get_game_launch_status");
 }
 
-export function getMicrosoftAccountStatus() {
-  if (!isTauriRuntime()) {
-    return Promise.resolve(browserPreviewMicrosoftAccountStatus);
-  }
-
-  return invoke<MicrosoftAccountStatus>("get_microsoft_account_status");
-}
-
-export function beginMicrosoftDeviceLogin() {
-  if (!isTauriRuntime()) {
-    return Promise.resolve(browserPreviewMicrosoftAccountStatus);
-  }
-
-  return invoke<MicrosoftAccountStatus>("begin_microsoft_device_login");
-}
-
-export function pollMicrosoftDeviceLogin() {
-  if (!isTauriRuntime()) {
-    return Promise.resolve(browserPreviewMicrosoftAccountStatus);
-  }
-
-  return invoke<MicrosoftAccountStatus>("poll_microsoft_device_login");
-}
-
-export function signOutMicrosoftAccount() {
-  if (!isTauriRuntime()) {
-    return Promise.resolve(browserPreviewMicrosoftAccountStatus);
-  }
-
-  return invoke<MicrosoftAccountStatus>("sign_out_microsoft_account");
-}
-
 export function launchMinecraft() {
   if (!isTauriRuntime()) {
     return Promise.resolve({
       ...browserPreviewGameLaunchStatus,
       state: "running" as const,
-      message: "Náhradní režim pro prohlížeč nasimuloval běžící relaci Minecraftu.",
+      message:
+        "Náhradní režim pro prohlížeč nasimuloval běžící relaci Minecraftu.",
     });
   }
 

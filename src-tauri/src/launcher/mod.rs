@@ -35,9 +35,9 @@ pub enum CheckState {
 }
 
 #[tauri::command]
-pub fn get_launcher_status(auth_state: tauri::State<'_, auth::AppAuthState>) -> LauncherStatus {
+pub fn get_launcher_status() -> LauncherStatus {
     let player_status = auth::resolve_offline_player_status().ok();
-    let launch_identity_ready = auth::resolve_launch_identity(&auth_state).is_ok();
+    let launch_identity_ready = auth::resolve_launch_identity().is_ok();
 
     LauncherStatus {
         product_name: config::PRODUCT_NAME,
@@ -72,8 +72,7 @@ pub fn get_launcher_status(auth_state: tauri::State<'_, auth::AppAuthState>) -> 
                     || matches!(
                         player_status.as_ref().map(|status| status.state),
                         Some(auth::OfflinePlayerState::Ready)
-                    )
-                {
+                    ) {
                     CheckState::Ready
                 } else {
                     CheckState::Blocked

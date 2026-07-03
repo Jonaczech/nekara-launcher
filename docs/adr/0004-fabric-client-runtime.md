@@ -1,76 +1,72 @@
-# ADR 0004: Fabric Client Runtime For Nekara
+# ADR 0004: Fabric klientský runtime pro Nekaru
 
-## Status
+## Stav
 
-Accepted
+Přijato
 
-## Date
+## Datum
 
 2026-06-30
 
-## Context
+## Kontext
 
-Nekara Launcher needs a single supported client configuration with mod support.
-The project must stay focused on one Nekara game path instead of becoming a
-general-purpose Minecraft launcher.
+Nekara Launcher potřebuje jednu podporovanou klientskou konfiguraci s mod
+supportem. Projekt musí zůstat soustředěný na jednu Nekara herní cestu místo
+toho, aby se změnil v obecný Minecraft launcher.
 
-The base Minecraft version is centrally fixed, but the launcher also needs a
-loader that can support mods and future client-side distribution of Nekara
-content.
+Základní Minecraft verze je centrálně fixovaná, ale launcher také potřebuje
+loader, který umí podpořit mody a budoucí client-side distribuci obsahu Nekary.
 
-## Decision
+## Rozhodnutí
 
-Use Fabric as the supported client runtime on top of the fixed Minecraft
-version.
+Použij Fabric jako podporovaný klientský runtime nad pevně danou Minecraft
+verzí.
 
-The launcher should:
+Launcher by měl:
 
-- resolve official Minecraft metadata for the base version,
-- resolve the Fabric loader/profile metadata for the same version,
-- install the Fabric profile JSON and Fabric libraries alongside the official
-  Minecraft files,
-- launch Minecraft through the Fabric-generated main class and arguments,
-- keep all user-facing wording aligned with the Fabric-backed Nekara client.
+- dohledat oficiální Minecraft metadata pro základní verzi,
+- dohledat Fabric loader/profile metadata pro stejnou verzi,
+- nainstalovat Fabric profile JSON a Fabric knihovny vedle oficiálních
+  Minecraft souborů,
+- spouštět Minecraft přes Fabric-generated main class a argumenty,
+- držet veškeré uživatelské wording v souladu s Fabric-backed Nekara klientem.
 
-## Rationale
+## Odůvodnění
 
-Fabric gives the launcher a lightweight and well-understood modding foundation
-without turning the app into a generic modpack manager.
+Fabric dává launcheru lehký a dobře pochopitelný základ pro modding, aniž by
+se aplikace změnila v generický modpack manager.
 
-It keeps the client surface narrow:
+Drží klientský surface úzký:
 
-- one supported game configuration,
-- one supported loader path,
-- one launch profile,
-- one isolated installation root.
+- jedna podporovaná herní konfigurace,
+- jedna podporovaná loader cesta,
+- jeden launch profil,
+- jeden izolovaný instalační root.
 
-That matches the project scope better than adding support for multiple loaders
-or user-selectable Minecraft versions.
+To lépe odpovídá scope projektu než přidávání podpory pro více loaderů nebo
+uživatelsky volitelné Minecraft verze.
 
-## Consequences
+## Důsledky
 
-### Positive
+### Pozitivní
 
-- The launcher can support mods through a known client loader.
-- The installation flow still remains integrity-driven and deterministic.
-- The launch code can continue to use official Minecraft metadata as the base
-  layer.
-- The UI can present a single Nekara play path instead of exposing complex
-  launcher internals.
+- Launcher může podporovat mody přes známý klientský loader.
+- Instalační flow zůstává integrity-driven a deterministický.
+- Launch kód může dál používat oficiální Minecraft metadata jako základní vrstvu.
+- UI může prezentovat jedinou Nekara play path místo odhalování interních
+  launcher detailů.
 
-### Negative
+### Negativní
 
-- The install pipeline now needs to manage Fabric profile metadata in addition
-  to official Minecraft files.
-- Release and diagnostics wording must stay synchronized with the loader
-  choice.
-- Future loader changes would require another architecture decision.
+- Instalační pipeline musí kromě oficiálních Minecraft souborů spravovat i
+  Fabric profile metadata.
+- Wording v release a diagnostice musí být synchronizovaný s volbou loaderu.
+- Budoucí změny loaderu by vyžadovaly další architektonické rozhodnutí.
 
-## Follow-Up Work
+## Navazující práce
 
-1. Add client mod distribution and synchronization on top of the Fabric
-   profile.
-2. Keep launcher diagnostics aligned with the Fabric profile and base Minecraft
-   version.
-3. Extend the updater/install integrity rules if Fabric loader metadata changes
-   format.
+1. Přidat distribuci a synchronizaci klientských modů nad Fabric profilem.
+2. Udržet launcher diagnostiku sladěnou s Fabric profilem a základní Minecraft
+   verzí.
+3. Rozšířit updater/install integrity pravidla, pokud se Fabric loader metadata
+   změní formátem.

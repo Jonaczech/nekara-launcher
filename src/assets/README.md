@@ -1,13 +1,14 @@
-# Asset Library
+# Knihovna assetů
 
-This folder contains static and imported launcher assets used by the React UI.
+Tento adresář obsahuje statické i importované assety launcheru používané
+v React UI.
 
-Recommended subfolders:
+Doporučená struktura podadresářů:
 
-- `backgrounds/` for conceptual artwork or hero imagery
-- `logos/` for brand marks and lockups
-- `fonts/` for bundled font files
-- `icons/` for UI and launcher-specific icon assets
+- `backgrounds/` pro konceptuální artwork nebo hero vizuály
+- `logos/` pro značky a lockupy
+- `fonts/` pro přibalené fonty
+- `icons/` pro UI a launcherové ikony
 
-Keep these assets original or properly licensed. Do not copy third-party
-launcher wallpapers or branding without permission.
+Udržuj assety originální nebo řádně licencované. Nekopíruj třetí strany
+launcher wallpaper ani branding bez povolení.

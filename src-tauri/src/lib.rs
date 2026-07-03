@@ -1,9 +1,9 @@
 mod auth;
 mod client_package;
 mod config;
+mod fabric;
 mod filesystem;
 mod game;
-mod fabric;
 mod java;
 mod launcher;
 mod logging;
@@ -14,17 +14,12 @@ mod settings;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(auth::AppAuthState::default())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             auth::get_offline_player_status,
             auth::save_offline_player_profile,
             auth::clear_offline_player_profile,
-            auth::get_microsoft_account_status,
-            auth::begin_microsoft_device_login,
-            auth::poll_microsoft_device_login,
-            auth::sign_out_microsoft_account,
             game::get_game_launch_status,
             game::launch_minecraft,
             launcher::get_launcher_status,

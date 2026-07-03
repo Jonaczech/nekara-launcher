@@ -1,15 +1,15 @@
 # Nekara Brand Assets
 
-This folder is the workspace for visual direction and production assets used by
-Nekara Launcher.
+Tento adresář je pracovní prostor pro vizuální směr a produkční assety používané
+v Nekara Launcheru.
 
-Use the subfolders for:
+Podadresáře používej takto:
 
-- `concepts/`: moodboards, style explorations, and rough visual studies.
-- `icons/`: app icons, launcher UI icons, and icon source files.
-- `logos/`: Nekara wordmarks, marks, and logo variations.
-- `wallpapers/`: launcher backgrounds, key art, and desktop-sized imagery.
+- `concepts/`: moodboardy, stylové explorace a hrubé vizuální studie.
+- `icons/`: ikony aplikace, ikony launcher UI a zdrojové soubory ikon.
+- `logos/`: wordmarky, značky a varianty loga Nekary.
+- `wallpapers/`: launcher pozadí, key art a obrázky v desktopovém rozlišení.
 
-Keep source files and exported assets together when that helps review. Do not
-store licensed third-party game assets here unless the license is explicit and
-compatible with the project.
+Zdrojové soubory a exportované assety ukládej společně, pokud to usnadní
+revizi. Neuchovávej zde licencované third-party herní assety, pokud není
+licence výslovná a kompatibilní s projektem.
