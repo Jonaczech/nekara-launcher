@@ -16,6 +16,10 @@ const browserPreviewUpdateStatus: LauncherUpdateStatus = {
     "Je aktivní náhradní režim pro prohlížeč. Pro kontrolu aktualizací launcheru spusť aplikaci uvnitř Tauri.",
 };
 
+type ResolvedUpdate = NonNullable<Awaited<ReturnType<typeof check>>>;
+
+let startupAutomaticUpdatePromise: Promise<void> | null = null;
+
 function toUpdateStatus(
   update: Awaited<ReturnType<typeof check>>,
 ): LauncherUpdateStatus {
@@ -62,6 +66,28 @@ async function logUpdate(scope: string, message: string) {
   }
 }
 
+async function resolveAvailableLauncherUpdate() {
+  return check();
+}
+
+async function installResolvedLauncherUpdate(update: ResolvedUpdate) {
+  await logUpdate(
+    "updater",
+    "Před instalací čistím zastaralou mezipaměť aktualizátoru.",
+  );
+  await clearLauncherUpdaterCache();
+  await logUpdate(
+    "updater",
+    `Stahuji aktualizaci launcheru ${update.version}.`,
+  );
+  await update.downloadAndInstall();
+  await logUpdate(
+    "updater",
+    `Aktualizace launcheru ${update.version} byla úspěšně nainstalována. Spouštím znovu.`,
+  );
+  await relaunch();
+}
+
 export async function checkLauncherUpdate() {
   if (!isTauriRuntime()) {
     return browserPreviewUpdateStatus;
@@ -70,7 +96,7 @@ export async function checkLauncherUpdate() {
   await logUpdate("updater", "Kontroluji aktualizace launcheru.");
 
   try {
-    const update = await check();
+    const update = await resolveAvailableLauncherUpdate();
     await logUpdate(
       "updater",
       update == null
@@ -101,7 +127,7 @@ export async function installLauncherUpdate() {
   let update: Awaited<ReturnType<typeof check>> | null = null;
 
   try {
-    update = await check();
+    update = await resolveAvailableLauncherUpdate();
     if (update == null) {
       await logUpdate(
         "updater",
@@ -116,21 +142,7 @@ export async function installLauncherUpdate() {
       };
     }
 
-    await logUpdate(
-      "updater",
-      "Před instalací čistím zastaralou mezipaměť aktualizátoru.",
-    );
-    await clearLauncherUpdaterCache();
-    await logUpdate(
-      "updater",
-      `Stahuji aktualizaci launcheru ${update.version}.`,
-    );
-    await update.downloadAndInstall();
-    await logUpdate(
-      "updater",
-      `Aktualizace launcheru ${update.version} byla úspěšně nainstalována. Spouštím znovu.`,
-    );
-    await relaunch();
+    await installResolvedLauncherUpdate(update);
   } catch (error: unknown) {
     const errorMessage = formatUpdaterError(error);
     await logUpdate(
@@ -143,4 +155,38 @@ export async function installLauncherUpdate() {
   }
 
   return toUpdateStatus(update);
+}
+
+export function runAutomaticLauncherUpdateOnStartup() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve();
+  }
+
+  if (startupAutomaticUpdatePromise != null) {
+    return startupAutomaticUpdatePromise;
+  }
+
+  startupAutomaticUpdatePromise = (async () => {
+    await logUpdate(
+      "updater",
+      "Spouštím automatickou kontrolu aktualizací launcheru při startu.",
+    );
+
+    const update = await resolveAvailableLauncherUpdate();
+    if (update == null) {
+      await logUpdate(
+        "updater",
+        "Při startu nebyla nalezena novější verze launcheru.",
+      );
+      return;
+    }
+
+    await logUpdate(
+      "updater",
+      `Při startu byla nalezena novější verze launcheru ${update.version}. Spouštím automatickou instalaci.`,
+    );
+    await installResolvedLauncherUpdate(update);
+  })();
+
+  return startupAutomaticUpdatePromise;
 }

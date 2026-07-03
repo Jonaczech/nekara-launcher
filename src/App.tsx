@@ -28,6 +28,7 @@ import {
   saveLauncherSettings,
   saveOfflinePlayerProfile,
 } from "./services/launcher";
+import { runAutomaticLauncherUpdateOnStartup } from "./services/updater";
 import type {
   GameDirectoryInfo,
   GameLaunchStatus,
@@ -249,6 +250,16 @@ function App() {
         cleanup();
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const cleanup = scheduleBackgroundWork(() => {
+      void runAutomaticLauncherUpdateOnStartup().catch((error: unknown) => {
+        console.warn("Automatic launcher update failed.", error);
+      });
+    }, 2400);
+
+    return cleanup;
   }, []);
 
   useEffect(() => {

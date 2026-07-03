@@ -87,6 +87,8 @@ offline spouštěcím postupem a offline profilem hráče.
   na systémový `PATH`.
 - Launcher už obsahuje podepsaný updater plugin pro GitHub Releases a
   pracovní postup, který publikuje Windows artefakty z tagovaných buildů.
+- Launcher při startu automaticky kontroluje novější release a pokud je
+  dostupný, sám stáhne update, nainstaluje ho a restartuje se.
 - ADR 0003 definuje GitHub Releases jako zamýšlenou první cestu pro
   samoupdatování launcheru a formalizuje strategii bez duplicitní instalace.
 - Launcher už ukládá lokální offline jméno hráče do launcher dat.
