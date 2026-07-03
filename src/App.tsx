@@ -26,7 +26,6 @@ import {
   saveLauncherSettings,
   saveOfflinePlayerProfile,
 } from "./services/launcher";
-import { checkLauncherUpdate } from "./services/updater";
 import type {
   GameDirectoryInfo,
   GameLaunchStatus,
@@ -177,10 +176,6 @@ function App() {
     }
   }
 
-  async function refreshLauncherUpdateStatus() {
-    return checkLauncherUpdate();
-  }
-
   async function refreshOfflinePlayerStatus() {
     try {
       const status = await getOfflinePlayerStatus();
@@ -231,35 +226,10 @@ function App() {
           void refreshGameLaunchStatus();
         }, 360),
       );
-      timers.push(
-        window.setTimeout(() => {
-          void refreshLauncherSettings();
-        }, 760),
-      );
       cleanups.push(
         scheduleBackgroundWork(() => {
           setWallpaperReady(true);
         }, 900),
-      );
-      cleanups.push(
-        scheduleBackgroundWork(() => {
-          void refreshDirectoryInfo();
-        }, 1400),
-      );
-      cleanups.push(
-        scheduleBackgroundWork(() => {
-          void refreshJavaRuntime();
-        }, 2600),
-      );
-      cleanups.push(
-        scheduleBackgroundWork(() => {
-          void refreshInstallationStatus();
-        }, 3600),
-      );
-      cleanups.push(
-        scheduleBackgroundWork(() => {
-          void refreshLauncherUpdateStatus().catch(() => undefined);
-        }, 5200),
       );
     });
 
@@ -273,6 +243,20 @@ function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (currentView !== "settings") {
+      return;
+    }
+
+    if (launcherSettingsState.kind === "loading") {
+      void refreshLauncherSettings();
+    }
+
+    if (directoryState.kind === "loading") {
+      void refreshDirectoryInfo();
+    }
+  }, [currentView, launcherSettingsState.kind, directoryState.kind]);
 
   useEffect(() => {
     if (
@@ -375,11 +359,13 @@ function App() {
         ? "Spouštím..."
         : preparingInstallation
           ? "Připravuji soubory..."
-          : !installationReady
-            ? "Připravit klienta"
-            : readinessCount === 5
-              ? "Hrát"
-              : "Instalace připravena";
+          : installationState.kind === "loading"
+            ? "Zkontrolovat klienta"
+            : !installationReady
+              ? "Připravit klienta"
+              : readinessCount === 5
+                ? "Hrát"
+                : "Instalace připravena";
 
   const ramMinMb = launcherSettings?.minRamMb ?? 2048;
   const ramMaxMb = launcherSettings?.maxAllowedRamMb ?? 12288;
