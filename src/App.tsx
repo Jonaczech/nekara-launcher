@@ -20,6 +20,7 @@ import {
   ensureNekaraGameDirectory,
   getGameLaunchStatus,
   getLauncherSettings,
+  getMinecraftInstallationProgress,
   getMinecraftInstallationStatus,
   getOfflinePlayerStatus,
   launchMinecraft,
@@ -35,6 +36,7 @@ import type {
   GameLaunchStatus,
   JavaRuntimeCheck,
   LauncherSettings,
+  MinecraftInstallationProgress,
   MinecraftInstallationStatus,
   OfflinePlayerStatus,
 } from "./types/launcher";
@@ -45,6 +47,35 @@ type LoadState<T> =
   | { kind: "error"; message: string };
 
 const appVersion = packageInfo.version;
+const bytesInMegabyte = 1024 * 1024;
+
+function formatRemainingMegabytes(bytes: number) {
+  const megabytes = Math.max(0, bytes) / bytesInMegabyte;
+
+  if (megabytes >= 100) {
+    return `${Math.round(megabytes)} MB`;
+  }
+
+  if (megabytes >= 10) {
+    return `${megabytes.toFixed(1)} MB`;
+  }
+
+  return `${megabytes.toFixed(2)} MB`;
+}
+
+function formatDownloadSpeed(bytesPerSecond: number | null) {
+  if (bytesPerSecond == null || !Number.isFinite(bytesPerSecond)) {
+    return null;
+  }
+
+  const megabytesPerSecond = bytesPerSecond / bytesInMegabyte;
+
+  if (megabytesPerSecond >= 10) {
+    return `${megabytesPerSecond.toFixed(1)} MB/s`;
+  }
+
+  return `${megabytesPerSecond.toFixed(2)} MB/s`;
+}
 
 function App() {
   const [directoryState, setDirectoryState] = useState<
@@ -82,6 +113,8 @@ function App() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [pickingGameDirectory, setPickingGameDirectory] = useState(false);
   const [preparingInstallation, setPreparingInstallation] = useState(false);
+  const [installationProgress, setInstallationProgress] =
+    useState<MinecraftInstallationProgress | null>(null);
   const [launchingGame, setLaunchingGame] = useState(false);
   const [currentView, setCurrentView] = useState<"home" | "settings">("home");
   const [wallpaperReady, setWallpaperReady] = useState(false);
@@ -293,6 +326,36 @@ function App() {
     return () => window.clearInterval(timer);
   }, [gameLaunchState]);
 
+  useEffect(() => {
+    if (!preparingInstallation) {
+      setInstallationProgress(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function refreshProgress() {
+      try {
+        const progress = await getMinecraftInstallationProgress();
+        if (!cancelled) {
+          setInstallationProgress(progress);
+        }
+      } catch (error) {
+        console.warn("Installation progress refresh failed.", error);
+      }
+    }
+
+    void refreshProgress();
+    const timer = window.setInterval(() => {
+      void refreshProgress();
+    }, 900);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [preparingInstallation]);
+
   const gameDirectory =
     directoryState.kind === "ready" ? directoryState.value : null;
   const javaRuntime = javaState.kind === "ready" ? javaState.value : null;
@@ -370,6 +433,38 @@ function App() {
     preparingInstallation || (installationStatus != null && !installationReady)
       ? installOperationPercent
       : readinessPercent;
+  const hasLiveDownloadProgress =
+    preparingInstallation &&
+    installationProgress?.active === true &&
+    (installationProgress?.totalBytes ?? 0) > 0;
+  const liveDownloadPercent = hasLiveDownloadProgress
+    ? Math.round(
+        (installationProgress!.downloadedBytes /
+          installationProgress!.totalBytes) *
+          100,
+      )
+    : 0;
+  const liveRemainingText =
+    installationProgress == null
+      ? null
+      : `${formatRemainingMegabytes(installationProgress.remainingBytes)} zbývá`;
+  const liveSpeedText =
+    installationProgress == null
+      ? null
+      : formatDownloadSpeed(installationProgress.bytesPerSecond);
+  const effectiveProgressPanelLabel =
+    preparingInstallation && installationProgress?.currentStep != null
+      ? installationProgress.currentStep
+      : progressPanelLabel;
+  const effectiveProgressPanelValue =
+    hasLiveDownloadProgress && liveRemainingText != null
+      ? liveSpeedText == null
+        ? liveRemainingText
+        : `${liveRemainingText} · ${liveSpeedText}`
+      : progressPanelValue;
+  const effectiveProgressPanelPercent = hasLiveDownloadProgress
+    ? liveDownloadPercent
+    : progressPanelPercent;
 
   const primaryButtonLabel = !identityReady
     ? "Uložit jméno"
@@ -479,6 +574,7 @@ function App() {
 
   async function handlePrepareInstallation() {
     setPreparingInstallation(true);
+    setInstallationProgress(null);
 
     try {
       const status = await prepareMinecraftInstallation();
@@ -493,6 +589,7 @@ function App() {
             : "Minecraft instalaci se nepodařilo připravit.",
       });
     } finally {
+      setInstallationProgress(null);
       setPreparingInstallation(false);
     }
   }
@@ -749,13 +846,13 @@ function App() {
                       aria-label="Průběh přípravy hry"
                     >
                       <div className="progress-panel__header">
-                        <span>{progressPanelLabel}</span>
-                        <span>{progressPanelValue}</span>
+                        <span>{effectiveProgressPanelLabel}</span>
+                        <span>{effectiveProgressPanelValue}</span>
                       </div>
                       <div className="progress-track" role="presentation">
                         <div
                           className="progress-track__fill"
-                          style={{ width: `${progressPanelPercent}%` }}
+                          style={{ width: `${effectiveProgressPanelPercent}%` }}
                         />
                       </div>
                     </section>
@@ -880,7 +977,9 @@ function App() {
                           <span className="settings-helper-text">
                             Když to necháš prázdné, hra se uloží do vlastní
                             složky <code>AppData\Roaming\Nekara</code>. Pokud
-                            chceš, můžeš jí vybrat i jiné místo.
+                            chceš, můžeš jí vybrat i jiné místo. Starší
+                            instalace z původního umístění se přesunou
+                            automaticky.
                           </span>
                         </div>
 

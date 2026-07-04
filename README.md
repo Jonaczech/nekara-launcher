@@ -115,8 +115,10 @@ spustitelnému souboru Javy, takže běhové prostředí lze připnout místo
 spoléhání jen na systémový `PATH`. Stejné nastavení také přijímá volitelný
 vlastní adresář hry. Pokud pole zůstane prázdné, launcher nově používá
 izolovanou složku `AppData\Roaming\Nekara`, takže se klient Nekary nemíchá s
-běžným `.minecraft`. Ze settings jde navíc přímo otevřít skutečný herní
-adresář v Průzkumníku.
+běžným `.minecraft`. Pokud launcher najde starší výchozí instalaci v
+`AppData\Local`, při prvním použití ji automaticky přesune do nového
+umístění. Ze settings jde navíc přímo otevřít skutečný herní adresář v
+Průzkumníku.
 
 Uživatelské rozhraní i diagnostika launcheru jsou lokalizované do češtiny a
 start aplikace nyní rozkládá těžší běhové kontroly, takže se první vykreslení

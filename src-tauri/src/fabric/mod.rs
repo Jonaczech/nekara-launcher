@@ -60,6 +60,8 @@ struct FabricLibraryArtifact {
     path: String,
     url: String,
     sha1: String,
+    #[serde(default)]
+    size: u64,
 }
 
 #[derive(Deserialize)]
@@ -247,6 +249,7 @@ async fn resolve_library_download(
                 path: artifact.path.clone(),
                 url: artifact.url.clone(),
                 sha1: artifact.sha1.clone(),
+                size: artifact.size,
             }));
         }
 
@@ -287,6 +290,7 @@ async fn resolve_library_download(
         path,
         url: artifact_url,
         sha1,
+        size: 0,
     }))
 }
 

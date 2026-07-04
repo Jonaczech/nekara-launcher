@@ -1,7 +1,9 @@
 use std::fs;
 use std::fs::OpenOptions;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
+use std::time::Instant;
 
 use flate2::write::GzEncoder;
 use flate2::Compression;
@@ -97,6 +99,18 @@ pub struct MinecraftInstallationStatus {
     message: String,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct MinecraftInstallationProgress {
+    active: bool,
+    current_step: Option<String>,
+    current_download_label: Option<String>,
+    total_bytes: u64,
+    downloaded_bytes: u64,
+    remaining_bytes: u64,
+    bytes_per_second: Option<f64>,
+}
+
 struct InstallationPaths {
     minecraft_dir: PathBuf,
     version_json_path: PathBuf,
@@ -130,6 +144,152 @@ struct ManagedModsState {
 
 struct InstallationLock {
     path: PathBuf,
+}
+
+#[derive(Default)]
+struct InstallationProgressTracker {
+    active: bool,
+    current_step: Option<String>,
+    current_download_label: Option<String>,
+    total_bytes: u64,
+    completed_bytes: u64,
+    current_download_total_bytes: u64,
+    current_download_downloaded_bytes: u64,
+    started_at: Option<Instant>,
+}
+
+struct InstallationProgressGuard;
+
+static INSTALLATION_PROGRESS_TRACKER: OnceLock<Mutex<InstallationProgressTracker>> =
+    OnceLock::new();
+
+fn installation_progress_tracker() -> &'static Mutex<InstallationProgressTracker> {
+    INSTALLATION_PROGRESS_TRACKER.get_or_init(|| Mutex::new(InstallationProgressTracker::default()))
+}
+
+fn snapshot_installation_progress() -> MinecraftInstallationProgress {
+    let tracker = installation_progress_tracker()
+        .lock()
+        .expect("installation progress tracker lock should not be poisoned");
+    let downloaded_bytes = tracker
+        .completed_bytes
+        .saturating_add(tracker.current_download_downloaded_bytes);
+    let remaining_bytes = tracker.total_bytes.saturating_sub(downloaded_bytes);
+    let bytes_per_second = tracker.started_at.and_then(|started_at| {
+        let elapsed = started_at.elapsed().as_secs_f64();
+        if elapsed >= 0.25 && downloaded_bytes > 0 {
+            Some(downloaded_bytes as f64 / elapsed)
+        } else {
+            None
+        }
+    });
+
+    MinecraftInstallationProgress {
+        active: tracker.active,
+        current_step: tracker.current_step.clone(),
+        current_download_label: tracker.current_download_label.clone(),
+        total_bytes: tracker.total_bytes,
+        downloaded_bytes,
+        remaining_bytes,
+        bytes_per_second,
+    }
+}
+
+fn start_installation_progress(total_bytes: u64, current_step: &str) {
+    let mut tracker = installation_progress_tracker()
+        .lock()
+        .expect("installation progress tracker lock should not be poisoned");
+    *tracker = InstallationProgressTracker {
+        active: true,
+        current_step: Some(current_step.to_string()),
+        current_download_label: None,
+        total_bytes,
+        completed_bytes: 0,
+        current_download_total_bytes: 0,
+        current_download_downloaded_bytes: 0,
+        started_at: Some(Instant::now()),
+    };
+}
+
+fn set_installation_progress_step(current_step: &str) {
+    let mut tracker = installation_progress_tracker()
+        .lock()
+        .expect("installation progress tracker lock should not be poisoned");
+    if !tracker.active {
+        return;
+    }
+
+    tracker.current_step = Some(current_step.to_string());
+}
+
+fn begin_installation_download(label: &str, expected_bytes: u64) {
+    let mut tracker = installation_progress_tracker()
+        .lock()
+        .expect("installation progress tracker lock should not be poisoned");
+    if !tracker.active {
+        return;
+    }
+
+    tracker.current_download_label = Some(label.to_string());
+    tracker.current_download_total_bytes = expected_bytes;
+    tracker.current_download_downloaded_bytes = 0;
+}
+
+fn advance_installation_download(downloaded_bytes_delta: u64) {
+    let mut tracker = installation_progress_tracker()
+        .lock()
+        .expect("installation progress tracker lock should not be poisoned");
+    if !tracker.active {
+        return;
+    }
+
+    tracker.current_download_downloaded_bytes = tracker
+        .current_download_downloaded_bytes
+        .saturating_add(downloaded_bytes_delta);
+}
+
+fn finish_installation_download(actual_bytes: u64) {
+    let mut tracker = installation_progress_tracker()
+        .lock()
+        .expect("installation progress tracker lock should not be poisoned");
+    if !tracker.active {
+        return;
+    }
+
+    if actual_bytes > tracker.current_download_total_bytes {
+        tracker.total_bytes = tracker
+            .total_bytes
+            .saturating_add(actual_bytes - tracker.current_download_total_bytes);
+    } else {
+        tracker.total_bytes = tracker
+            .total_bytes
+            .saturating_sub(tracker.current_download_total_bytes - actual_bytes);
+    }
+
+    tracker.completed_bytes = tracker.completed_bytes.saturating_add(actual_bytes);
+    tracker.current_download_label = None;
+    tracker.current_download_total_bytes = 0;
+    tracker.current_download_downloaded_bytes = 0;
+}
+
+fn clear_installation_progress() {
+    let mut tracker = installation_progress_tracker()
+        .lock()
+        .expect("installation progress tracker lock should not be poisoned");
+    *tracker = InstallationProgressTracker::default();
+}
+
+impl InstallationProgressGuard {
+    fn start(total_bytes: u64, current_step: &str) -> Self {
+        start_installation_progress(total_bytes, current_step);
+        Self
+    }
+}
+
+impl Drop for InstallationProgressGuard {
+    fn drop(&mut self) {
+        clear_installation_progress();
+    }
 }
 
 fn installation_paths(fabric_profile_id: &str) -> Result<InstallationPaths, String> {
@@ -329,7 +489,12 @@ fn log_prepare_step(message: &str) {
     let _ = logging::append_launcher_log_entry("minecraft", message);
 }
 
-async fn download_verified_bytes(url: &str, expected_sha1: &str) -> Result<Vec<u8>, String> {
+async fn download_bytes_with_progress(
+    url: &str,
+    error_label: &str,
+    progress_label: &str,
+    expected_bytes: u64,
+) -> Result<Vec<u8>, String> {
     let client = reqwest::Client::builder()
         .user_agent(config::PRODUCT_NAME)
         .timeout(Duration::from_secs(config::HTTP_REQUEST_TIMEOUT_SECS))
@@ -344,13 +509,35 @@ async fn download_verified_bytes(url: &str, expected_sha1: &str) -> Result<Vec<u
 
     let response = response
         .error_for_status()
-        .map_err(|error| format!("Official file download failed for {url}: {error}"))?;
+        .map_err(|error| format!("{error_label} download failed for {url}: {error}"))?;
 
-    let bytes = response
-        .bytes()
+    let announced_bytes = response.content_length().unwrap_or(expected_bytes);
+    begin_installation_download(progress_label, announced_bytes);
+
+    let mut bytes = Vec::new();
+    let mut response = response;
+    while let Some(chunk) = response
+        .chunk()
         .await
-        .map_err(|error| format!("Unable to read official file response from {url}: {error}"))?;
+        .map_err(|error| format!("Unable to read {error_label} response from {url}: {error}"))?
+    {
+        advance_installation_download(chunk.len() as u64);
+        bytes.extend_from_slice(&chunk);
+    }
 
+    finish_installation_download(bytes.len() as u64);
+
+    Ok(bytes)
+}
+
+async fn download_verified_bytes(
+    url: &str,
+    expected_sha1: &str,
+    expected_bytes: u64,
+    progress_label: &str,
+) -> Result<Vec<u8>, String> {
+    let bytes =
+        download_bytes_with_progress(url, "Official file", progress_label, expected_bytes).await?;
     let actual_sha1 = sha1_hex(bytes.as_ref());
     if !actual_sha1.eq_ignore_ascii_case(expected_sha1) {
         return Err(format!(
@@ -364,28 +551,12 @@ async fn download_verified_bytes(url: &str, expected_sha1: &str) -> Result<Vec<u
 async fn download_verified_bytes_sha512(
     url: &str,
     expected_sha512: &str,
+    expected_bytes: u64,
+    progress_label: &str,
 ) -> Result<Vec<u8>, String> {
-    let client = reqwest::Client::builder()
-        .user_agent(config::PRODUCT_NAME)
-        .timeout(Duration::from_secs(config::HTTP_REQUEST_TIMEOUT_SECS))
-        .build()
-        .map_err(|error| format!("Failed to create HTTP client: {error}"))?;
-
-    let response = client
-        .get(url)
-        .send()
-        .await
-        .map_err(|error| format!("Unable to download approved mod file from {url}: {error}"))?;
-
-    let response = response
-        .error_for_status()
-        .map_err(|error| format!("Approved mod download failed for {url}: {error}"))?;
-
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|error| format!("Unable to read approved mod response from {url}: {error}"))?;
-
+    let bytes =
+        download_bytes_with_progress(url, "Approved mod file", progress_label, expected_bytes)
+            .await?;
     let actual_sha512 = sha512_hex(bytes.as_ref());
     if !actual_sha512.eq_ignore_ascii_case(expected_sha512) {
         return Err(format!(
@@ -396,10 +567,16 @@ async fn download_verified_bytes_sha512(
     Ok(bytes.to_vec())
 }
 
-async fn download_verified_file(path: &Path, url: &str, expected_sha1: &str) -> Result<(), String> {
+async fn download_verified_file(
+    path: &Path,
+    url: &str,
+    expected_sha1: &str,
+    expected_bytes: u64,
+    progress_label: &str,
+) -> Result<(), String> {
     ensure_parent_directory(path)?;
 
-    let bytes = download_verified_bytes(url, expected_sha1).await?;
+    let bytes = download_verified_bytes(url, expected_sha1, expected_bytes, progress_label).await?;
     let temp_path = path.with_extension("download");
 
     fs::write(&temp_path, &bytes).map_err(|error| {
@@ -430,10 +607,14 @@ async fn download_verified_file_sha512(
     path: &Path,
     url: &str,
     expected_sha512: &str,
+    expected_bytes: u64,
+    progress_label: &str,
 ) -> Result<(), String> {
     ensure_parent_directory(path)?;
 
-    let bytes = download_verified_bytes_sha512(url, expected_sha512).await?;
+    let bytes =
+        download_verified_bytes_sha512(url, expected_sha512, expected_bytes, progress_label)
+            .await?;
     let temp_path = path.with_extension("download");
 
     fs::write(&temp_path, &bytes).map_err(|error| {
@@ -620,6 +801,8 @@ async fn sync_approved_mods(paths: &InstallationPaths) -> Result<usize, String> 
             &local_path,
             &approved_mod.download_url,
             &approved_mod.sha512,
+            approved_mod.size,
+            &format!("Mod {}", approved_mod.display_name),
         )
         .await?;
         changed_count += 1;
@@ -708,6 +891,66 @@ fn combined_required_java_major(
         .max(fabric_min_java_major)
 }
 
+fn installation_snapshot_is_ready(snapshot: &InstallationSnapshot) -> bool {
+    snapshot.version_json_ready
+        && snapshot.client_jar_ready
+        && snapshot.fabric_profile_ready
+        && snapshot.asset_index_ready
+        && snapshot.library_count_ready == snapshot.library_count_total
+        && snapshot.asset_count_ready == snapshot.asset_count_total
+        && snapshot.mod_count_ready == snapshot.mod_count_total
+}
+
+fn collect_pending_download_bytes(
+    paths: &InstallationPaths,
+    base_details: &manifests::OfficialMinecraftVersionDetails,
+    fabric_details: &fabric::FabricInstallationDetails,
+    asset_index_contents: &manifests::OfficialAssetIndexContents,
+    approved_package: &client_package::ApprovedClientPackage,
+) -> Result<u64, String> {
+    let mut total_bytes = 0u64;
+
+    if !sha1_matches(&paths.client_jar_path, &base_details.client_download_sha1)? {
+        total_bytes = total_bytes.saturating_add(base_details.client_download_size);
+    }
+
+    for library in &base_details.libraries {
+        let local_path = library_path(paths, library);
+        if !sha1_matches(&local_path, &library.sha1)? {
+            total_bytes = total_bytes.saturating_add(library.size);
+        }
+    }
+
+    for library in &fabric_details.libraries {
+        let local_path = library_path(paths, library);
+        if !sha1_matches(&local_path, &library.sha1)? {
+            total_bytes = total_bytes.saturating_add(library.size);
+        }
+    }
+
+    for asset in &asset_index_contents.objects {
+        let local_path = asset_object_path(paths, &asset.hash);
+        if !file_size_matches(&local_path, asset.size)? {
+            total_bytes = total_bytes.saturating_add(asset.size);
+        }
+    }
+
+    for approved_mod in &approved_package.mods {
+        if approved_mod.distribution != "required" {
+            continue;
+        }
+
+        let local_path = paths.mods_dir.join(&approved_mod.file_name);
+        if !file_size_matches(&local_path, approved_mod.size)?
+            || !sha512_matches(&local_path, &approved_mod.sha512)?
+        {
+            total_bytes = total_bytes.saturating_add(approved_mod.size);
+        }
+    }
+
+    Ok(total_bytes)
+}
+
 fn build_installation_status(
     paths: &InstallationPaths,
     base_details: &manifests::OfficialMinecraftVersionDetails,
@@ -715,14 +958,7 @@ fn build_installation_status(
     snapshot: InstallationSnapshot,
     message: String,
 ) -> MinecraftInstallationStatus {
-    let state = if snapshot.version_json_ready
-        && snapshot.client_jar_ready
-        && snapshot.fabric_profile_ready
-        && snapshot.asset_index_ready
-        && snapshot.library_count_ready == snapshot.library_count_total
-        && snapshot.asset_count_ready == snapshot.asset_count_total
-        && snapshot.mod_count_ready == snapshot.mod_count_total
-    {
+    let state = if installation_snapshot_is_ready(&snapshot) {
         MinecraftInstallationState::Ready
     } else {
         MinecraftInstallationState::Pending
@@ -885,6 +1121,7 @@ mod tests {
             required_java_major: Some(21),
             client_download_url: "https://example.test/client.jar".to_string(),
             client_download_sha1: "client-sha1".to_string(),
+            client_download_size: 1024,
             asset_index: manifests::OfficialAssetIndexDownload {
                 id: "asset-index".to_string(),
                 sha1: "asset-index-sha1".to_string(),
@@ -896,11 +1133,13 @@ mod tests {
                     path: "official/a.jar".to_string(),
                     url: "https://example.test/official/a.jar".to_string(),
                     sha1: "official-a".to_string(),
+                    size: 64,
                 },
                 manifests::OfficialLibraryDownload {
                     path: "official/b.jar".to_string(),
                     url: "https://example.test/official/b.jar".to_string(),
                     sha1: "official-b".to_string(),
+                    size: 64,
                 },
             ],
         }
@@ -916,6 +1155,7 @@ mod tests {
                 path: "fabric/loader.jar".to_string(),
                 url: "https://example.test/fabric/loader.jar".to_string(),
                 sha1: "fabric-loader".to_string(),
+                size: 64,
             }],
         }
     }
@@ -1163,6 +1403,16 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
         manifests::fetch_official_asset_index_contents(&base_details.asset_index).await?;
 
     let _ = filesystem::ensure_nekara_game_directory()?;
+    let approved_package = client_package::load_approved_client_package()?;
+    let pending_download_bytes = collect_pending_download_bytes(
+        &paths,
+        &base_details,
+        &fabric_details,
+        &asset_index_contents,
+        &approved_package,
+    )?;
+    let _progress_guard =
+        InstallationProgressGuard::start(pending_download_bytes, "Připravuji hru");
 
     let mut changed_parts = Vec::new();
 
@@ -1172,10 +1422,13 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
     }
 
     if !sha1_matches(&paths.client_jar_path, &base_details.client_download_sha1)? {
+        set_installation_progress_step("Stahuji základ hry");
         download_verified_file(
             &paths.client_jar_path,
             &base_details.client_download_url,
             &base_details.client_download_sha1,
+            base_details.client_download_size,
+            "Minecraft klient",
         )
         .await?;
         changed_parts.push("client `.jar`");
@@ -1199,6 +1452,7 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
     }
 
     let mut downloaded_libraries = 0usize;
+    set_installation_progress_step("Stahuji knihovny");
     log_prepare_step("Ověřuji a stahuji oficiální knihovny.");
     for library in &base_details.libraries {
         let local_path = library_path(&paths, library);
@@ -1206,7 +1460,14 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
             continue;
         }
 
-        download_verified_file(&local_path, &library.url, &library.sha1).await?;
+        download_verified_file(
+            &local_path,
+            &library.url,
+            &library.sha1,
+            library.size,
+            "Oficiální knihovna",
+        )
+        .await?;
         downloaded_libraries += 1;
     }
 
@@ -1215,6 +1476,7 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
     }
 
     let mut downloaded_fabric_libraries = 0usize;
+    set_installation_progress_step("Stahuji Fabric knihovny");
     log_prepare_step("Ověřuji a stahuji Fabric knihovny.");
     for library in &fabric_details.libraries {
         let local_path = library_path(&paths, library);
@@ -1222,7 +1484,14 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
             continue;
         }
 
-        download_verified_file(&local_path, &library.url, &library.sha1).await?;
+        download_verified_file(
+            &local_path,
+            &library.url,
+            &library.sha1,
+            library.size,
+            "Fabric knihovna",
+        )
+        .await?;
         downloaded_fabric_libraries += 1;
     }
 
@@ -1231,6 +1500,7 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
     }
 
     let mut downloaded_assets = 0usize;
+    set_installation_progress_step("Stahuji herní soubory");
     log_prepare_step("Ověřuji a stahuji objekty assetů.");
     for asset in &asset_index_contents.objects {
         let local_path = asset_object_path(&paths, &asset.hash);
@@ -1244,7 +1514,7 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
             &asset.hash[..2],
             asset.hash
         );
-        download_verified_file(&local_path, &url, &asset.hash).await?;
+        download_verified_file(&local_path, &url, &asset.hash, asset.size, "Herní asset").await?;
         downloaded_assets += 1;
     }
 
@@ -1252,6 +1522,7 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
         changed_parts.push("objekty assetů");
     }
 
+    set_installation_progress_step("Stahuji schválené mody");
     let synchronized_mods = sync_approved_mods(&paths).await?;
     if synchronized_mods > 0 {
         changed_parts.push("schválené mody");
@@ -1298,4 +1569,9 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
         snapshot,
         message,
     ))
+}
+
+#[tauri::command]
+pub fn get_minecraft_installation_progress() -> MinecraftInstallationProgress {
+    snapshot_installation_progress()
 }

@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use directories::ProjectDirs;
@@ -37,6 +37,93 @@ struct ResolvedGameDirectory {
     path: PathBuf,
     configured_path: Option<PathBuf>,
     location_kind: GameDirectoryLocationKind,
+}
+
+fn legacy_local_game_dir() -> Result<PathBuf, String> {
+    Ok(launcher_data_dir()?
+        .join("Nekara")
+        .join("game")
+        .join(".minecraft"))
+}
+
+fn directory_has_entries(path: &Path) -> Result<bool, String> {
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    let mut entries = fs::read_dir(path)
+        .map_err(|error| format!("Unable to read directory {}: {error}", path.display()))?;
+
+    Ok(entries
+        .next()
+        .transpose()
+        .map_err(|error| {
+            format!(
+                "Unable to inspect directory entries at {}: {error}",
+                path.display()
+            )
+        })?
+        .is_some())
+}
+
+fn remove_directory_if_empty(path: &Path) {
+    if path.exists() {
+        let _ = fs::remove_dir(path);
+    }
+}
+
+fn migrate_legacy_default_game_dir_if_needed(target_game_dir: &Path) -> Result<bool, String> {
+    let legacy_game_dir = legacy_local_game_dir()?;
+    if legacy_game_dir == target_game_dir || !legacy_game_dir.exists() {
+        return Ok(false);
+    }
+
+    let target_exists_with_content =
+        target_game_dir.exists() && directory_has_entries(target_game_dir)?;
+    if target_exists_with_content {
+        return Ok(false);
+    }
+
+    if target_game_dir.exists() && !directory_has_entries(target_game_dir)? {
+        fs::remove_dir(target_game_dir).map_err(|error| {
+            format!(
+                "Unable to clear empty target game directory at {} before migration: {error}",
+                target_game_dir.display()
+            )
+        })?;
+    }
+
+    let Some(target_parent) = target_game_dir.parent() else {
+        return Err(format!(
+            "Unable to determine target parent for {}.",
+            target_game_dir.display()
+        ));
+    };
+
+    fs::create_dir_all(target_parent).map_err(|error| {
+        format!(
+            "Unable to create target game directory parent at {}: {error}",
+            target_parent.display()
+        )
+    })?;
+
+    fs::rename(&legacy_game_dir, target_game_dir).map_err(|error| {
+        format!(
+            "Unable to move legacy Nekara game directory from {} to {}: {error}",
+            legacy_game_dir.display(),
+            target_game_dir.display()
+        )
+    })?;
+
+    if let Some(legacy_game_parent) = legacy_game_dir.parent() {
+        remove_directory_if_empty(legacy_game_parent);
+
+        if let Some(legacy_root) = legacy_game_parent.parent() {
+            remove_directory_if_empty(legacy_root);
+        }
+    }
+
+    Ok(true)
 }
 
 fn project_dirs() -> Result<ProjectDirs, String> {
@@ -169,6 +256,10 @@ pub fn ensure_nekara_game_directory() -> Result<GameDirectoryInfo, String> {
     let configured_game_directory_path = configured_path.map(|path| path.display().to_string());
 
     let existed_before = game_dir.exists() && minecraft_dir.exists();
+    let migrated_legacy_directory =
+        matches!(location_kind, GameDirectoryLocationKind::AppDataRoaming)
+            && configured_game_directory_path.is_none()
+            && migrate_legacy_default_game_dir_if_needed(&minecraft_dir)?;
 
     fs::create_dir_all(&minecraft_dir).map_err(|error| {
         format!(
@@ -184,8 +275,11 @@ pub fn ensure_nekara_game_directory() -> Result<GameDirectoryInfo, String> {
         configured_game_directory_path,
         resolved_location_kind: location_kind,
         exists: true,
-        created: !existed_before,
-        message: if existed_before {
+        created: !existed_before && !migrated_legacy_directory,
+        message: if migrated_legacy_directory {
+            "Legacy Nekara game directory was moved to the new AppData\\Roaming\\Nekara location."
+                .to_string()
+        } else if existed_before {
             "Nekara game directory already exists.".to_string()
         } else {
             "Nekara game directory was created.".to_string()

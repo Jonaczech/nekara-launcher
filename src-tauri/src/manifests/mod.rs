@@ -16,6 +16,7 @@ pub struct OfficialMinecraftVersionDetails {
     pub required_java_major: Option<u32>,
     pub client_download_url: String,
     pub client_download_sha1: String,
+    pub client_download_size: u64,
     pub asset_index: OfficialAssetIndexDownload,
     pub libraries: Vec<OfficialLibraryDownload>,
 }
@@ -25,6 +26,7 @@ pub struct OfficialLibraryDownload {
     pub path: String,
     pub url: String,
     pub sha1: String,
+    pub size: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -94,6 +96,7 @@ struct VersionDownloads {
 struct DownloadEntry {
     url: String,
     sha1: String,
+    size: u64,
 }
 
 #[derive(Deserialize)]
@@ -115,8 +118,7 @@ struct LibraryArtifact {
     path: String,
     url: String,
     sha1: String,
-    #[serde(rename = "size")]
-    _size: u64,
+    size: u64,
 }
 
 #[derive(Deserialize)]
@@ -367,6 +369,7 @@ pub async fn fetch_official_minecraft_version_details(
                     path: artifact.path,
                     url: artifact.url,
                     sha1: artifact.sha1,
+                    size: artifact.size,
                 })
         })
         .collect();
@@ -382,6 +385,7 @@ pub async fn fetch_official_minecraft_version_details(
             .map(|java_version| java_version.major_version),
         client_download_url: version_details.downloads.client.url,
         client_download_sha1: version_details.downloads.client.sha1,
+        client_download_size: version_details.downloads.client.size,
         asset_index: OfficialAssetIndexDownload {
             id: version_details.asset_index.id,
             sha1: version_details.asset_index.sha1,

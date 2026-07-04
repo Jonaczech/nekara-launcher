@@ -128,6 +128,16 @@ export interface MinecraftInstallationStatus {
   message: string;
 }
 
+export interface MinecraftInstallationProgress {
+  active: boolean;
+  currentStep: string | null;
+  currentDownloadLabel: string | null;
+  totalBytes: number;
+  downloadedBytes: number;
+  remainingBytes: number;
+  bytesPerSecond: number | null;
+}
+
 export type OfflinePlayerState = "missing" | "ready";
 
 export interface OfflinePlayerStatus {

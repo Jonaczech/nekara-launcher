@@ -26,6 +26,7 @@ pub fn run() {
             launcher::get_launcher_status,
             manifests::check_minecraft_version_metadata,
             minecraft::get_minecraft_installation_plan,
+            minecraft::get_minecraft_installation_progress,
             minecraft::get_minecraft_installation_status,
             minecraft::prepare_minecraft_installation,
             settings::get_launcher_settings,

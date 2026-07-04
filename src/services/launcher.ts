@@ -7,6 +7,7 @@ import type {
   LauncherSettings,
   LauncherLogInfo,
   LauncherStatus,
+  MinecraftInstallationProgress,
   MinecraftInstallationPlan,
   MinecraftInstallationStatus,
   MinecraftMetadataCheck,
@@ -162,6 +163,17 @@ const browserPreviewMinecraftInstallationStatus: MinecraftInstallationStatus = {
     "Je aktivní náhradní režim pro prohlížeč. Pro přípravu Fabric klientských souborů spusť aplikaci uvnitř Tauri.",
 };
 
+const browserPreviewMinecraftInstallationProgress: MinecraftInstallationProgress =
+  {
+    active: false,
+    currentStep: null,
+    currentDownloadLabel: null,
+    totalBytes: 0,
+    downloadedBytes: 0,
+    remainingBytes: 0,
+    bytesPerSecond: null,
+  };
+
 const browserPreviewOfflinePlayerStatus: OfflinePlayerStatus = {
   state: "missing",
   playerName: null,
@@ -277,6 +289,16 @@ export function getMinecraftInstallationStatus() {
 
   return invoke<MinecraftInstallationStatus>(
     "get_minecraft_installation_status",
+  );
+}
+
+export function getMinecraftInstallationProgress() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve(browserPreviewMinecraftInstallationProgress);
+  }
+
+  return invoke<MinecraftInstallationProgress>(
+    "get_minecraft_installation_progress",
   );
 }
 
