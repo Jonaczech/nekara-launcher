@@ -427,8 +427,7 @@ fn replace_placeholders(value: &str, context: &LaunchContext) -> String {
 }
 
 fn launch_paths(fabric_profile_id: &str) -> Result<LaunchPaths, String> {
-    let game_dir = filesystem::nekara_game_dir()?;
-    let minecraft_dir = game_dir.join(".minecraft");
+    let minecraft_dir = filesystem::nekara_game_dir()?;
     let base_version_dir = minecraft_dir
         .join("versions")
         .join(config::MINECRAFT_VERSION);

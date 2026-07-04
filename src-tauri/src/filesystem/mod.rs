@@ -1,10 +1,18 @@
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
 use crate::config;
+
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum GameDirectoryLocationKind {
+    Custom,
+    AppDataRoaming,
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -13,6 +21,7 @@ pub struct GameDirectoryInfo {
     nekara_game_dir: String,
     minecraft_dir: String,
     configured_game_directory_path: Option<String>,
+    resolved_location_kind: GameDirectoryLocationKind,
     exists: bool,
     created: bool,
     message: String,
@@ -22,6 +31,12 @@ pub struct GameDirectoryInfo {
 struct LauncherSettingsFile {
     #[serde(default)]
     game_directory_path: Option<String>,
+}
+
+struct ResolvedGameDirectory {
+    path: PathBuf,
+    configured_path: Option<PathBuf>,
+    location_kind: GameDirectoryLocationKind,
 }
 
 fn project_dirs() -> Result<ProjectDirs, String> {
@@ -52,12 +67,7 @@ pub fn ensure_launcher_subdirectory(name: &str) -> Result<PathBuf, String> {
 }
 
 pub fn nekara_game_dir() -> Result<PathBuf, String> {
-    if let Some(custom_path) = configured_game_directory_path()? {
-        return Ok(custom_path);
-    }
-
-    let dirs = project_dirs()?;
-    Ok(dirs.data_local_dir().join("Nekara").join("game"))
+    Ok(resolve_game_directory()?.path)
 }
 
 pub fn launcher_data_dir() -> Result<PathBuf, String> {
@@ -69,6 +79,28 @@ pub fn updater_cache_dir() -> Result<PathBuf, String> {
         .ok_or_else(|| "Unable to determine local application data directory.".to_string())?;
 
     Ok(PathBuf::from(local_app_data).join("nekara-launcher-updater"))
+}
+
+fn app_data_roaming_game_dir() -> Result<PathBuf, String> {
+    let roaming_app_data = std::env::var_os("APPDATA")
+        .ok_or_else(|| "Unable to determine roaming application data directory.".to_string())?;
+    Ok(PathBuf::from(roaming_app_data).join("Nekara"))
+}
+
+fn resolve_game_directory() -> Result<ResolvedGameDirectory, String> {
+    if let Some(custom_path) = configured_game_directory_path()? {
+        return Ok(ResolvedGameDirectory {
+            path: custom_path.clone(),
+            configured_path: Some(custom_path),
+            location_kind: GameDirectoryLocationKind::Custom,
+        });
+    }
+
+    Ok(ResolvedGameDirectory {
+        path: app_data_roaming_game_dir()?,
+        configured_path: None,
+        location_kind: GameDirectoryLocationKind::AppDataRoaming,
+    })
 }
 
 fn configured_game_directory_path() -> Result<Option<PathBuf>, String> {
@@ -128,10 +160,13 @@ pub fn clear_launcher_updater_cache() -> Result<bool, String> {
 #[tauri::command]
 pub fn ensure_nekara_game_directory() -> Result<GameDirectoryInfo, String> {
     let launcher_data_dir = launcher_data_dir()?;
-    let game_dir = nekara_game_dir()?;
-    let minecraft_dir = game_dir.join(".minecraft");
-    let configured_game_directory_path =
-        configured_game_directory_path()?.map(|path| path.display().to_string());
+    let ResolvedGameDirectory {
+        path: game_dir,
+        configured_path,
+        location_kind,
+    } = resolve_game_directory()?;
+    let minecraft_dir = game_dir.clone();
+    let configured_game_directory_path = configured_path.map(|path| path.display().to_string());
 
     let existed_before = game_dir.exists() && minecraft_dir.exists();
 
@@ -147,6 +182,7 @@ pub fn ensure_nekara_game_directory() -> Result<GameDirectoryInfo, String> {
         nekara_game_dir: game_dir.display().to_string(),
         minecraft_dir: minecraft_dir.display().to_string(),
         configured_game_directory_path,
+        resolved_location_kind: location_kind,
         exists: true,
         created: !existed_before,
         message: if existed_before {
@@ -155,4 +191,56 @@ pub fn ensure_nekara_game_directory() -> Result<GameDirectoryInfo, String> {
             "Nekara game directory was created.".to_string()
         },
     })
+}
+
+#[tauri::command]
+pub fn open_directory_in_file_explorer(path: String) -> Result<(), String> {
+    let trimmed_path = path.trim();
+    if trimmed_path.is_empty() {
+        return Err("Directory path cannot be empty.".to_string());
+    }
+
+    let directory = PathBuf::from(trimmed_path);
+    if !directory.is_absolute() {
+        return Err("Directory path must be absolute.".to_string());
+    }
+    if !directory.exists() {
+        return Err(format!(
+            "Directory {} does not exist yet.",
+            directory.display()
+        ));
+    }
+    if !directory.is_dir() {
+        return Err(format!("Path {} is not a directory.", directory.display()));
+    }
+
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let mut command = Command::new("explorer");
+        command.arg(&directory);
+        command
+    };
+
+    #[cfg(target_os = "macos")]
+    let mut command = {
+        let mut command = Command::new("open");
+        command.arg(&directory);
+        command
+    };
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    let mut command = {
+        let mut command = Command::new("xdg-open");
+        command.arg(&directory);
+        command
+    };
+
+    command.spawn().map_err(|error| {
+        format!(
+            "Unable to open directory {} in the file explorer: {error}",
+            directory.display()
+        )
+    })?;
+
+    Ok(())
 }

@@ -77,6 +77,7 @@ const browserPreviewGameDirectoryInfo: GameDirectoryInfo = {
   nekaraGameDir: "Browser preview fallback",
   minecraftDir: "Browser preview fallback",
   configuredGameDirectoryPath: null,
+  resolvedLocationKind: "appDataRoaming",
   exists: false,
   created: false,
   message:
@@ -228,6 +229,14 @@ export function ensureNekaraGameDirectory() {
   }
 
   return invoke<GameDirectoryInfo>("ensure_nekara_game_directory");
+}
+
+export function openDirectoryInFileExplorer(path: string) {
+  if (!isTauriRuntime()) {
+    return Promise.resolve();
+  }
+
+  return invoke<void>("open_directory_in_file_explorer", { path });
 }
 
 export async function pickGameDirectoryPath(defaultPath?: string) {

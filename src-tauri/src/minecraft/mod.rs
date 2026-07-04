@@ -133,8 +133,7 @@ struct InstallationLock {
 }
 
 fn installation_paths(fabric_profile_id: &str) -> Result<InstallationPaths, String> {
-    let game_dir = filesystem::nekara_game_dir()?;
-    let minecraft_dir = game_dir.join(".minecraft");
+    let minecraft_dir = filesystem::nekara_game_dir()?;
     let base_version_dir = minecraft_dir
         .join("versions")
         .join(config::MINECRAFT_VERSION);
@@ -866,7 +865,7 @@ mod tests {
         let root = PathBuf::from("C:/NekaraTest");
 
         InstallationPaths {
-            minecraft_dir: root.join(".minecraft"),
+            minecraft_dir: root.clone(),
             version_json_path: root.join("versions/26.1.2/26.1.2.json"),
             client_jar_path: root.join("versions/26.1.2/26.1.2.jar"),
             fabric_profile_json_path: root.join("versions/fabric/fabric.json"),
@@ -998,8 +997,8 @@ mod tests {
                 ));
             }
 
-            let mods_dir = smoke_root.join(".minecraft").join("mods");
-            let servers_dat = smoke_root.join(".minecraft").join("servers.dat");
+            let mods_dir = smoke_root.join("mods");
+            let servers_dat = smoke_root.join("servers.dat");
 
             if !mods_dir.exists() {
                 return Err(format!(

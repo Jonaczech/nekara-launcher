@@ -113,8 +113,10 @@ RAM pro Minecraft a po neúspěšném spuštění zůstává k dispozici nápov�
 opravě i výřez logu. Nastavení navíc přijímá volitelnou vlastní cestu ke
 spustitelnému souboru Javy, takže běhové prostředí lze připnout místo
 spoléhání jen na systémový `PATH`. Stejné nastavení také přijímá volitelný
-vlastní adresář hry, aby izolovaný klient Nekary nemusel ležet pod výchozím
-`AppData`.
+vlastní adresář hry. Pokud pole zůstane prázdné, launcher nově používá
+izolovanou složku `AppData\Roaming\Nekara`, takže se klient Nekary nemíchá s
+běžným `.minecraft`. Ze settings jde navíc přímo otevřít skutečný herní
+adresář v Průzkumníku.
 
 Uživatelské rozhraní i diagnostika launcheru jsou lokalizované do češtiny a
 start aplikace nyní rozkládá těžší běhové kontroly, takže se první vykreslení

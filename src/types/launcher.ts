@@ -42,6 +42,7 @@ export interface GameDirectoryInfo {
   nekaraGameDir: string;
   minecraftDir: string;
   configuredGameDirectoryPath: string | null;
+  resolvedLocationKind: "custom" | "appDataRoaming";
   exists: boolean;
   created: boolean;
   message: string;

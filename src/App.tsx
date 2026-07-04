@@ -23,6 +23,7 @@ import {
   getMinecraftInstallationStatus,
   getOfflinePlayerStatus,
   launchMinecraft,
+  openDirectoryInFileExplorer,
   pickGameDirectoryPath,
   prepareMinecraftInstallation,
   saveLauncherSettings,
@@ -356,34 +357,35 @@ function App() {
       : Math.round(
           (installOperationReadyUnits / installOperationTotalUnits) * 100,
         );
-  const progressPanelLabel =
-    preparingInstallation || (installationStatus != null && !installationReady)
-      ? "Průběh Fabric klienta"
-      : "Průběh přípravy";
+  const progressPanelLabel = "Průběh";
   const progressPanelValue =
     preparingInstallation || (installationStatus != null && !installationReady)
       ? `${installOperationPercent}%`
-      : `${readinessCount}/5 připraveno`;
+      : readinessCount === 5
+        ? "Všechno je připravené"
+        : readinessCount >= 3
+          ? "Už jen pár kroků"
+          : "Připravuji hru";
   const progressPanelPercent =
     preparingInstallation || (installationStatus != null && !installationReady)
       ? installOperationPercent
       : readinessPercent;
 
   const primaryButtonLabel = !identityReady
-    ? "Uložit jméno hráče"
+    ? "Uložit jméno"
     : gameRunning
-      ? "Běží"
+      ? "Hra běží"
       : launchingGame
-        ? "Spouštím..."
+        ? "Spouštím hru..."
         : preparingInstallation
-          ? "Připravuji soubory..."
+          ? "Připravuji hru..."
           : installationState.kind === "loading"
-            ? "Zkontrolovat klienta"
+            ? "Zkontrolovat hru"
             : !installationReady
-              ? "Připravit klienta"
+              ? "Připravit hru"
               : readinessCount === 5
                 ? "Hrát"
-                : "Instalace připravena";
+                : "Skoro hotovo";
 
   const ramMinMb = launcherSettings?.minRamMb ?? 2048;
   const ramMaxMb = launcherSettings?.maxAllowedRamMb ?? 12288;
@@ -405,6 +407,12 @@ function App() {
     ramSettingsDirty || javaSettingsDirty || gameDirectorySettingsDirty;
   const ramInputLabel = `${ramInputMb} MB`;
   const currentVersionLabel = `v${appVersion}`;
+  const resolvedGameDirectoryModeLabel =
+    gameDirectoryPathNormalized.length > 0
+      ? "Vlastní umístění"
+      : gameDirectory?.resolvedLocationKind === "appDataRoaming"
+        ? "Výchozí umístění"
+        : "Výchozí umístění";
 
   function runWindowAction(
     action: (appWindow: ReturnType<typeof getCurrentWindow>) => Promise<void>,
@@ -543,6 +551,24 @@ function App() {
       );
     } finally {
       setPickingGameDirectory(false);
+    }
+  }
+
+  async function handleOpenMinecraftDirectory() {
+    if (gameDirectory?.minecraftDir == null) {
+      return;
+    }
+
+    setGameDirectoryPickerError(null);
+
+    try {
+      await openDirectoryInFileExplorer(gameDirectory.minecraftDir);
+    } catch (error: unknown) {
+      setGameDirectoryPickerError(
+        error instanceof Error
+          ? error.message
+          : "Nepodařilo se otevřít herní složku v Průzkumníku.",
+      );
     }
   }
 
@@ -686,11 +712,7 @@ function App() {
               <>
                 <section className="hero-panel">
                   <div className="hero-copy">
-                    <p className="hero-eyebrow">Nekara Launcher</p>
                     <h1 id="launcher-title">Nekara</h1>
-                    <p className="hero-subtitle">
-                      Jedna hra. Jeden klient. Jedna cesta do světa.
-                    </p>
                   </div>
 
                   <div className="hero-actions hero-actions--stacked">
@@ -705,16 +727,26 @@ function App() {
                       {savingPlayer ||
                       preparingInstallation ||
                       launchingGame ? (
-                        <LoaderCircle size={18} className="spin" />
+                        <LoaderCircle
+                          size={22}
+                          strokeWidth={2.6}
+                          className="spin primary-action__icon"
+                        />
                       ) : (
-                        <Play size={18} />
+                        <Play
+                          size={22}
+                          strokeWidth={2.6}
+                          className="primary-action__icon"
+                        />
                       )}
-                      <span>{primaryButtonLabel}</span>
+                      <span className="primary-action__label">
+                        {primaryButtonLabel}
+                      </span>
                     </button>
 
                     <section
                       className="progress-panel progress-panel--hero"
-                      aria-label="Průběh přípravy launcheru"
+                      aria-label="Průběh přípravy hry"
                     >
                       <div className="progress-panel__header">
                         <span>{progressPanelLabel}</span>
@@ -734,14 +766,13 @@ function App() {
                   <section className="home-card home-card--player">
                     <div className="panel-heading">
                       <UserRound size={18} />
-                      <span>Hráč</span>
+                      <span>Jméno ve hře</span>
                     </div>
                     <p className="home-card__lead">
-                      Lokální profil pro první spuštění klienta i běžné
-                      používání launcheru.
+                      Tohle jméno použije launcher při spuštění hry.
                     </p>
                     <label className="player-field">
-                      <span className="player-field__label">Offline jméno</span>
+                      <span className="player-field__label">Herní jméno</span>
                       <input
                         type="text"
                         maxLength={16}
@@ -749,7 +780,7 @@ function App() {
                         onChange={(event) =>
                           setPlayerNameInput(event.target.value)
                         }
-                        placeholder="Zadej jméno"
+                        placeholder="Sem napiš své jméno"
                       />
                     </label>
                     <div className="player-field__actions">
@@ -759,7 +790,7 @@ function App() {
                         onClick={() => void handleSaveOfflinePlayer()}
                         disabled={savingPlayer}
                       >
-                        Uložit
+                        Uložit jméno
                       </button>
                       <button
                         type="button"
@@ -767,7 +798,7 @@ function App() {
                         onClick={() => void handleClearOfflinePlayer()}
                         disabled={savingPlayer}
                       >
-                        Vymazat
+                        Smazat jméno
                       </button>
                     </div>
                   </section>
@@ -778,21 +809,21 @@ function App() {
                 <div className="settings-page__header">
                   <div>
                     <p className="eyebrow">Nastavení</p>
-                    <h2>Ovládání launcheru</h2>
+                    <h2>Všechno důležité na jednom místě</h2>
                   </div>
                   <p className="settings-page__lead">
-                    Sekundární volby bez rušivých diagnostických bloků.
+                    Jen to, co dává smysl měnit. Bez zbytečné technické omáčky.
                   </p>
                 </div>
 
                 <div className="settings-grid">
                   <section className="settings-card">
                     <div className="settings-card__header">
-                      <h4>Instalace klienta</h4>
+                      <h4>Kam se hra uloží</h4>
                     </div>
                     <p className="settings-card__lead">
-                      Tady nastavíš, kam se má ukládat Minecraft, Fabric i
-                      schválené mody.
+                      Tady vybereš složku pro Nekaru, aby zůstala oddělená od
+                      běžného Minecraftu.
                     </p>
                     {launcherSettingsState.kind === "error" ? (
                       <p className="settings-error-note">
@@ -802,7 +833,7 @@ function App() {
                       <div className="settings-control-stack">
                         <div className="settings-path-picker">
                           <label className="settings-path-field">
-                            <span>Cílová složka klienta</span>
+                            <span>Herní složka</span>
                             <input
                               type="text"
                               value={gameDirectoryPathInput}
@@ -844,20 +875,18 @@ function App() {
 
                         <div className="settings-inline-meta">
                           <span className="settings-value-chip">
-                            {gameDirectoryPathNormalized.length > 0
-                              ? "Vlastní umístění"
-                              : "Výchozí AppData"}
+                            {resolvedGameDirectoryModeLabel}
                           </span>
                           <span className="settings-helper-text">
-                            Prázdné pole použije výchozí adresář launcheru v
-                            AppData. Vyplněná cesta musí být absolutní a můžeš
-                            ji vybrat i přes Průzkumníka souborů.
+                            Když to necháš prázdné, hra se uloží do vlastní
+                            složky <code>AppData\Roaming\Nekara</code>. Pokud
+                            chceš, můžeš jí vybrat i jiné místo.
                           </span>
                         </div>
 
                         <div className="settings-inline-meta">
                           <span className="settings-value-chip">
-                            Verze launcheru
+                            Verze aplikace
                           </span>
                           <span className="settings-helper-text">
                             {currentVersionLabel}
@@ -867,7 +896,7 @@ function App() {
                         {gameDirectory?.minecraftDir && (
                           <div className="settings-inline-meta">
                             <span className="settings-value-chip">
-                              Aktuální složka
+                              Používaná složka
                             </span>
                             <span className="settings-helper-text">
                               {gameDirectory.minecraftDir}
@@ -879,6 +908,14 @@ function App() {
                           <button
                             type="button"
                             className="text-action"
+                            onClick={() => void handleOpenMinecraftDirectory()}
+                            disabled={gameDirectory?.minecraftDir == null}
+                          >
+                            Otevřít složku
+                          </button>
+                          <button
+                            type="button"
+                            className="text-action"
                             onClick={() => void handleSaveLauncherSettings()}
                             disabled={
                               launcherSettingsState.kind !== "ready" ||
@@ -886,7 +923,7 @@ function App() {
                               !launcherSettingsDirty
                             }
                           >
-                            {savingSettings ? "Ukládám..." : "Uložit umístění"}
+                            {savingSettings ? "Ukládám..." : "Uložit"}
                           </button>
                           <button
                             type="button"
@@ -902,7 +939,7 @@ function App() {
                             }}
                             disabled={savingSettings}
                           >
-                            Obnovit
+                            Vrátit změny
                           </button>
                         </div>
                       </div>
@@ -911,10 +948,10 @@ function App() {
 
                   <section className="settings-card">
                     <div className="settings-card__header">
-                      <h4>RAM</h4>
+                      <h4>Paměť pro hru</h4>
                     </div>
                     <p className="settings-card__lead">
-                      Přidělení paměti patří sem, ne na hlavní obrazovku.
+                      Tady určíš, kolik paměti může Nekara při spuštění použít.
                     </p>
                     {launcherSettingsState.kind === "error" ? (
                       <p className="settings-error-note">
@@ -924,7 +961,7 @@ function App() {
                       <div className="settings-control-stack">
                         <div className="settings-inline-fields">
                           <label className="settings-slider-field">
-                            <span>Limit paměti</span>
+                            <span>Kolik paměti může hra použít</span>
                             <input
                               className="settings-slider"
                               type="range"
@@ -945,7 +982,7 @@ function App() {
                           </label>
 
                           <label className="settings-number-field">
-                            <span>Aktuální hodnota</span>
+                            <span>Vybraná hodnota</span>
                             <input
                               type="number"
                               min={ramMinMb}
@@ -973,8 +1010,8 @@ function App() {
                             {ramInputLabel}
                           </span>
                           <span className="settings-helper-text">
-                            Spouští Minecraft s vybraným limitem{" "}
-                            <code>-Xmx</code>.
+                            Vyšší hodnota může pomoct větším modům, ale nech
+                            něco i pro zbytek počítače.
                           </span>
                         </div>
 
@@ -989,7 +1026,7 @@ function App() {
                               !launcherSettingsDirty
                             }
                           >
-                            {savingSettings ? "Ukládám..." : "Uložit RAM"}
+                            {savingSettings ? "Ukládám..." : "Uložit paměť"}
                           </button>
                           <button
                             type="button"
@@ -1003,7 +1040,7 @@ function App() {
                             }}
                             disabled={savingSettings}
                           >
-                            Obnovit
+                            Vrátit změny
                           </button>
                         </div>
                       </div>
@@ -1012,12 +1049,11 @@ function App() {
 
                   <section className="settings-card">
                     <div className="settings-card__header">
-                      <h4>Java runtime</h4>
+                      <h4>Java</h4>
                     </div>
                     <p className="settings-card__lead">
-                      Nech to prázdné, pokud chceš použít první{" "}
-                      <code>java</code> z PATH, nebo sem vlož vlastní{" "}
-                      <code>java.exe</code>.
+                      Ve většině případů to můžeš nechat prázdné. Vyplň to jen
+                      tehdy, když chceš launcheru ukázat vlastní Javu ručně.
                     </p>
                     {launcherSettingsState.kind === "error" ? (
                       <p className="settings-error-note">
@@ -1026,7 +1062,7 @@ function App() {
                     ) : (
                       <div className="settings-control-stack">
                         <label className="settings-path-field">
-                          <span>Cesta ke spustitelnému souboru Javy</span>
+                          <span>Vlastní Java (volitelné)</span>
                           <input
                             type="text"
                             value={javaPathInput}
@@ -1044,12 +1080,12 @@ function App() {
                         <div className="settings-inline-meta">
                           <span className="settings-value-chip">
                             {javaPathNormalized.length > 0
-                              ? "Vlastní cesta"
-                              : "Systémová PATH"}
+                              ? "Vlastní Java"
+                              : "Automatický výběr"}
                           </span>
                           <span className="settings-helper-text">
-                            Launcher zkusí tento soubor dřív, než přejde na
-                            systémové hledání.
+                            Když sem cestu nevyplníš, launcher zkusí Javu najít
+                            sám.
                           </span>
                         </div>
 
@@ -1064,7 +1100,7 @@ function App() {
                               !launcherSettingsDirty
                             }
                           >
-                            {savingSettings ? "Ukládám..." : "Uložit runtime"}
+                            {savingSettings ? "Ukládám..." : "Uložit Javu"}
                           </button>
                           <button
                             type="button"
@@ -1080,7 +1116,7 @@ function App() {
                             }}
                             disabled={savingSettings}
                           >
-                            Obnovit
+                            Vrátit změny
                           </button>
                         </div>
                       </div>
