@@ -112,3 +112,11 @@ release launcheru, který se umí aktualizovat sám.
   - spravovaný Nekara runtime.
 - [ ] Spustit vrstvu synchronizace klientského balíčku Nekary:
       schválené mody, konfigurace, resource packy a verzované manifesty.
+
+### 4. Nadstavba ekosystému
+
+- [ ] Navrhnout a spustit první verzi veřejných webovek Nekary.
+- [ ] Navrhnout API a datový model pro integraci launcheru se serverem.
+- [ ] Rozhodnout, které serverové informace mají mít prioritu v launcheru a na webu.
+- [ ] Připravit společný produktový jazyk, aby launcher, web a server působily jako jedna značka.
+- [ ] Zvážit notifikace, novinky a stav serveru jako první sdílené funkce.

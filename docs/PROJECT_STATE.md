@@ -90,6 +90,7 @@ offline spouštěcím postupem, offline profilem hráče a izolovanou herní slo
 3. Rozhodnout, zda launcher někdy spravuje vlastní Java runtime.
 4. Pokračovat ve vrstvě synchronizace klientského balíčku Nekary pro další typy manifestů.
 5. Přidat robustnější reporting chyb pro updater a přípravu klienta, pokud se objeví nové reálné edge casy.
+6. Navrhnout první verzi webové prezentace a server integrace, aby launcher, web a backend server sdílely stejný produktový směr.
 
 ## Poznámky pro budoucí práci
 
