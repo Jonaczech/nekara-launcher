@@ -1,6 +1,6 @@
 # Roadmapa Nekara Launcheru
 
-Tato roadmapa sleduje počáteční cestu od prázdného repozitáře k použitelnému
+Tato roadmapa sleduje počeáteční cestu od prázdného repozitáře k použitelnému
 vlastnímu launcheru pro server Nekara.
 
 ## Fáze 0: Základ projektu
@@ -23,25 +23,13 @@ vlastnímu launcheru pro server Nekara.
 - [x] Přidat příkaz pro kontrolu Minecraft version metadata.
 - [x] Zobrazit stav launcheru a diagnostiku v UI.
 
-Exit criteria:
-
-- Launcher se spustí v development módu.
-- UI volá alespoň jeden skutečný Tauri command.
-- Launcher umí říct, jestli je cílová Minecraft verze přítomná v oficiálních
-  metadatech.
-
 ## Fáze 2: Konfigurace a lokální adresáře
 
 - [x] Definovat centrální konfiguraci Nekary.
 - [x] Definovat jednu podporovanou Minecraft verzi na jednom místě.
 - [x] Vyřešit platformově specifické aplikační a herní adresáře.
 - [x] Vytvořit izolovaný herní adresář Nekary.
-- [ ] Přidat diagnostiku pro chybějící oprávnění nebo neplatné cesty.
-
-Exit criteria:
-
-- Launcher umí ukázat nakonfigurovaný herní adresář a bezpečně jej vytvořit.
-- Neexistují žádné uživatelsky spravované profily ani výběr verzí.
+- [x] Přidat diagnostiku pro chybějící nebo neplatné herní cesty.
 
 ## Fáze 3: Oficiální Minecraft metadata a soubory
 
@@ -49,17 +37,12 @@ Exit criteria:
 - [x] Získat potřebné client files z oficiálních metadat.
 - [x] Modelovat izolované instalační cesty pro klienta Nekary.
 - [x] Stáhnout první oficiální Minecraft soubory pro nastaveného klienta.
-- [ ] Stahovat soubory s reportováním průběhu.
+- [x] Stahovat soubory s reportováním průběhu.
 - [x] Ověřovat hash souborů.
 - [x] Opravovat chybějící nebo poškozené soubory.
-- [ ] Zapsat jasnou diagnostiku pro nedostupná nebo neplatná metadata.
+- [x] Zapsat jasnou diagnostiku pro nedostupná nebo neplatná metadata.
 - [x] Připravit oficiální knihovny, asset index a asset objekty.
 - [ ] Připravit zbývající runtime soubory potřebné pro spuštění.
-
-Exit criteria:
-
-- Launcher umí připravit oficiální Minecraft soubory pro nastavenou verzi
-  Nekary.
 
 ## Fáze 4: Java runtime
 
@@ -68,20 +51,11 @@ Exit criteria:
 - [x] Připravit kontrolu kompatibility runtime.
 - [x] Zobrazit použitelnou diagnostiku, když Java chybí nebo je nekompatibilní.
 
-Exit criteria:
-
-- Launcher umí najít platnou runtime cestu pro spuštění Minecraftu.
-
 ## Fáze 5: Identita hráče
 
 - [x] Přidat offline flow pro profil hráče.
 - [x] Ukládat offline jméno hráče do dat launcheru.
 - [ ] Zobrazit identitu hráče a diagnostiku profilu jasněji.
-
-Exit criteria:
-
-- Uživatel si umí nastavit lokální identitu a launcher ji umí použít pro
-  spouštěcí relaci.
 
 ## Fáze 6: Spuštění a sledování procesu
 
@@ -90,10 +64,6 @@ Exit criteria:
 - [x] Průběžně streamovat nebo ukládat relevantní logy.
 - [x] Sledovat stavy running, exited a crashed.
 - [x] Zobrazovat uživatelsky srozumitelnou diagnostiku chyb.
-
-Exit criteria:
-
-- Uživatel s připravenou instalací může stisknout Hrát a spustit Minecraft.
 
 ## Pozdější fáze
 
@@ -114,11 +84,11 @@ release launcheru, který se umí aktualizovat sám.
       používá GitHub Releases.
 - [x] Opravit stav připravenosti Fabric instalace tak, aby připravený klient
       mohl opustit pending stav.
-- [x] Zvýšit verzi launcheru na `0.1.11`.
-- [ ] Publikovat `app-v0.1.11` z CI, aby si hráči mohli nainstalovat opravený
-      updater key.
-- [ ] Nahradit všechny lokálně nainstalované buildy starší než `0.1.8` novým
-      installerem, jakmile bude release publikovaný.
+- [x] Zvýšit verzi launcheru na `0.1.18`.
+- [x] Publikovat `app-v0.1.18` z CI, aby si hráči mohli nainstalovat opravený
+      launcher.
+- [x] Nahradit všechny lokálně nainstalované buildy starší než `0.1.8` novým
+      installerem, jakmile byl release publikovaný.
 
 ### 2. Zpevnění releasu
 
@@ -128,14 +98,14 @@ release launcheru, který se umí aktualizovat sám.
       veřejné verze.
 - [ ] Přidat srozumitelnější updater error surface v UI, když selže validace
       podpisu.
-- [ ] Přidat automatické desktop smoke checky, aby se snížila
-      regresní chybovost releasů.
+- [ ] Přidat automatické desktop smoke checky, aby se snížila regresní
+      chybovost releasů.
 
 ### 3. Připravenost launcheru
 
-- [ ] Přidat reportování průběhu pro dlouhé download operace místo jen
-      agregované readiness bar.
-- [ ] Zlepšit instalační diagnostiku pro blokovaná metadata, oprávnění
+- [x] Přidat reporting průběhu pro dlouhé download operace místo jen agregované
+      readiness bar.
+- [x] Zlepšit instalační diagnostiku pro blokovaná metadata, oprávnění
       filesystemu a rozbité lokální cesty.
 - [ ] Rozhodnout a implementovat strategii pro Java runtime:
   - pouze systémová Java, nebo
