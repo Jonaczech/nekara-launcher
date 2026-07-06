@@ -10,8 +10,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use sha1::Digest;
+use sha2::Sha512;
 
-use crate::{auth, config, fabric, filesystem, java, logging, manifests, settings};
+use crate::{auth, client_package, config, fabric, filesystem, java, logging, manifests, settings};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -60,6 +61,7 @@ struct LaunchPaths {
     fabric_profile_json_path: PathBuf,
     libraries_dir: PathBuf,
     assets_dir: PathBuf,
+    mods_dir: PathBuf,
     logs_dir: PathBuf,
     natives_dir: PathBuf,
     log_configs_dir: PathBuf,
@@ -436,6 +438,7 @@ fn launch_paths(fabric_profile_id: &str) -> Result<LaunchPaths, String> {
     Ok(LaunchPaths {
         libraries_dir: minecraft_dir.join("libraries"),
         assets_dir: minecraft_dir.join("assets"),
+        mods_dir: minecraft_dir.join("mods"),
         logs_dir: minecraft_dir.join("logs").join("launcher"),
         natives_dir: minecraft_dir
             .join("natives")
@@ -489,6 +492,17 @@ fn sha1_hex(bytes: &[u8]) -> String {
     hex
 }
 
+fn sha512_hex(bytes: &[u8]) -> String {
+    let digest = Sha512::digest(bytes);
+    let mut hex = String::with_capacity(digest.len() * 2);
+
+    for byte in digest {
+        hex.push_str(&format!("{byte:02x}"));
+    }
+
+    hex
+}
+
 fn sha1_matches(path: &Path, expected_sha1: &str) -> Result<bool, String> {
     if !path.exists() {
         return Ok(false);
@@ -501,6 +515,31 @@ fn sha1_matches(path: &Path, expected_sha1: &str) -> Result<bool, String> {
         )
     })?;
     Ok(sha1_hex(&bytes).eq_ignore_ascii_case(expected_sha1))
+}
+
+fn text_matches(path: &Path, expected_text: &str) -> Result<bool, String> {
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    let local_text = fs::read_to_string(path)
+        .map_err(|error| format!("Unable to read {}: {error}", path.display()))?;
+
+    Ok(local_text == expected_text)
+}
+
+fn sha512_matches(path: &Path, expected_sha512: &str) -> Result<bool, String> {
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    let bytes = fs::read(path).map_err(|error| {
+        format!(
+            "Unable to read {} for SHA-512 verification: {error}",
+            path.display()
+        )
+    })?;
+    Ok(sha512_hex(&bytes).eq_ignore_ascii_case(expected_sha512))
 }
 
 async fn download_verified_file(path: &Path, url: &str, expected_sha1: &str) -> Result<(), String> {
@@ -580,17 +619,37 @@ fn ensure_launch_requirements(
     paths: &LaunchPaths,
     base_details: &manifests::OfficialMinecraftVersionDetails,
     fabric_details: &fabric::FabricInstallationDetails,
+    approved_package: &client_package::ApprovedClientPackage,
 ) -> Result<(), String> {
     if !paths.version_json_path.exists() {
         return Err("Chybí metadata verze Minecraftu. Nejprve připrav klienta.".to_string());
+    }
+
+    if !text_matches(&paths.version_json_path, &base_details.version_json)? {
+        return Err(
+            "Metadata verze Minecraftu jsou poškozená. Nejprve připrav klienta.".to_string(),
+        );
     }
 
     if !paths.client_jar_path.exists() {
         return Err("Chybí client `.jar` soubor Minecraftu. Nejprve připrav klienta.".to_string());
     }
 
+    if !sha1_matches(&paths.client_jar_path, &base_details.client_download_sha1)? {
+        return Err(
+            "Client `.jar` soubor Minecraftu je poškozený. Nejprve připrav klienta.".to_string(),
+        );
+    }
+
     if !paths.fabric_profile_json_path.exists() {
         return Err("Chybí metadata Fabric profilu. Nejprve připrav klienta.".to_string());
+    }
+
+    if !text_matches(
+        &paths.fabric_profile_json_path,
+        &fabric_details.profile_json,
+    )? {
+        return Err("Metadata Fabric profilu jsou poškozená. Nejprve připrav klienta.".to_string());
     }
 
     let asset_index_path = paths
@@ -601,11 +660,22 @@ fn ensure_launch_requirements(
         return Err("Chybí index assetů Minecraftu. Nejprve připrav klienta.".to_string());
     }
 
+    if !sha1_matches(&asset_index_path, &base_details.asset_index.sha1)? {
+        return Err("Index assetů Minecraftu je poškozený. Nejprve připrav klienta.".to_string());
+    }
+
     for library in &base_details.libraries {
         let library_path = paths.libraries_dir.join(&library.path);
         if !library_path.exists() {
             return Err(format!(
                 "Chybí požadovaná knihovna: {}. Nejprve připrav klienta.",
+                library_path.display()
+            ));
+        }
+
+        if !sha1_matches(&library_path, &library.sha1)? {
+            return Err(format!(
+                "Knihovna {} je poškozená. Nejprve připrav klienta.",
                 library_path.display()
             ));
         }
@@ -617,6 +687,34 @@ fn ensure_launch_requirements(
             return Err(format!(
                 "Chybí požadovaná Fabric knihovna: {}. Nejprve připrav klienta.",
                 library_path.display()
+            ));
+        }
+
+        if !sha1_matches(&library_path, &library.sha1)? {
+            return Err(format!(
+                "Fabric knihovna {} je poškozená. Nejprve připrav klienta.",
+                library_path.display()
+            ));
+        }
+    }
+
+    for approved_mod in approved_package
+        .mods
+        .iter()
+        .filter(|approved_mod| approved_mod.distribution == "required")
+    {
+        let local_path = paths.mods_dir.join(&approved_mod.file_name);
+        if !local_path.exists() {
+            return Err(format!(
+                "Chybí požadovaný mod: {}. Nejprve připrav klienta.",
+                local_path.display()
+            ));
+        }
+
+        if !sha512_matches(&local_path, &approved_mod.sha512)? {
+            return Err(format!(
+                "Mod {} je poškozený. Nejprve připrav klienta.",
+                local_path.display()
             ));
         }
     }
@@ -806,8 +904,11 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
 
     let base_details = manifests::fetch_official_minecraft_version_details().await?;
     let fabric_details = fabric::fetch_fabric_installation_details().await?;
+    let approved_package = client_package::load_approved_client_package()?;
     let paths = launch_paths(&fabric_details.profile_id)?;
-    if let Err(error) = ensure_launch_requirements(&paths, &base_details, &fabric_details) {
+    if let Err(error) =
+        ensure_launch_requirements(&paths, &base_details, &fabric_details, &approved_package)
+    {
         let _ = logging::append_launcher_log_entry(
             "game",
             &format!("Předpoklady spuštění selhaly: {error}"),
@@ -1124,6 +1225,41 @@ pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::client_package;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_launch_root(prefix: &str) -> PathBuf {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("current time should be after epoch")
+            .as_millis();
+        std::env::temp_dir().join(format!("{prefix}-{suffix}"))
+    }
+
+    fn launch_test_paths(root: &Path) -> LaunchPaths {
+        LaunchPaths {
+            minecraft_dir: root.to_path_buf(),
+            version_json_path: root.join("versions/26.1.2/26.1.2.json"),
+            client_jar_path: root.join("versions/26.1.2/26.1.2.jar"),
+            fabric_profile_json_path: root.join("versions/fabric-loader/fabric-loader.json"),
+            libraries_dir: root.join("libraries"),
+            assets_dir: root.join("assets"),
+            mods_dir: root.join("mods"),
+            logs_dir: root.join("logs"),
+            natives_dir: root.join("natives"),
+            log_configs_dir: root.join("log_configs"),
+        }
+    }
+
+    fn write_launch_test_file(path: &Path, contents: &[u8]) {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("test directory should be creatable");
+        }
+
+        fs::write(path, contents).expect("test file should be writable");
+    }
 
     #[test]
     fn merge_launch_manifests_keeps_base_classpath_args_and_fabric_main_class() {
@@ -1188,5 +1324,160 @@ mod tests {
         assert!(merged_jvm_args
             .iter()
             .any(|arg| arg.contains("net.minecraft.client.main.Main")));
+    }
+
+    #[test]
+    fn ensure_launch_requirements_accepts_verified_files() {
+        let root = temp_launch_root("nekara-launch-requirements");
+        let paths = launch_test_paths(&root);
+        let mut base_details = manifests::OfficialMinecraftVersionDetails {
+            version_type: "release".to_string(),
+            version_url: "https://example.test/version.json".to_string(),
+            version_json: "{\"id\":\"26.1.2\"}".to_string(),
+            latest_release: config::MINECRAFT_VERSION.to_string(),
+            latest_snapshot: config::MINECRAFT_VERSION.to_string(),
+            required_java_major: Some(21),
+            client_download_url: "https://example.test/client.jar".to_string(),
+            client_download_sha1: String::new(),
+            client_download_size: 16,
+            asset_index: manifests::OfficialAssetIndexDownload {
+                id: "asset-index".to_string(),
+                sha1: String::new(),
+                total_size: 0,
+                url: "https://example.test/assets.json".to_string(),
+            },
+            libraries: vec![manifests::OfficialLibraryDownload {
+                path: "official/example.jar".to_string(),
+                url: "https://example.test/official/example.jar".to_string(),
+                sha1: String::new(),
+                size: 16,
+            }],
+        };
+        let mut fabric_details = fabric::FabricInstallationDetails {
+            loader_version: "0.16.14".to_string(),
+            profile_id: "fabric-loader-0.16.14-26.1.2".to_string(),
+            profile_json: "{\"libraries\":[]}".to_string(),
+            min_java_major: 21,
+            libraries: vec![manifests::OfficialLibraryDownload {
+                path: "fabric/example.jar".to_string(),
+                url: "https://example.test/fabric/example.jar".to_string(),
+                sha1: String::new(),
+                size: 16,
+            }],
+        };
+        let mod_bytes = b"required mod payload";
+        let approved_package = client_package::ApprovedClientPackage {
+            game_configuration_id: config::GAME_CONFIGURATION_ID.to_string(),
+            minecraft_version: config::MINECRAFT_VERSION.to_string(),
+            mods: vec![client_package::ApprovedMod {
+                id: "nekara-core".to_string(),
+                display_name: "Nekara Core".to_string(),
+                distribution: "required".to_string(),
+                file_name: "nekara-core.jar".to_string(),
+                download_url: "https://example.test/mods/nekara-core.jar".to_string(),
+                sha512: sha512_hex(mod_bytes),
+                size: mod_bytes.len() as u64,
+            }],
+        };
+
+        let client_bytes = b"client jar payload";
+        let asset_index_bytes = b"{\"objects\":{}}";
+        let official_library_bytes = b"official library payload";
+        let fabric_library_bytes = b"fabric library payload";
+        let asset_index_path = paths.assets_dir.join("indexes").join("asset-index.json");
+
+        write_launch_test_file(
+            &paths.version_json_path,
+            base_details.version_json.as_bytes(),
+        );
+        write_launch_test_file(&paths.client_jar_path, client_bytes);
+        write_launch_test_file(
+            &paths.fabric_profile_json_path,
+            fabric_details.profile_json.as_bytes(),
+        );
+        write_launch_test_file(&asset_index_path, asset_index_bytes);
+        write_launch_test_file(
+            &paths.libraries_dir.join("official/example.jar"),
+            official_library_bytes,
+        );
+        write_launch_test_file(
+            &paths.libraries_dir.join("fabric/example.jar"),
+            fabric_library_bytes,
+        );
+        write_launch_test_file(&paths.mods_dir.join("nekara-core.jar"), mod_bytes);
+
+        base_details.client_download_sha1 = sha1_hex(client_bytes);
+        base_details.asset_index.sha1 = sha1_hex(asset_index_bytes);
+        base_details.libraries[0].sha1 = sha1_hex(official_library_bytes);
+        fabric_details.libraries[0].sha1 = sha1_hex(fabric_library_bytes);
+
+        let result =
+            ensure_launch_requirements(&paths, &base_details, &fabric_details, &approved_package);
+
+        let _ = fs::remove_dir_all(&root);
+
+        assert!(result.is_ok(), "{result:?}");
+    }
+
+    #[test]
+    fn ensure_launch_requirements_rejects_corrupted_version_metadata() {
+        let root = temp_launch_root("nekara-launch-requirements-bad");
+        let paths = launch_test_paths(&root);
+        let mut base_details = manifests::OfficialMinecraftVersionDetails {
+            version_type: "release".to_string(),
+            version_url: "https://example.test/version.json".to_string(),
+            version_json: "{\"id\":\"26.1.2\"}".to_string(),
+            latest_release: config::MINECRAFT_VERSION.to_string(),
+            latest_snapshot: config::MINECRAFT_VERSION.to_string(),
+            required_java_major: Some(21),
+            client_download_url: "https://example.test/client.jar".to_string(),
+            client_download_sha1: String::new(),
+            client_download_size: 16,
+            asset_index: manifests::OfficialAssetIndexDownload {
+                id: "asset-index".to_string(),
+                sha1: String::new(),
+                total_size: 0,
+                url: "https://example.test/assets.json".to_string(),
+            },
+            libraries: vec![],
+        };
+        let fabric_details = fabric::FabricInstallationDetails {
+            loader_version: "0.16.14".to_string(),
+            profile_id: "fabric-loader-0.16.14-26.1.2".to_string(),
+            profile_json: "{\"libraries\":[]}".to_string(),
+            min_java_major: 21,
+            libraries: vec![],
+        };
+        let approved_package = client_package::ApprovedClientPackage {
+            game_configuration_id: config::GAME_CONFIGURATION_ID.to_string(),
+            minecraft_version: config::MINECRAFT_VERSION.to_string(),
+            mods: vec![],
+        };
+
+        let client_bytes = b"client jar payload";
+        let asset_index_bytes = b"{}";
+        write_launch_test_file(&paths.version_json_path, b"{\"id\":\"tampered\"}");
+        write_launch_test_file(&paths.client_jar_path, client_bytes);
+        write_launch_test_file(
+            &paths.fabric_profile_json_path,
+            fabric_details.profile_json.as_bytes(),
+        );
+        write_launch_test_file(
+            &paths.assets_dir.join("indexes").join("asset-index.json"),
+            asset_index_bytes,
+        );
+
+        base_details.client_download_sha1 = sha1_hex(client_bytes);
+        base_details.asset_index.sha1 = sha1_hex(asset_index_bytes);
+
+        let result =
+            ensure_launch_requirements(&paths, &base_details, &fabric_details, &approved_package);
+
+        let _ = fs::remove_dir_all(&root);
+
+        assert_eq!(
+            result,
+            Err("Metadata verze Minecraftu jsou poškozená. Nejprve připrav klienta.".to_string())
+        );
     }
 }

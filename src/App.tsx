@@ -19,6 +19,8 @@ import {
   clearOfflinePlayerProfile,
   ensureNekaraGameDirectory,
   getGameLaunchStatus,
+  getLauncherLogInfo,
+  getLauncherStatus,
   getLauncherSettings,
   getMinecraftInstallationProgress,
   getMinecraftInstallationStatus,
@@ -35,6 +37,8 @@ import type {
   GameDirectoryInfo,
   GameLaunchStatus,
   JavaRuntimeCheck,
+  LauncherLogInfo,
+  LauncherStatus,
   LauncherSettings,
   MinecraftInstallationProgress,
   MinecraftInstallationStatus,
@@ -97,6 +101,16 @@ function App() {
   const [launcherSettingsState, setLauncherSettingsState] = useState<
     LoadState<LauncherSettings>
   >({ kind: "loading" });
+  const [launcherLogState, setLauncherLogState] = useState<
+    LoadState<LauncherLogInfo>
+  >({
+    kind: "loading",
+  });
+  const [launcherStatusState, setLauncherStatusState] = useState<
+    LoadState<LauncherStatus>
+  >({
+    kind: "loading",
+  });
   const [playerState, setPlayerState] = useState<
     LoadState<OfflinePlayerStatus>
   >({
@@ -118,6 +132,9 @@ function App() {
   const [launchingGame, setLaunchingGame] = useState(false);
   const [currentView, setCurrentView] = useState<"home" | "settings">("home");
   const [wallpaperReady, setWallpaperReady] = useState(false);
+  const [launcherDiagnosticsError, setLauncherDiagnosticsError] = useState<
+    string | null
+  >(null);
 
   function updateRamInput(value: number) {
     if (!Number.isNaN(value)) {
@@ -218,6 +235,42 @@ function App() {
     }
   }
 
+  async function refreshLauncherLogInfo() {
+    try {
+      const info = await getLauncherLogInfo();
+      setLauncherLogState({ kind: "ready", value: info });
+      return info;
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Informace o lokálních logách launcheru nejsou k dispozici.";
+      setLauncherLogState({
+        kind: "error",
+        message,
+      });
+      return null;
+    }
+  }
+
+  async function refreshLauncherStatus() {
+    try {
+      const status = await getLauncherStatus();
+      setLauncherStatusState({ kind: "ready", value: status });
+      return status;
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Stav launcheru není k dispozici.";
+      setLauncherStatusState({
+        kind: "error",
+        message,
+      });
+      return null;
+    }
+  }
+
   async function refreshOfflinePlayerStatus() {
     try {
       const status = await getOfflinePlayerStatus();
@@ -267,6 +320,16 @@ function App() {
         window.setTimeout(() => {
           void refreshGameLaunchStatus();
         }, 360),
+      );
+      timers.push(
+        window.setTimeout(() => {
+          void refreshLauncherStatus();
+        }, 420),
+      );
+      timers.push(
+        window.setTimeout(() => {
+          void refreshLauncherLogInfo();
+        }, 540),
       );
       cleanups.push(
         scheduleBackgroundWork(() => {
@@ -365,6 +428,10 @@ function App() {
     gameLaunchState.kind === "ready" ? gameLaunchState.value : null;
   const launcherSettings =
     launcherSettingsState.kind === "ready" ? launcherSettingsState.value : null;
+  const launcherLogInfo =
+    launcherLogState.kind === "ready" ? launcherLogState.value : null;
+  const launcherStatus =
+    launcherStatusState.kind === "ready" ? launcherStatusState.value : null;
   const offlinePlayer = playerState.kind === "ready" ? playerState.value : null;
   const offlinePlayerReady = offlinePlayer?.state === "ready";
   const identityReady = offlinePlayerReady;
@@ -378,6 +445,80 @@ function App() {
         installationStatus.requiredJavaMajor;
   const gameRunning =
     gameLaunch?.state === "running" || gameLaunch?.state === "launching";
+  const launchFailed = gameLaunch?.state === "failed";
+  const installationNeedsAttention =
+    installationStatus != null && !installationReady;
+  const diagnosticSummary = launchFailed
+    ? (gameLaunch?.diagnosticSummary ?? null)
+    : installationNeedsAttention
+      ? (installationStatus?.message ?? null)
+      : null;
+  const diagnosticFix = launchFailed
+    ? (gameLaunch?.suggestedFix ?? null)
+    : installationNeedsAttention
+      ? "Spusť přípravu hry znovu, nebo zkontroluj, zda jsou soubory dostupné v herní složce."
+      : null;
+  const diagnosticLogExcerpt = launchFailed
+    ? (gameLaunch?.logExcerpt ?? null)
+    : null;
+  const diagnosticLogPath = launchFailed
+    ? (gameLaunch?.logPath ?? null)
+    : (launcherLogInfo?.logFile ?? null);
+  const hasDiagnosticDetails =
+    diagnosticSummary != null ||
+    diagnosticFix != null ||
+    diagnosticLogExcerpt != null ||
+    launcherDiagnosticsError != null ||
+    launcherLogState.kind === "error";
+  const launcherCheckStateLabel = {
+    ready: "Připraveno",
+    pending: "Čeká",
+    blocked: "Blokováno",
+  } as const;
+  const launchBlockerItems: string[] = [];
+  if (!identityReady) {
+    launchBlockerItems.push("Ulož herní jméno hráče.");
+  }
+  if (!gameDirectory?.exists) {
+    launchBlockerItems.push("Připrav herní složku Nekary v nastavení.");
+  }
+  if (!javaCompatible) {
+    launchBlockerItems.push("Nainstaluj nebo vyber kompatibilní Java runtime.");
+  }
+  if (installationStatus != null && !installationReady) {
+    if (!installationStatus.versionJsonReady) {
+      launchBlockerItems.push("Chybí metadata verze Minecraftu.");
+    }
+    if (!installationStatus.clientJarReady) {
+      launchBlockerItems.push("Chybí client JAR Minecraftu.");
+    }
+    if (!installationStatus.fabricProfileReady) {
+      launchBlockerItems.push("Chybí Fabric profil.");
+    }
+    if (!installationStatus.assetIndexReady) {
+      launchBlockerItems.push("Chybí index assetů.");
+    }
+    if (
+      installationStatus.libraryCountReady <
+      installationStatus.libraryCountTotal
+    ) {
+      launchBlockerItems.push(
+        `${installationStatus.libraryCountTotal - installationStatus.libraryCountReady} knihoven chybí.`,
+      );
+    }
+    if (
+      installationStatus.assetCountReady < installationStatus.assetCountTotal
+    ) {
+      launchBlockerItems.push(
+        `${installationStatus.assetCountTotal - installationStatus.assetCountReady} assetů chybí.`,
+      );
+    }
+    if (installationStatus.modCountReady < installationStatus.modCountTotal) {
+      launchBlockerItems.push(
+        `${installationStatus.modCountTotal - installationStatus.modCountReady} modů chybí.`,
+      );
+    }
+  }
 
   const readiness = useMemo(
     () => ({
@@ -669,6 +810,42 @@ function App() {
     }
   }
 
+  async function handleOpenLauncherLogs() {
+    setLauncherDiagnosticsError(null);
+
+    try {
+      const info =
+        launcherLogInfo ??
+        (launcherLogState.kind === "loading"
+          ? await refreshLauncherLogInfo()
+          : null);
+
+      if (info == null) {
+        throw new Error("Cesta k logům launcheru není k dispozici.");
+      }
+
+      await openDirectoryInFileExplorer(info.logDir);
+    } catch (error: unknown) {
+      setLauncherDiagnosticsError(
+        error instanceof Error
+          ? error.message
+          : "Složku s logy launcheru se nepodařilo otevřít.",
+      );
+    }
+  }
+
+  async function handleRefreshDiagnostics() {
+    setLauncherDiagnosticsError(null);
+
+    await Promise.allSettled([
+      refreshGameLaunchStatus(),
+      refreshLauncherLogInfo(),
+      installationNeedsAttention
+        ? refreshInstallationStatus()
+        : Promise.resolve(),
+    ]);
+  }
+
   async function handleLaunchMinecraft() {
     setLaunchingGame(true);
 
@@ -856,6 +1033,170 @@ function App() {
                         />
                       </div>
                     </section>
+                  </div>
+                </section>
+
+                {(hasDiagnosticDetails ||
+                  launchFailed ||
+                  installationNeedsAttention) && (
+                  <section className="home-card home-card--diagnostic">
+                    <div className="panel-heading">
+                      <Settings2 size={18} />
+                      <span>Diagnostika</span>
+                    </div>
+                    <p className="home-card__lead">
+                      {launchFailed
+                        ? "Spuštění se zastavilo dřív, než se Minecraft otevřel. Tady je přesný důvod i další krok."
+                        : installationNeedsAttention
+                          ? "Instalace ještě není kompletní. Launcher ti ukáže, co chybí a co má smysl udělat dál."
+                          : "Launcher si drží po ruce cestu k logům a poslední stav kontroly pro rychlé řešení potíží."}
+                    </p>
+
+                    <dl className="settings-diagnostics">
+                      {diagnosticSummary && (
+                        <div>
+                          <dt>Co se stalo</dt>
+                          <dd>{diagnosticSummary}</dd>
+                        </div>
+                      )}
+                      {diagnosticFix && (
+                        <div>
+                          <dt>Doporučený krok</dt>
+                          <dd>{diagnosticFix}</dd>
+                        </div>
+                      )}
+                      {diagnosticLogPath && (
+                        <div>
+                          <dt>Log soubor</dt>
+                          <dd>{diagnosticLogPath}</dd>
+                        </div>
+                      )}
+                    </dl>
+
+                    {diagnosticLogExcerpt && (
+                      <div className="diagnostic-log-block">
+                        <p className="settings-checkline__label">
+                          Poslední řádky logu
+                        </p>
+                        <pre className="diagnostic-log">
+                          {diagnosticLogExcerpt}
+                        </pre>
+                      </div>
+                    )}
+
+                    {launcherLogState.kind === "error" && (
+                      <p className="settings-error-note">
+                        {launcherLogState.message}
+                      </p>
+                    )}
+
+                    {launcherDiagnosticsError && (
+                      <p className="settings-error-note">
+                        {launcherDiagnosticsError}
+                      </p>
+                    )}
+
+                    <div className="profile-card__actions">
+                      <button
+                        type="button"
+                        className="text-action"
+                        onClick={() => void handleRefreshDiagnostics()}
+                      >
+                        Obnovit stav
+                      </button>
+                      <button
+                        type="button"
+                        className="text-action"
+                        onClick={() => void handleOpenLauncherLogs()}
+                      >
+                        Otevřít logy
+                      </button>
+                    </div>
+                  </section>
+                )}
+
+                <section className="home-card home-card--status">
+                  <div className="panel-heading">
+                    <Settings2 size={18} />
+                    <span>Stav launcheru</span>
+                  </div>
+                  <p className="home-card__lead">
+                    Tohle je rychlý přehled toho, co launcher už umí a co ještě
+                    čeká na dokončení.
+                  </p>
+
+                  {launcherStatusState.kind === "error" ? (
+                    <p className="settings-error-note">
+                      {launcherStatusState.message}
+                    </p>
+                  ) : launcherStatusState.kind === "loading" ? (
+                    <p className="settings-helper-text">
+                      Načítám stav launcheru...
+                    </p>
+                  ) : (
+                    <ul className="settings-checklist">
+                      {launcherStatus?.checks.map((check) => (
+                        <li
+                          key={check.id}
+                          className={`settings-checkline settings-checkline--${check.state}`}
+                        >
+                          <span className="settings-checkline__label">
+                            {check.label}
+                          </span>
+                          <span className="settings-checkline__value">
+                            {launcherCheckStateLabel[check.state]}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                <section className="home-card home-card--readiness">
+                  <div className="panel-heading">
+                    <Play size={18} />
+                    <span>Co chybí k hraní</span>
+                  </div>
+                  <p className="home-card__lead">
+                    Tady je přehled toho, co ještě brání spuštění. Jedno
+                    tlačítko tě pošle buď na opravu, nebo rovnou do hry.
+                  </p>
+
+                  {launchBlockerItems.length === 0 ? (
+                    <p className="settings-helper-text">
+                      Všechno je připravené. Můžeš spustit hru.
+                    </p>
+                  ) : (
+                    <ul className="settings-checklist">
+                      {launchBlockerItems.map((item, index) => (
+                        <li
+                          key={`${index}-${item}`}
+                          className="settings-checkline"
+                        >
+                          <span className="settings-checkline__label">
+                            {item}
+                          </span>
+                          <span className="settings-checkline__value">
+                            Nutné
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="profile-card__actions">
+                    <button
+                      type="button"
+                      className="text-action"
+                      onClick={() => void handlePrimaryAction()}
+                      disabled={
+                        savingPlayer || preparingInstallation || launchingGame
+                      }
+                    >
+                      {launchBlockerItems.length === 0
+                        ? "Hrát"
+                        : "Opravit a pokračovat"}
+                    </button>
                   </div>
                 </section>
 

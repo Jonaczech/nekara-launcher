@@ -345,6 +345,24 @@ code {
   background: rgba(8, 8, 10, 0.72);
 }
 
+.home-card--diagnostic {
+  display: grid;
+  gap: 12px;
+  background: rgba(8, 8, 10, 0.82);
+}
+
+.home-card--status {
+  display: grid;
+  gap: 12px;
+  background: rgba(8, 8, 10, 0.74);
+}
+
+.home-card--readiness {
+  display: grid;
+  gap: 12px;
+  background: rgba(8, 8, 10, 0.8);
+}
+
 .home-card__lead,
 .home-card p {
   margin: 10px 0 0;
@@ -422,6 +440,22 @@ code {
 
 .settings-diagnostics dd {
   margin: 6px 0 0;
+  word-break: break-word;
+}
+
+.diagnostic-log-block {
+  display: grid;
+  gap: 8px;
+}
+
+.diagnostic-log {
+  margin: 0;
+  padding: 14px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(245, 241, 232, 0.86);
+  white-space: pre-wrap;
   word-break: break-word;
 }
 

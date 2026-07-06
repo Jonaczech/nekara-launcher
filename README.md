@@ -201,3 +201,10 @@ Command Promptu s `~/.cargo/bin` v `PATH`.
 
 Současný pnpm workspace výslovně schvaluje instalační skript `esbuild`, který
 Vite potřebuje.
+Před spuštěním hry launcher znovu ověřuje integritu klíčových klientských
+souborů, aby se poškození zachytilo ještě před startem Minecraftu.
+Launcher nove zobrazuje diagnostiku a vyrez logu primo na hlavni obrazovce.
+Na domovske obrazovce je take rychly prehled stavu launcheru a jeho readiness
+checklistu.
+Krome toho ukazuje i presny seznam toho, co jeste chybi k hrani, a nabizi
+jedno tlacitko pro opravu nebo pripravu.
