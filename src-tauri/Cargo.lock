@@ -1901,10 +1901,9 @@ dependencies = [
 
 [[package]]
 name = "nekara-launcher"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "directories",
- "flate2",
  "md-5",
  "reqwest 0.12.28",
  "serde",

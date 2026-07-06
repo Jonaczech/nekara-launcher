@@ -5,8 +5,6 @@ use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 use std::time::Instant;
 
-use flate2::write::GzEncoder;
-use flate2::Compression;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use sha2::Sha512;
@@ -712,21 +710,13 @@ fn build_servers_dat_payload() -> Result<Vec<u8>, String> {
     Ok(payload)
 }
 
-fn build_servers_dat_gzip_bytes() -> Result<Vec<u8>, String> {
-    let payload = build_servers_dat_payload()?;
-    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    use std::io::Write;
-    encoder
-        .write_all(&payload)
-        .map_err(|error| format!("Unable to encode preset multiplayer server payload: {error}"))?;
-    encoder
-        .finish()
-        .map_err(|error| format!("Unable to finalize preset multiplayer server payload: {error}"))
+fn build_servers_dat_bytes() -> Result<Vec<u8>, String> {
+    build_servers_dat_payload()
 }
 
 fn ensure_preset_multiplayer_server(paths: &InstallationPaths) -> Result<bool, String> {
     let servers_dat_path = paths.minecraft_dir.join("servers.dat");
-    let encoded_payload = build_servers_dat_gzip_bytes()?;
+    let encoded_payload = build_servers_dat_bytes()?;
 
     if servers_dat_path.exists() {
         let existing_bytes = fs::read(&servers_dat_path)
@@ -1195,10 +1185,16 @@ mod tests {
     #[test]
     fn preset_multiplayer_server_payload_contains_expected_host() {
         let payload = build_servers_dat_payload().expect("server payload should build");
-        let payload_text = String::from_utf8_lossy(&payload);
-
-        assert!(payload_text.contains(config::PRESET_MULTIPLAYER_SERVER_NAME));
-        assert!(payload_text.contains(config::PRESET_MULTIPLAYER_SERVER_ADDRESS));
+        assert_eq!(
+            payload,
+            vec![
+                0x0A, 0x00, 0x00, 0x09, 0x00, 0x07, b's', b'e', b'r', b'v', b'e', b'r', b's', 0x0A,
+                0x00, 0x00, 0x00, 0x01, 0x08, 0x00, 0x04, b'n', b'a', b'm', b'e', 0x00, 0x06, b'N',
+                b'e', b'k', b'a', b'r', b'a', 0x08, 0x00, 0x02, b'i', b'p', 0x00, 0x14, b'n', b'e',
+                b'k', b'a', b'r', b'a', b'.', b'm', b'c', b'.', b'h', b'o', b's', b't', b'i', b'f',
+                b'y', b'.', b'c', b'z', 0x00, 0x00,
+            ]
+        );
     }
 
     #[test]
@@ -1252,6 +1248,14 @@ mod tests {
                     "Smoke test expected preset server file at {}.",
                     servers_dat.display()
                 ));
+            }
+
+            let servers_dat_bytes = fs::read(&servers_dat)
+                .map_err(|error| format!("Unable to read smoke servers.dat: {error}"))?;
+            if servers_dat_bytes.starts_with(&[0x1F, 0x8B]) {
+                return Err(
+                    "Smoke test expected raw NBT, not gzip-compressed servers.dat.".to_string(),
+                );
             }
 
             let mod_files = fs::read_dir(&mods_dir)

@@ -5,8 +5,8 @@ GitHub Releases.
 
 ## Výchozí údaje
 
-- Aktuální cílový release po opravách updateru a Fabricu, zklidnění startu a
-  zjednodušení launcher layoutu: `0.1.11`
+- Aktuální cílový release po opravě preset multiplayer serveru a release
+  housekeeping: `0.1.20`
 - Release workflow: `.github/workflows/release.yml`
 - Updater endpoint: GitHub Releases `latest.json`
 
@@ -28,8 +28,8 @@ GitHub Releases.
 3. Vytvoř release tag:
 
 ```bash
-git tag app-v0.1.11
-git push origin app-v0.1.11
+git tag app-v0.1.20
+git push origin app-v0.1.20
 ```
 
 4. Počkej, až doběhne `.github/workflows/release.yml`.
