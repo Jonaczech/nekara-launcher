@@ -470,12 +470,6 @@ function App() {
   const diagnosticLogPath = launchFailed
     ? (gameLaunch?.logPath ?? null)
     : (launcherLogInfo?.logFile ?? null);
-  const hasDiagnosticDetails =
-    diagnosticSummary != null ||
-    diagnosticFix != null ||
-    diagnosticLogExcerpt != null ||
-    launcherDiagnosticsError != null ||
-    launcherLogState.kind === "error";
   const launcherCheckStateLabel = {
     ready: "Připraveno",
     pending: "Čeká",
@@ -612,6 +606,34 @@ function App() {
   const effectiveProgressPanelPercent = hasLiveDownloadProgress
     ? liveDownloadPercent
     : progressPanelPercent;
+
+  const homeStatusHeadline = gameRunning
+    ? "Hra právě běží"
+    : preparingInstallation
+      ? "Připravuji klienta"
+      : readinessCount === 5
+        ? "Všechno je připravené"
+        : identityReady
+          ? "Ještě dolaďujeme pár věcí"
+          : "Nejdřív ulož jméno hráče";
+  const homeStatusLead = gameRunning
+    ? "Minecraft už běží. Kdykoli můžeš přejít do nastavení nebo jen počkat na návrat hry."
+    : preparingInstallation
+      ? "Launcher dokončuje přípravu na pozadí. Podrobnosti a opravy najdeš v Nastavení."
+      : readinessCount === 5
+        ? "Můžeš spustit hru okamžitě. Všechno důležité už je připravené."
+        : identityReady
+          ? "Zbytek kontroly probíhá automaticky. Když budeš chtít víc detailů, otevři Nastavení."
+          : "Ulož herní jméno a launcher se postará o zbytek.";
+  const homeStatusBadge = gameRunning
+    ? "Hra běží"
+    : preparingInstallation
+      ? "Probíhá příprava"
+      : readinessCount === 5
+        ? "Připraveno"
+        : identityReady
+          ? "Na cestě k hraní"
+          : "Chybí jméno";
 
   const primaryButtonLabel = !identityReady
     ? "Uložit jméno"
@@ -1042,171 +1064,28 @@ function App() {
                   </div>
                 </section>
 
-                {(hasDiagnosticDetails ||
-                  launchFailed ||
-                  installationNeedsAttention) && (
-                  <section className="home-card home-card--diagnostic">
+                <section className="home-grid">
+                  <section className="home-card home-card--summary">
                     <div className="panel-heading">
-                      <Settings2 size={18} />
-                      <span>Diagnostika</span>
+                      <Play size={18} />
+                      <span>Rychlý přehled</span>
                     </div>
-                    <p className="home-card__lead">
-                      {launchFailed
-                        ? "Spuštění se zastavilo dřív, než se Minecraft otevřel. Tady je přesný důvod i další krok."
-                        : installationNeedsAttention
-                          ? "Instalace ještě není kompletní. Launcher ti ukáže, co chybí a co má smysl udělat dál."
-                          : "Launcher si drží po ruce cestu k logům a poslední stav kontroly pro rychlé řešení potíží."}
-                    </p>
-
-                    <dl className="settings-diagnostics">
-                      {diagnosticSummary && (
-                        <div>
-                          <dt>Co se stalo</dt>
-                          <dd>{diagnosticSummary}</dd>
-                        </div>
-                      )}
-                      {diagnosticFix && (
-                        <div>
-                          <dt>Doporučený krok</dt>
-                          <dd>{diagnosticFix}</dd>
-                        </div>
-                      )}
-                      {diagnosticLogPath && (
-                        <div>
-                          <dt>Log soubor</dt>
-                          <dd>{diagnosticLogPath}</dd>
-                        </div>
-                      )}
-                    </dl>
-
-                    {diagnosticLogExcerpt && (
-                      <div className="diagnostic-log-block">
-                        <p className="settings-checkline__label">
-                          Poslední řádky logu
-                        </p>
-                        <pre className="diagnostic-log">
-                          {diagnosticLogExcerpt}
-                        </pre>
-                      </div>
-                    )}
-
-                    {launcherLogState.kind === "error" && (
-                      <p className="settings-error-note">
-                        {launcherLogState.message}
-                      </p>
-                    )}
-
-                    {launcherDiagnosticsError && (
-                      <p className="settings-error-note">
-                        {launcherDiagnosticsError}
-                      </p>
-                    )}
-
-                    <div className="profile-card__actions">
+                    <h2>{homeStatusHeadline}</h2>
+                    <p className="home-card__lead">{homeStatusLead}</p>
+                    <div className="home-summary__meta">
+                      <span className="settings-value-chip">
+                        {homeStatusBadge}
+                      </span>
                       <button
                         type="button"
                         className="text-action"
-                        onClick={() => void handleRefreshDiagnostics()}
+                        onClick={() => setCurrentView("settings")}
                       >
-                        Obnovit stav
-                      </button>
-                      <button
-                        type="button"
-                        className="text-action"
-                        onClick={() => void handleOpenLauncherLogs()}
-                      >
-                        Otevřít logy
+                        Otevřít nastavení
                       </button>
                     </div>
                   </section>
-                )}
 
-                <section className="home-card home-card--status">
-                  <div className="panel-heading">
-                    <Settings2 size={18} />
-                    <span>Stav launcheru</span>
-                  </div>
-                  <p className="home-card__lead">
-                    Tohle je rychlý přehled toho, co launcher už umí a co ještě
-                    čeká na dokončení.
-                  </p>
-
-                  {launcherStatusState.kind === "error" ? (
-                    <p className="settings-error-note">
-                      {launcherStatusState.message}
-                    </p>
-                  ) : launcherStatusState.kind === "loading" ? (
-                    <p className="settings-helper-text">
-                      Načítám stav launcheru...
-                    </p>
-                  ) : (
-                    <ul className="settings-checklist">
-                      {launcherStatus?.checks.map((check) => (
-                        <li
-                          key={check.id}
-                          className={`settings-checkline settings-checkline--${check.state}`}
-                        >
-                          <span className="settings-checkline__label">
-                            {check.label}
-                          </span>
-                          <span className="settings-checkline__value">
-                            {launcherCheckStateLabel[check.state]}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
-
-                <section className="home-card home-card--readiness">
-                  <div className="panel-heading">
-                    <Play size={18} />
-                    <span>Co chybí k hraní</span>
-                  </div>
-                  <p className="home-card__lead">
-                    Tady je přehled toho, co ještě brání spuštění. Jedno
-                    tlačítko tě pošle buď na opravu, nebo rovnou do hry.
-                  </p>
-
-                  {launchBlockerItems.length === 0 ? (
-                    <p className="settings-helper-text">
-                      Všechno je připravené. Můžeš spustit hru.
-                    </p>
-                  ) : (
-                    <ul className="settings-checklist">
-                      {launchBlockerItems.map((item, index) => (
-                        <li
-                          key={`${index}-${item}`}
-                          className="settings-checkline"
-                        >
-                          <span className="settings-checkline__label">
-                            {item}
-                          </span>
-                          <span className="settings-checkline__value">
-                            Nutné
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  <div className="profile-card__actions">
-                    <button
-                      type="button"
-                      className="text-action"
-                      onClick={() => void handlePrimaryAction()}
-                      disabled={
-                        savingPlayer || preparingInstallation || launchingGame
-                      }
-                    >
-                      {launchBlockerItems.length === 0
-                        ? "Hrát"
-                        : "Opravit a pokračovat"}
-                    </button>
-                  </div>
-                </section>
-
-                <section className="home-grid">
                   <section className="home-card home-card--player">
                     <div className="panel-heading">
                       <UserRound size={18} />
@@ -1567,6 +1446,152 @@ function App() {
                         </div>
                       </div>
                     )}
+                  </section>
+
+                  <section className="settings-card settings-card--wide">
+                    <div className="settings-card__header">
+                      <h4>Diagnostika a kontroly</h4>
+                    </div>
+                    <p className="settings-card__lead">
+                      Tady najdeš podrobnosti, které se dřív objevovaly na
+                      hlavní obrazovce. Hráčská plocha zůstává jednoduchá, ale
+                      opravy a stavové informace jsou pořád po ruce.
+                    </p>
+
+                    <div className="settings-diagnostics">
+                      <div className="settings-diagnostics__section">
+                        <p className="settings-checkline__label">
+                          Rychlý stav launcheru
+                        </p>
+                        {launcherStatusState.kind === "error" ? (
+                          <p className="settings-error-note">
+                            {launcherStatusState.message}
+                          </p>
+                        ) : launcherStatusState.kind === "loading" ? (
+                          <p className="settings-helper-text">
+                            Načítám stav launcheru...
+                          </p>
+                        ) : (
+                          <ul className="settings-checklist">
+                            {launcherStatus?.checks.map((check) => (
+                              <li
+                                key={check.id}
+                                className={`settings-checkline settings-checkline--${check.state}`}
+                              >
+                                <span className="settings-checkline__label">
+                                  {check.label}
+                                </span>
+                                <span className="settings-checkline__value">
+                                  {launcherCheckStateLabel[check.state]}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      <div className="settings-diagnostics__section">
+                        <p className="settings-checkline__label">
+                          Co chybí k hraní
+                        </p>
+                        {launchBlockerItems.length === 0 ? (
+                          <p className="settings-helper-text">
+                            Všechno je připravené. Hru můžeš spustit.
+                          </p>
+                        ) : (
+                          <ul className="settings-checklist">
+                            {launchBlockerItems.map((item, index) => (
+                              <li
+                                key={`${index}-${item}`}
+                                className="settings-checkline"
+                              >
+                                <span className="settings-checkline__label">
+                                  {item}
+                                </span>
+                                <span className="settings-checkline__value">
+                                  Nutné
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      <div className="settings-diagnostics__section">
+                        <p className="settings-checkline__label">
+                          Poslední chyba nebo log
+                        </p>
+                        {diagnosticSummary != null ||
+                        diagnosticFix != null ||
+                        diagnosticLogPath != null ? (
+                          <dl className="settings-diagnostics__details">
+                            {diagnosticSummary && (
+                              <div>
+                                <dt>Co se stalo</dt>
+                                <dd>{diagnosticSummary}</dd>
+                              </div>
+                            )}
+                            {diagnosticFix && (
+                              <div>
+                                <dt>Doporučený krok</dt>
+                                <dd>{diagnosticFix}</dd>
+                              </div>
+                            )}
+                            {diagnosticLogPath && (
+                              <div>
+                                <dt>Log soubor</dt>
+                                <dd>{diagnosticLogPath}</dd>
+                              </div>
+                            )}
+                          </dl>
+                        ) : (
+                          <p className="settings-helper-text">
+                            Zatím tu není žádná chyba. Pokud se něco pokazí,
+                            objeví se sem detail i cesta k logům.
+                          </p>
+                        )}
+
+                        {diagnosticLogExcerpt && (
+                          <div className="diagnostic-log-block">
+                            <p className="settings-checkline__label">
+                              Poslední řádky logu
+                            </p>
+                            <pre className="diagnostic-log">
+                              {diagnosticLogExcerpt}
+                            </pre>
+                          </div>
+                        )}
+
+                        {launcherLogState.kind === "error" && (
+                          <p className="settings-error-note">
+                            {launcherLogState.message}
+                          </p>
+                        )}
+
+                        {launcherDiagnosticsError && (
+                          <p className="settings-error-note">
+                            {launcherDiagnosticsError}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="profile-card__actions">
+                      <button
+                        type="button"
+                        className="text-action"
+                        onClick={() => void handleRefreshDiagnostics()}
+                      >
+                        Obnovit stav
+                      </button>
+                      <button
+                        type="button"
+                        className="text-action"
+                        onClick={() => void handleOpenLauncherLogs()}
+                      >
+                        Otevřít logy
+                      </button>
+                    </div>
                   </section>
                 </div>
               </section>

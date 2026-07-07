@@ -345,27 +345,24 @@ code {
   background: rgba(8, 8, 10, 0.72);
 }
 
-.home-card--diagnostic {
+.home-card--summary {
   display: grid;
   gap: 12px;
-  background: rgba(8, 8, 10, 0.82);
-}
-
-.home-card--status {
-  display: grid;
-  gap: 12px;
-  background: rgba(8, 8, 10, 0.74);
-}
-
-.home-card--readiness {
-  display: grid;
-  gap: 12px;
-  background: rgba(8, 8, 10, 0.8);
+  background: rgba(8, 8, 10, 0.78);
 }
 
 .home-card__lead,
 .home-card p {
   margin: 10px 0 0;
+}
+
+.home-summary__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
 }
 
 .panel-heading {
@@ -429,7 +426,7 @@ code {
   padding: 0;
 }
 
-.settings-diagnostics div,
+.settings-diagnostics__section,
 .settings-checkline,
 .settings-release-notes {
   padding: 12px;
@@ -438,7 +435,24 @@ code {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.settings-diagnostics dd {
+.settings-diagnostics__details {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.settings-diagnostics__details div {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-diagnostics__details dt {
+  margin: 0;
+}
+
+.settings-diagnostics__details dd {
   margin: 6px 0 0;
   word-break: break-word;
 }
