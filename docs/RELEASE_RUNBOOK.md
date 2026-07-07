@@ -5,8 +5,7 @@ GitHub Releases.
 
 ## Výchozí údaje
 
-- Aktuální cílový release po opravě preset multiplayer serveru a release
-  housekeeping: `0.1.20`
+- Aktuální cílový release po popup update oznámení: `0.1.21`
 - Release workflow: `.github/workflows/release.yml`
 - Updater endpoint: GitHub Releases `latest.json`
 
@@ -28,8 +27,8 @@ GitHub Releases.
 3. Vytvoř release tag:
 
 ```bash
-git tag app-v0.1.20
-git push origin app-v0.1.20
+git tag app-v0.1.21
+git push origin app-v0.1.21
 ```
 
 4. Počkej, až doběhne `.github/workflows/release.yml`.
