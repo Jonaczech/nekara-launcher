@@ -683,7 +683,7 @@ fn push_nbt_named_string(payload: &mut Vec<u8>, name: &str, value: &str) -> Resu
     push_nbt_string_payload(payload, value)
 }
 
-fn build_servers_dat_payload() -> Result<Vec<u8>, String> {
+pub(crate) fn build_servers_dat_payload() -> Result<Vec<u8>, String> {
     let mut payload = Vec::new();
 
     // Root compound with empty name.
@@ -710,12 +710,12 @@ fn build_servers_dat_payload() -> Result<Vec<u8>, String> {
     Ok(payload)
 }
 
-fn build_servers_dat_bytes() -> Result<Vec<u8>, String> {
+pub(crate) fn build_servers_dat_bytes() -> Result<Vec<u8>, String> {
     build_servers_dat_payload()
 }
 
-fn ensure_preset_multiplayer_server(paths: &InstallationPaths) -> Result<bool, String> {
-    let servers_dat_path = paths.minecraft_dir.join("servers.dat");
+pub(crate) fn ensure_preset_multiplayer_server(minecraft_dir: &Path) -> Result<bool, String> {
+    let servers_dat_path = minecraft_dir.join("servers.dat");
     let encoded_payload = build_servers_dat_bytes()?;
 
     if servers_dat_path.exists() {
@@ -1532,7 +1532,7 @@ pub async fn prepare_minecraft_installation() -> Result<MinecraftInstallationSta
         changed_parts.push("schválené mody");
     }
 
-    if ensure_preset_multiplayer_server(&paths)? {
+    if ensure_preset_multiplayer_server(&paths.minecraft_dir)? {
         changed_parts.push("Nekara server v multiplayeru");
     }
 

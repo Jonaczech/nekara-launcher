@@ -621,6 +621,8 @@ fn ensure_launch_requirements(
     fabric_details: &fabric::FabricInstallationDetails,
     approved_package: &client_package::ApprovedClientPackage,
 ) -> Result<(), String> {
+    crate::minecraft::ensure_preset_multiplayer_server(&paths.minecraft_dir)?;
+
     if !paths.version_json_path.exists() {
         return Err("Chybí metadata verze Minecraftu. Nejprve připrav klienta.".to_string());
     }
@@ -1417,6 +1419,99 @@ mod tests {
         let _ = fs::remove_dir_all(&root);
 
         assert!(result.is_ok(), "{result:?}");
+    }
+
+    #[test]
+    fn ensure_launch_requirements_repairs_legacy_servers_dat_format() {
+        let root = temp_launch_root("nekara-launch-requirements-servers");
+        let paths = launch_test_paths(&root);
+        let mut base_details = manifests::OfficialMinecraftVersionDetails {
+            version_type: "release".to_string(),
+            version_url: "https://example.test/version.json".to_string(),
+            version_json: "{\"id\":\"26.1.2\"}".to_string(),
+            latest_release: config::MINECRAFT_VERSION.to_string(),
+            latest_snapshot: config::MINECRAFT_VERSION.to_string(),
+            required_java_major: Some(21),
+            client_download_url: "https://example.test/client.jar".to_string(),
+            client_download_sha1: String::new(),
+            client_download_size: 16,
+            asset_index: manifests::OfficialAssetIndexDownload {
+                id: "asset-index".to_string(),
+                sha1: String::new(),
+                total_size: 0,
+                url: "https://example.test/assets.json".to_string(),
+            },
+            libraries: vec![manifests::OfficialLibraryDownload {
+                path: "official/example.jar".to_string(),
+                url: "https://example.test/official/example.jar".to_string(),
+                sha1: String::new(),
+                size: 16,
+            }],
+        };
+        let mut fabric_details = fabric::FabricInstallationDetails {
+            loader_version: "0.16.14".to_string(),
+            profile_id: "fabric-loader-0.16.14-26.1.2".to_string(),
+            profile_json: "{\"libraries\":[]}".to_string(),
+            min_java_major: 21,
+            libraries: vec![manifests::OfficialLibraryDownload {
+                path: "fabric/example.jar".to_string(),
+                url: "https://example.test/fabric/example.jar".to_string(),
+                sha1: String::new(),
+                size: 16,
+            }],
+        };
+        let approved_package = client_package::ApprovedClientPackage {
+            game_configuration_id: config::GAME_CONFIGURATION_ID.to_string(),
+            minecraft_version: config::MINECRAFT_VERSION.to_string(),
+            mods: vec![],
+        };
+
+        let client_bytes = b"client jar payload";
+        let asset_index_bytes = b"{\"objects\":{}}";
+        let official_library_bytes = b"official library payload";
+        let fabric_library_bytes = b"fabric library payload";
+        let legacy_servers_dat_bytes = b"\x1f\x8b\x08\x00legacy-gzip-payload";
+        let asset_index_path = paths.assets_dir.join("indexes").join("asset-index.json");
+        let servers_dat_path = paths.minecraft_dir.join("servers.dat");
+
+        write_launch_test_file(
+            &paths.version_json_path,
+            base_details.version_json.as_bytes(),
+        );
+        write_launch_test_file(&paths.client_jar_path, client_bytes);
+        write_launch_test_file(
+            &paths.fabric_profile_json_path,
+            fabric_details.profile_json.as_bytes(),
+        );
+        write_launch_test_file(&asset_index_path, asset_index_bytes);
+        write_launch_test_file(
+            &paths.libraries_dir.join("official/example.jar"),
+            official_library_bytes,
+        );
+        write_launch_test_file(
+            &paths.libraries_dir.join("fabric/example.jar"),
+            fabric_library_bytes,
+        );
+        write_launch_test_file(&servers_dat_path, legacy_servers_dat_bytes);
+
+        base_details.client_download_sha1 = sha1_hex(client_bytes);
+        base_details.asset_index.sha1 = sha1_hex(asset_index_bytes);
+        base_details.libraries[0].sha1 = sha1_hex(official_library_bytes);
+        fabric_details.libraries[0].sha1 = sha1_hex(fabric_library_bytes);
+
+        let result =
+            ensure_launch_requirements(&paths, &base_details, &fabric_details, &approved_package);
+
+        let current_servers_dat =
+            fs::read(&servers_dat_path).expect("servers.dat should be readable after repair");
+        let expected_servers_dat = crate::minecraft::build_servers_dat_bytes()
+            .expect("preset multiplayer payload should build");
+
+        let _ = fs::remove_dir_all(&root);
+
+        assert!(result.is_ok(), "{result:?}");
+        assert_eq!(current_servers_dat, expected_servers_dat);
+        assert!(!current_servers_dat.starts_with(b"\x1f\x8b"));
     }
 
     #[test]
