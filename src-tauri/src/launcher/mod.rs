@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::{auth, config};
+use crate::{auth, config, java};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -30,7 +30,6 @@ pub struct LauncherCheck {
 #[serde(rename_all = "camelCase")]
 pub enum CheckState {
     Ready,
-    Pending,
     Blocked,
 }
 
@@ -38,6 +37,7 @@ pub enum CheckState {
 pub fn get_launcher_status() -> LauncherStatus {
     let player_status = auth::resolve_offline_player_status().ok();
     let launch_identity_ready = auth::resolve_launch_identity().is_ok();
+    let java_runtime = java::resolve_java_runtime();
 
     LauncherStatus {
         product_name: config::PRODUCT_NAME,
@@ -63,7 +63,11 @@ pub fn get_launcher_status() -> LauncherStatus {
             LauncherCheck {
                 id: "runtime",
                 label: "Detekce Java runtime",
-                state: CheckState::Pending,
+                state: if java_runtime.java_version.is_some() {
+                    CheckState::Ready
+                } else {
+                    CheckState::Blocked
+                },
             },
             LauncherCheck {
                 id: "player-identity",

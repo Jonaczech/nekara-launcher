@@ -64,7 +64,7 @@ offline spouštěcím postupem, offline profilem hráče a izolovanou herní slo
 - Launcher už preferuje nakonfigurovanou Java executable path před fallbackem na systémový `PATH`.
 - Launcher už obsahuje podepsaný updater plugin pro GitHub Releases a pracovní postup, který publikuje Windows artefakty z tagovaných buildů.
 - Launcher při startu automaticky kontroluje novější release a pokud je dostupný, nejdřív ho oznámí v popup okně, pak stáhne update, nainstaluje ho a restartuje se.
-- Nejnovější publikovaný release je `app-v0.1.22`.
+- Nejnovější publikovaný release je `app-v0.1.23`.
 - ADR 0003 definuje GitHub Releases jako zamýšlenou první cestu pro samoupdatování launcheru.
 - Launcher už ukládá lokální offline jméno hráče do launcher dat.
 - Microsoft přihlašovací flow bylo z launcheru odstraněné a podporovaná herní identita je nyní výhradně offline profil hráče.

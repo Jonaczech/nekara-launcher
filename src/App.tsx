@@ -334,6 +334,11 @@ function App() {
           void refreshLauncherLogInfo();
         }, 540),
       );
+      timers.push(
+        window.setTimeout(() => {
+          void refreshJavaRuntime();
+        }, 660),
+      );
       cleanups.push(
         scheduleBackgroundWork(() => {
           setWallpaperReady(true);
@@ -519,6 +524,9 @@ function App() {
       );
     }
   }
+  const hasJavaRuntimeBlocker = launchBlockerItems.some((item) =>
+    item.includes("Java runtime"),
+  );
 
   const readiness = useMemo(
     () => ({
@@ -611,29 +619,35 @@ function App() {
     ? "Hra právě běží"
     : preparingInstallation
       ? "Připravuji klienta"
-      : readinessCount === 5
-        ? "Všechno je připravené"
-        : identityReady
-          ? "Ještě dolaďujeme pár věcí"
-          : "Nejdřív ulož jméno hráče";
+      : hasJavaRuntimeBlocker
+        ? "Chybí Java runtime"
+        : readinessCount === 5
+          ? "Všechno je připravené"
+          : identityReady
+            ? "Ještě dolaďujeme pár věcí"
+            : "Nejdřív ulož jméno hráče";
   const homeStatusLead = gameRunning
     ? "Minecraft už běží. Kdykoli můžeš přejít do nastavení nebo jen počkat na návrat hry."
     : preparingInstallation
       ? "Launcher dokončuje přípravu na pozadí. Podrobnosti a opravy najdeš v Nastavení."
-      : readinessCount === 5
-        ? "Můžeš spustit hru okamžitě. Všechno důležité už je připravené."
-        : identityReady
-          ? "Zbytek kontroly probíhá automaticky. Když budeš chtít víc detailů, otevři Nastavení."
-          : "Ulož herní jméno a launcher se postará o zbytek.";
+      : hasJavaRuntimeBlocker
+        ? "Launcher čeká na kompatibilní Java runtime. V Nastavení vyber cestu k `java.exe`, nebo nainstaluj Javu a pak zkus přípravu znovu."
+        : readinessCount === 5
+          ? "Můžeš spustit hru okamžitě. Všechno důležité už je připravené."
+          : identityReady
+            ? "Zbytek kontroly probíhá automaticky. Když budeš chtít víc detailů, otevři Nastavení."
+            : "Ulož herní jméno a launcher se postará o zbytek.";
   const homeStatusBadge = gameRunning
     ? "Hra běží"
     : preparingInstallation
       ? "Probíhá příprava"
-      : readinessCount === 5
-        ? "Připraveno"
-        : identityReady
-          ? "Na cestě k hraní"
-          : "Chybí jméno";
+      : hasJavaRuntimeBlocker
+        ? "Chybí Java"
+        : readinessCount === 5
+          ? "Připraveno"
+          : identityReady
+            ? "Na cestě k hraní"
+            : "Chybí jméno";
 
   const primaryButtonLabel = !identityReady
     ? "Uložit jméno"
