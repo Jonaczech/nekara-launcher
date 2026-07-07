@@ -47,7 +47,7 @@ vlastnímu launcheru pro server Nekara.
 ## Fáze 4: Java runtime
 
 - [x] Detekovat kompatibilní lokální Java runtime.
-- [ ] Rozhodnout, zda budeme spravovat přibalený runtime.
+- [x] Rozhodnout a implementovat spravovaný launcher-owned runtime pro chybějící Java.
 - [x] Připravit kontrolu kompatibility runtime.
 - [x] Zobrazit použitelnou diagnostiku, když Java chybí nebo je nekompatibilní.
 
@@ -107,9 +107,8 @@ release launcheru, který se umí aktualizovat sám.
       readiness bar.
 - [x] Zlepšit instalační diagnostiku pro blokovaná metadata, oprávnění
       filesystemu a rozbité lokální cesty.
-- [ ] Rozhodnout a implementovat strategii pro Java runtime:
-  - pouze systémová Java, nebo
-  - spravovaný Nekara runtime.
+- [x] Rozhodnout a implementovat strategii pro Java runtime:
+  - spravovaný Nekara runtime pro chybějící Java.
 - [ ] Spustit vrstvu synchronizace klientského balíčku Nekary:
       schválené mody, konfigurace, resource packy a verzované manifesty.
 

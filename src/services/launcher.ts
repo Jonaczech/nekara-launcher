@@ -4,6 +4,7 @@ import type {
   GameLaunchStatus,
   GameDirectoryInfo,
   JavaRuntimeCheck,
+  JavaRuntimeInstallProgress,
   LauncherSettings,
   LauncherLogInfo,
   LauncherStatus,
@@ -95,6 +96,16 @@ const browserPreviewJavaRuntimeCheck: JavaRuntimeCheck = {
   majorVersion: null,
   message:
     "Je aktivní náhradní režim pro prohlížeč. Pro detekci Javy spusť aplikaci uvnitř Tauri.",
+};
+
+const browserPreviewJavaRuntimeInstallProgress: JavaRuntimeInstallProgress = {
+  active: false,
+  currentStep: null,
+  currentDownloadLabel: null,
+  totalBytes: 0,
+  downloadedBytes: 0,
+  remainingBytes: 0,
+  bytesPerSecond: null,
 };
 
 const browserPreviewMinecraftInstallationPlan: MinecraftInstallationPlan = {
@@ -272,6 +283,26 @@ export function checkJavaRuntime() {
   }
 
   return invoke<JavaRuntimeCheck>("check_java_runtime");
+}
+
+export function getJavaRuntimeInstallProgress() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve(browserPreviewJavaRuntimeInstallProgress);
+  }
+
+  return invoke<JavaRuntimeInstallProgress>(
+    "get_java_runtime_install_progress",
+  );
+}
+
+export function installManagedJavaRuntime(requiredJavaMajor: number) {
+  if (!isTauriRuntime()) {
+    return Promise.resolve();
+  }
+
+  return invoke<void>("install_managed_java_runtime", {
+    requiredJavaMajor,
+  });
 }
 
 export function getMinecraftInstallationPlan() {

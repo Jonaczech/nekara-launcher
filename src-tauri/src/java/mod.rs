@@ -4,6 +4,8 @@ use serde::Serialize;
 
 use crate::settings;
 
+mod managed;
+
 #[derive(Clone)]
 pub struct ResolvedJavaRuntime {
     pub executable_path: Option<String>,
@@ -98,6 +100,12 @@ fn extract_major_version(java_version: &str) -> Option<u32> {
         .and_then(|value| value.parse::<u32>().ok())
 }
 
+fn resolve_managed_java_runtime() -> Option<String> {
+    managed::resolve_managed_java_executable_path()
+        .ok()
+        .flatten()
+}
+
 pub fn resolve_java_runtime() -> ResolvedJavaRuntime {
     let configured_java_executable = settings::resolve_java_executable_path().ok().flatten();
 
@@ -108,6 +116,13 @@ pub fn resolve_java_runtime() -> ResolvedJavaRuntime {
                 Some(configured_java_executable),
                 version_line,
                 "Custom path".to_string(),
+            )
+        } else if let Some(managed_java_executable) = resolve_managed_java_runtime() {
+            let version_line = capture_java_version_line(&managed_java_executable);
+            (
+                Some(managed_java_executable),
+                version_line,
+                "Managed runtime".to_string(),
             )
         } else {
             let executable_path = locate_java_executable();
@@ -154,13 +169,35 @@ pub fn check_java_runtime() -> Result<JavaRuntimeCheck, String> {
         message: if detected {
             if resolved.source == "Custom path" {
                 "Nastavený Java runtime je připraven.".to_string()
+            } else if resolved.source == "Managed runtime" {
+                "Spravovaný Java runtime je připraven.".to_string()
             } else {
                 "Byl nalezen kompatibilní Java runtime.".to_string()
             }
         } else if resolved.source == "Custom path" {
             "Nastavený Java spustitelný soubor se nepodařilo spustit.".to_string()
+        } else if resolved.source == "Managed runtime" {
+            "Spravovaný Java runtime se nepodařilo spustit.".to_string()
         } else {
             "Na tomto systému zatím nebyl nalezen Java runtime.".to_string()
         },
     })
+}
+
+#[tauri::command]
+pub fn get_java_runtime_install_progress() -> managed::JavaRuntimeInstallProgress {
+    managed::snapshot_java_runtime_install_progress()
+}
+
+#[tauri::command]
+pub async fn install_managed_java_runtime(required_java_major: u32) -> Result<(), String> {
+    let resolved = resolve_java_runtime();
+    if resolved
+        .major_version
+        .is_some_and(|major| major >= required_java_major)
+    {
+        return Ok(());
+    }
+
+    managed::install_managed_java_runtime(required_java_major).await
 }

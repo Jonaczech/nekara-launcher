@@ -21,7 +21,7 @@ Za aplikaci odpovídá zejména:
 - identita hráče pro danou spouštěcí relaci,
 - izolovaná správa herního adresáře Nekary,
 - práce s oficiálními Minecraft metadaty, příprava Fabric profilu a kontrola integrity klientských souborů,
-- detekce nebo příprava Java běhového prostředí,
+- detekce nebo automatická instalace Java běhového prostředí,
 - validace a oprava souborů,
 - sestavení spouštěcího příkazu,
 - spuštění a sledování procesu Minecraftu,
@@ -117,7 +117,9 @@ vlastní adresář hry. Pokud pole zůstane prázdné, launcher nově používá
 izolovanou složku `AppData\Roaming\Nekara`, takže se klient Nekary nemíchá s
 běžným `.minecraft`. Pokud launcher najde starší výchozí instalaci v
 `AppData\Local`, při prvním použití ji automaticky přesune do nového
-umístění. Ze settings jde navíc přímo otevřít skutečný herní adresář v
+umístění. Když kompatibilní Java chybí, launcher umí stáhnout a nainstalovat
+launcher-owned Temurin JRE z oficiálního Adoptium balíčku do vlastních dat.
+Ze settings jde navíc přímo otevřít skutečný herní adresář v
 Průzkumníku.
 
 Uživatelské rozhraní i diagnostika launcheru jsou lokalizované do češtiny a

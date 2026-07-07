@@ -36,7 +36,9 @@ pub fn run() {
             filesystem::open_directory_in_file_explorer,
             logging::append_launcher_log,
             logging::get_launcher_log_info,
-            java::check_java_runtime
+            java::check_java_runtime,
+            java::get_java_runtime_install_progress,
+            java::install_managed_java_runtime
         ])
         .run(tauri::generate_context!())
         .expect("error while running Nekara Launcher");

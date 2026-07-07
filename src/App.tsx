@@ -22,9 +22,11 @@ import {
   getLauncherLogInfo,
   getLauncherStatus,
   getLauncherSettings,
+  getJavaRuntimeInstallProgress,
   getMinecraftInstallationProgress,
   getMinecraftInstallationStatus,
   getOfflinePlayerStatus,
+  installManagedJavaRuntime,
   launchMinecraft,
   openDirectoryInFileExplorer,
   pickGameDirectoryPath,
@@ -37,6 +39,7 @@ import type {
   GameDirectoryInfo,
   GameLaunchStatus,
   JavaRuntimeCheck,
+  JavaRuntimeInstallProgress,
   LauncherLogInfo,
   LauncherStatus,
   LauncherUpdateStatus,
@@ -132,6 +135,9 @@ function App() {
   const [preparingInstallation, setPreparingInstallation] = useState(false);
   const [installationProgress, setInstallationProgress] =
     useState<MinecraftInstallationProgress | null>(null);
+  const [installingManagedJava, setInstallingManagedJava] = useState(false);
+  const [javaInstallProgress, setJavaInstallProgress] =
+    useState<JavaRuntimeInstallProgress | null>(null);
   const [launchingGame, setLaunchingGame] = useState(false);
   const [currentView, setCurrentView] = useState<"home" | "settings">("home");
   const [wallpaperReady, setWallpaperReady] = useState(false);
@@ -430,6 +436,36 @@ function App() {
     };
   }, [preparingInstallation]);
 
+  useEffect(() => {
+    if (!installingManagedJava) {
+      setJavaInstallProgress(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function refreshProgress() {
+      try {
+        const progress = await getJavaRuntimeInstallProgress();
+        if (!cancelled) {
+          setJavaInstallProgress(progress);
+        }
+      } catch (error) {
+        console.warn("Java runtime install progress refresh failed.", error);
+      }
+    }
+
+    void refreshProgress();
+    const timer = window.setInterval(() => {
+      void refreshProgress();
+    }, 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [installingManagedJava]);
+
   const gameDirectory =
     directoryState.kind === "ready" ? directoryState.value : null;
   const javaRuntime = javaState.kind === "ready" ? javaState.value : null;
@@ -488,7 +524,11 @@ function App() {
     launchBlockerItems.push("Připrav herní složku Nekary v nastavení.");
   }
   if (!javaCompatible) {
-    launchBlockerItems.push("Nainstaluj nebo vyber kompatibilní Java runtime.");
+    launchBlockerItems.push(
+      javaRuntime?.source === "Custom path"
+        ? "Nastavená cesta k Java runtime nefunguje."
+        : "Nainstaluj nebo vyber kompatibilní Java runtime.",
+    );
   }
   if (installationStatus != null && !installationReady) {
     if (!installationStatus.versionJsonReady) {
@@ -524,9 +564,7 @@ function App() {
       );
     }
   }
-  const hasJavaRuntimeBlocker = launchBlockerItems.some((item) =>
-    item.includes("Java runtime"),
-  );
+  const hasJavaRuntimeBlocker = !javaCompatible;
 
   const readiness = useMemo(
     () => ({
@@ -582,6 +620,25 @@ function App() {
     preparingInstallation || (installationStatus != null && !installationReady)
       ? installOperationPercent
       : readinessPercent;
+  const hasLiveJavaDownloadProgress =
+    installingManagedJava &&
+    javaInstallProgress?.active === true &&
+    (javaInstallProgress?.totalBytes ?? 0) > 0;
+  const liveJavaDownloadPercent = hasLiveJavaDownloadProgress
+    ? Math.round(
+        (javaInstallProgress!.downloadedBytes /
+          javaInstallProgress!.totalBytes) *
+          100,
+      )
+    : 0;
+  const liveJavaRemainingText =
+    javaInstallProgress == null
+      ? null
+      : `${formatRemainingMegabytes(javaInstallProgress.remainingBytes)} zbývá`;
+  const liveJavaSpeedText =
+    javaInstallProgress == null
+      ? null
+      : formatDownloadSpeed(javaInstallProgress.bytesPerSecond);
   const hasLiveDownloadProgress =
     preparingInstallation &&
     installationProgress?.active === true &&
@@ -602,68 +659,92 @@ function App() {
       ? null
       : formatDownloadSpeed(installationProgress.bytesPerSecond);
   const effectiveProgressPanelLabel =
-    preparingInstallation && installationProgress?.currentStep != null
-      ? installationProgress.currentStep
-      : progressPanelLabel;
+    installingManagedJava && javaInstallProgress?.currentStep != null
+      ? javaInstallProgress.currentStep
+      : installingManagedJava
+        ? "Instaluji Java runtime"
+        : preparingInstallation && installationProgress?.currentStep != null
+          ? installationProgress.currentStep
+          : progressPanelLabel;
   const effectiveProgressPanelValue =
-    hasLiveDownloadProgress && liveRemainingText != null
-      ? liveSpeedText == null
-        ? liveRemainingText
-        : `${liveRemainingText} · ${liveSpeedText}`
-      : progressPanelValue;
-  const effectiveProgressPanelPercent = hasLiveDownloadProgress
-    ? liveDownloadPercent
-    : progressPanelPercent;
+    hasLiveJavaDownloadProgress && liveJavaRemainingText != null
+      ? liveJavaSpeedText == null
+        ? liveJavaRemainingText
+        : `${liveJavaRemainingText} · ${liveJavaSpeedText}`
+      : installingManagedJava
+        ? (javaInstallProgress?.currentStep ?? "Připravuji Java runtime")
+        : hasLiveDownloadProgress && liveRemainingText != null
+          ? liveSpeedText == null
+            ? liveRemainingText
+            : `${liveRemainingText} · ${liveSpeedText}`
+          : progressPanelValue;
+  const effectiveProgressPanelPercent = hasLiveJavaDownloadProgress
+    ? liveJavaDownloadPercent
+    : installingManagedJava
+      ? 0
+      : hasLiveDownloadProgress
+        ? liveDownloadPercent
+        : progressPanelPercent;
 
   const homeStatusHeadline = gameRunning
     ? "Hra právě běží"
-    : preparingInstallation
-      ? "Připravuji klienta"
-      : hasJavaRuntimeBlocker
-        ? "Chybí Java runtime"
-        : readinessCount === 5
-          ? "Všechno je připravené"
-          : identityReady
-            ? "Ještě dolaďujeme pár věcí"
-            : "Nejdřív ulož jméno hráče";
+    : installingManagedJava
+      ? "Instaluji Java runtime"
+      : preparingInstallation
+        ? "Připravuji klienta"
+        : hasJavaRuntimeBlocker
+          ? "Chybí Java runtime"
+          : readinessCount === 5
+            ? "Všechno je připravené"
+            : identityReady
+              ? "Ještě dolaďujeme pár věcí"
+              : "Nejdřív ulož jméno hráče";
   const homeStatusLead = gameRunning
     ? "Minecraft už běží. Kdykoli můžeš přejít do nastavení nebo jen počkat na návrat hry."
-    : preparingInstallation
-      ? "Launcher dokončuje přípravu na pozadí. Podrobnosti a opravy najdeš v Nastavení."
-      : hasJavaRuntimeBlocker
-        ? "Launcher čeká na kompatibilní Java runtime. V Nastavení vyber cestu k `java.exe`, nebo nainstaluj Javu a pak zkus přípravu znovu."
-        : readinessCount === 5
-          ? "Můžeš spustit hru okamžitě. Všechno důležité už je připravené."
-          : identityReady
-            ? "Zbytek kontroly probíhá automaticky. Když budeš chtít víc detailů, otevři Nastavení."
-            : "Ulož herní jméno a launcher se postará o zbytek.";
+    : installingManagedJava
+      ? "Launcher právě stahuje a ověřuje kompatibilní Java runtime. Nech ho běžet a pak zkus hraní znovu."
+      : preparingInstallation
+        ? "Launcher dokončuje přípravu na pozadí. Podrobnosti a opravy najdeš v Nastavení."
+        : hasJavaRuntimeBlocker
+          ? "Launcher čeká na kompatibilní Java runtime. V Nastavení ji můžeš nainstalovat automaticky nebo vybrat vlastní cestu k `java.exe`."
+          : readinessCount === 5
+            ? "Můžeš spustit hru okamžitě. Všechno důležité už je připravené."
+            : identityReady
+              ? "Zbytek kontroly probíhá automaticky. Když budeš chtít víc detailů, otevři Nastavení."
+              : "Ulož herní jméno a launcher se postará o zbytek.";
   const homeStatusBadge = gameRunning
     ? "Hra běží"
-    : preparingInstallation
-      ? "Probíhá příprava"
-      : hasJavaRuntimeBlocker
-        ? "Chybí Java"
-        : readinessCount === 5
-          ? "Připraveno"
-          : identityReady
-            ? "Na cestě k hraní"
-            : "Chybí jméno";
+    : installingManagedJava
+      ? "Instaluji Javu"
+      : preparingInstallation
+        ? "Probíhá příprava"
+        : hasJavaRuntimeBlocker
+          ? "Chybí Java"
+          : readinessCount === 5
+            ? "Připraveno"
+            : identityReady
+              ? "Na cestě k hraní"
+              : "Chybí jméno";
 
   const primaryButtonLabel = !identityReady
     ? "Uložit jméno"
     : gameRunning
       ? "Hra běží"
-      : launchingGame
-        ? "Spouštím hru..."
-        : preparingInstallation
-          ? "Připravuji hru..."
-          : installationState.kind === "loading"
-            ? "Zkontrolovat hru"
-            : !installationReady
-              ? "Připravit hru"
-              : readinessCount === 5
-                ? "Hrát"
-                : "Skoro hotovo";
+      : installingManagedJava
+        ? "Instaluji Javu..."
+        : launchingGame
+          ? "Spouštím hru..."
+          : preparingInstallation
+            ? "Připravuji hru..."
+            : installationState.kind === "loading"
+              ? "Zkontrolovat hru"
+              : !installationReady
+                ? "Připravit hru"
+                : !javaCompatible
+                  ? "Nainstalovat Javu a hrát"
+                  : readinessCount === 5
+                    ? "Hrát"
+                    : "Skoro hotovo";
 
   const ramMinMb = launcherSettings?.minRamMb ?? 2048;
   const ramMaxMb = launcherSettings?.maxAllowedRamMb ?? 12288;
@@ -777,6 +858,27 @@ function App() {
     }
   }
 
+  async function handleInstallManagedJavaRuntime(requiredJavaMajor: number) {
+    setInstallingManagedJava(true);
+    setLauncherDiagnosticsError(null);
+
+    try {
+      await installManagedJavaRuntime(requiredJavaMajor);
+      const refreshedJava = await refreshJavaRuntime();
+      return refreshedJava;
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Spravovaný Java runtime se nepodařilo nainstalovat.";
+      setLauncherDiagnosticsError(message);
+      return null;
+    } finally {
+      setInstallingManagedJava(false);
+      setJavaInstallProgress(null);
+    }
+  }
+
   async function handleSaveLauncherSettings() {
     setSavingSettings(true);
 
@@ -882,6 +984,7 @@ function App() {
     await Promise.allSettled([
       refreshGameLaunchStatus(),
       refreshLauncherLogInfo(),
+      refreshJavaRuntime(),
       installationNeedsAttention
         ? refreshInstallationStatus()
         : Promise.resolve(),
@@ -918,24 +1021,44 @@ function App() {
 
     if (effectiveInstallationStatus?.state !== "ready") {
       await handlePrepareInstallation();
-      return;
+      effectiveInstallationStatus = await refreshInstallationStatus();
+      if (effectiveInstallationStatus.state !== "ready") {
+        return;
+      }
     }
 
     if (gameRunning) {
       return;
     }
 
+    const currentInstallationStatus = effectiveInstallationStatus;
+    if (currentInstallationStatus == null) {
+      return;
+    }
+
+    let effectiveJavaRuntime = javaRuntime;
     let effectiveJavaCompatible = javaCompatible;
-    if (
-      !javaCompatible &&
-      (javaState.kind === "loading" || javaState.kind === "error")
-    ) {
-      const refreshedJava = await refreshJavaRuntime();
-      effectiveJavaCompatible =
-        effectiveInstallationStatus?.requiredJavaMajor == null
-          ? refreshedJava.detected
-          : (refreshedJava.majorVersion ?? 0) >=
-            effectiveInstallationStatus.requiredJavaMajor;
+    if (!effectiveJavaCompatible) {
+      const requiredJavaMajor = currentInstallationStatus.requiredJavaMajor;
+      if (requiredJavaMajor == null) {
+        setLauncherDiagnosticsError(
+          "Launcher nedokáže určit kompatibilní verzi Java runtime.",
+        );
+        return;
+      }
+
+      if (javaRuntime?.source !== "Custom path") {
+        effectiveJavaRuntime =
+          await handleInstallManagedJavaRuntime(requiredJavaMajor);
+        if (effectiveJavaRuntime == null) {
+          return;
+        }
+        effectiveJavaCompatible =
+          currentInstallationStatus.requiredJavaMajor == null
+            ? (effectiveJavaRuntime?.detected ?? false)
+            : (effectiveJavaRuntime?.majorVersion ?? 0) >=
+              currentInstallationStatus.requiredJavaMajor;
+      }
     }
 
     if (!effectiveJavaCompatible) {
@@ -1037,11 +1160,15 @@ function App() {
                       className="primary-action"
                       onClick={() => void handlePrimaryAction()}
                       disabled={
-                        savingPlayer || preparingInstallation || launchingGame
+                        savingPlayer ||
+                        preparingInstallation ||
+                        installingManagedJava ||
+                        launchingGame
                       }
                     >
                       {savingPlayer ||
                       preparingInstallation ||
+                      installingManagedJava ||
                       launchingGame ? (
                         <LoaderCircle
                           size={22}
@@ -1428,7 +1555,41 @@ function App() {
                           </span>
                         </div>
 
+                        {javaPathNormalized.length === 0 &&
+                          installationStatus?.requiredJavaMajor != null && (
+                            <div className="settings-inline-meta">
+                              <span className="settings-value-chip">
+                                Spravovaná Java
+                              </span>
+                              <span className="settings-helper-text">
+                                Launcher může chybějící Java runtime stáhnout
+                                automaticky.
+                              </span>
+                            </div>
+                          )}
+
                         <div className="profile-card__actions">
+                          {javaPathNormalized.length === 0 &&
+                            installationStatus?.requiredJavaMajor != null && (
+                              <button
+                                type="button"
+                                className="text-action"
+                                onClick={() =>
+                                  void handleInstallManagedJavaRuntime(
+                                    installationStatus.requiredJavaMajor!,
+                                  )
+                                }
+                                disabled={
+                                  launcherSettingsState.kind !== "ready" ||
+                                  savingSettings ||
+                                  installingManagedJava
+                                }
+                              >
+                                {installingManagedJava
+                                  ? "Instaluji Javu..."
+                                  : "Nainstalovat Javu"}
+                              </button>
+                            )}
                           <button
                             type="button"
                             className="text-action"
@@ -1530,6 +1691,28 @@ function App() {
                           </ul>
                         )}
                       </div>
+
+                      {installingManagedJava && (
+                        <div className="settings-diagnostics__section">
+                          <p className="settings-checkline__label">
+                            Instalace Java runtime
+                          </p>
+                          <div className="progress-panel progress-panel--hero">
+                            <div className="progress-panel__header">
+                              <span>{effectiveProgressPanelLabel}</span>
+                              <span>{effectiveProgressPanelValue}</span>
+                            </div>
+                            <div className="progress-track" role="presentation">
+                              <div
+                                className="progress-track__fill"
+                                style={{
+                                  width: `${effectiveProgressPanelPercent}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="settings-diagnostics__section">
                         <p className="settings-checkline__label">

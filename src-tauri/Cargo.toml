@@ -1,6 +1,6 @@
 [package]
 name = "nekara-launcher"
-version = "0.1.23"
+version = "0.1.24"
 description = "Custom desktop launcher for the Nekara Minecraft server"
 authors = ["Nekara"]
 edition = "2021"
@@ -29,3 +29,4 @@ sha1 = "0.10"
 sha2 = "0.10"
 md-5 = "0.10"
 tauri-plugin-dialog = "2.7.1"
+zip = "0.6"

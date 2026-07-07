@@ -14,8 +14,8 @@ Projektový základ pro vlastní desktopový launcher určený pro Minecraft ser
 Nekara, s hráčsky orientovaným brandovaným shellem, podepsanými aktualizacemi
 přes GitHub Releases, kontrolou oficiálních metadat, detekcí Java runtime,
 přípravou oficiálních souborů pro základní Minecraft klient, knihovny a assety,
-offline spouštěcím postupem, offline profilem hráče a izolovanou herní složkou
-`AppData\Roaming\Nekara`.
+launcher-owned Java runtime fallbackem, offline spouštěcím postupem, offline
+profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
 
 ## Stav repozitáře
 
@@ -38,6 +38,9 @@ offline spouštěcím postupem, offline profilem hráče a izolovanou herní slo
 - React má obsluhovat UI a interakci s uživatelem.
 - Rust/Tauri mají obsluhovat systémové operace, práci se souborovým systémem,
   stahování, správu procesů, logiku Java runtime a skládání launch commandu.
+- Launcher teď umí automaticky stáhnout a nainstalovat managed Java runtime z
+  oficiálního Adoptium Temurin JRE ZIPu na Windows, když kompatibilní Java
+  chybí.
 
 ## Ověřená fakta
 
@@ -60,6 +63,8 @@ offline spouštěcím postupem, offline profilem hráče a izolovanou herní slo
 - Launcher už skládá první skutečný offline Minecraft launch command z oficiálních metadat a startuje Minecraft proces, když je klient připravený.
 - Launcher už sleduje, jestli Minecraft startuje, běží nebo skončil, a ukládá launcher-side game log path pro diagnostiku.
 - Launcher už ukládá nakonfigurovaný Minecraft RAM limit a volitelnou vlastní cestu k Java executable do launcher settings.
+- Launcher už dokáže automaticky nainstalovat managed Java runtime do vlastních
+  dat launcheru, když kompatibilní Java chybí.
 - Launcher už zobrazuje launch diagnostiku, včetně log excerptu, doporučené opravy a runtime summary po neúspěšném startu.
 - Launcher už preferuje nakonfigurovanou Java executable path před fallbackem na systémový `PATH`.
 - Launcher už obsahuje podepsaný updater plugin pro GitHub Releases a pracovní postup, který publikuje Windows artefakty z tagovaných buildů.

@@ -61,6 +61,16 @@ export interface JavaRuntimeCheck {
   message: string;
 }
 
+export interface JavaRuntimeInstallProgress {
+  active: boolean;
+  currentStep: string | null;
+  currentDownloadLabel: string | null;
+  totalBytes: number;
+  downloadedBytes: number;
+  remainingBytes: number;
+  bytesPerSecond: number | null;
+}
+
 export type MinecraftInstallationPlanState = "ready" | "blocked";
 
 export interface MinecraftInstallationPlan {
