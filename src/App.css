@@ -459,6 +459,65 @@ code {
   word-break: break-word;
 }
 
+.launcher-update-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 5, 6, 0.68);
+  backdrop-filter: blur(14px);
+}
+
+.launcher-update-dialog {
+  display: grid;
+  gap: 14px;
+  width: min(560px, 100%);
+  padding: 24px;
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 17, 18, 0.98) 0%,
+    rgba(10, 10, 12, 0.98) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+
+.launcher-update-dialog h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+  line-height: 0.98;
+}
+
+.launcher-update-dialog__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.launcher-update-dialog__icon {
+  color: var(--gold);
+}
+
+.launcher-update-dialog__lead {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.launcher-update-dialog__body {
+  padding: 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(245, 241, 232, 0.92);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow: auto;
+}
+
 .settings-page {
   display: grid;
   gap: 20px;

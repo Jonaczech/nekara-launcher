@@ -20,6 +20,12 @@ type ResolvedUpdate = NonNullable<Awaited<ReturnType<typeof check>>>;
 
 let startupAutomaticUpdatePromise: Promise<void> | null = null;
 
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 function toUpdateStatus(
   update: Awaited<ReturnType<typeof check>>,
 ): LauncherUpdateStatus {
@@ -157,7 +163,9 @@ export async function installLauncherUpdate() {
   return toUpdateStatus(update);
 }
 
-export function runAutomaticLauncherUpdateOnStartup() {
+export function runAutomaticLauncherUpdateOnStartup(
+  onUpdateAvailable?: (status: LauncherUpdateStatus) => void | Promise<void>,
+) {
   if (!isTauriRuntime()) {
     return Promise.resolve();
   }
@@ -181,6 +189,9 @@ export function runAutomaticLauncherUpdateOnStartup() {
       return;
     }
 
+    const updateStatus = toUpdateStatus(update);
+    await onUpdateAvailable?.(updateStatus);
+    await sleep(900);
     await logUpdate(
       "updater",
       `Při startu byla nalezena novější verze launcheru ${update.version}. Spouštím automatickou instalaci.`,

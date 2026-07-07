@@ -130,7 +130,8 @@ procházet chyby aktualizace i spuštění.
 
 Samoupdaty launcheru jsou napojené na podepsané GitHub Releases. Updater při
 startu automaticky kontroluje koncový bod releasu a jakmile najde novější
-verzi, sám ji stáhne, nainstaluje a restartuje launcher.
+verzi, nejdřív ji uživateli oznámí v popup okně, potom ji stáhne, nainstaluje a
+restartuje launcher.
 
 Zdrojové brand assets jsou organizované v `brand/`, zatímco generované ikony
 aplikace Tauri jsou v `src-tauri/icons/`.

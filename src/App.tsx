@@ -39,6 +39,7 @@ import type {
   JavaRuntimeCheck,
   LauncherLogInfo,
   LauncherStatus,
+  LauncherUpdateStatus,
   LauncherSettings,
   MinecraftInstallationProgress,
   MinecraftInstallationStatus,
@@ -111,6 +112,8 @@ function App() {
   >({
     kind: "loading",
   });
+  const [startupUpdateNotice, setStartupUpdateNotice] =
+    useState<LauncherUpdateStatus | null>(null);
   const [playerState, setPlayerState] = useState<
     LoadState<OfflinePlayerStatus>
   >({
@@ -351,7 +354,10 @@ function App() {
 
   useEffect(() => {
     const cleanup = scheduleBackgroundWork(() => {
-      void runAutomaticLauncherUpdateOnStartup().catch((error: unknown) => {
+      void runAutomaticLauncherUpdateOnStartup((status) => {
+        setStartupUpdateNotice(status);
+      }).catch((error: unknown) => {
+        setStartupUpdateNotice(null);
         console.warn("Automatic launcher update failed.", error);
       });
     }, 2400);
@@ -1568,6 +1574,40 @@ function App() {
           </div>
         </section>
       </div>
+      {startupUpdateNotice?.available && (
+        <div
+          className="launcher-update-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="launcher-update-title"
+        >
+          <section className="launcher-update-dialog">
+            <div className="launcher-update-dialog__eyebrow">
+              <LoaderCircle
+                size={16}
+                strokeWidth={2.4}
+                className="spin launcher-update-dialog__icon"
+              />
+              <span>Aktualizace launcheru</span>
+            </div>
+            <h2 id="launcher-update-title">
+              Stahuji verzi {startupUpdateNotice.version}
+            </h2>
+            <p className="launcher-update-dialog__lead">
+              Launcher našel novější verzi a teď ji stáhne a nainstaluje. Po
+              dokončení se sám restartuje.
+            </p>
+            {startupUpdateNotice.body && (
+              <div className="launcher-update-dialog__body">
+                {startupUpdateNotice.body}
+              </div>
+            )}
+            <p className="settings-helper-text">
+              Prosím launcher nevypínej, dokud se nevrátí zpět.
+            </p>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
