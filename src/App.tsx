@@ -31,6 +31,7 @@ import {
   openDirectoryInFileExplorer,
   pickGameDirectoryPath,
   prepareMinecraftInstallation,
+  refreshLauncherErrorReport as generateLauncherErrorReport,
   saveLauncherSettings,
   saveOfflinePlayerProfile,
 } from "./services/launcher";
@@ -262,6 +263,21 @@ function App() {
     }
   }
 
+  async function refreshLauncherErrorReport() {
+    try {
+      const info = await generateLauncherErrorReport();
+      return info;
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Error log se nepodařilo vytvořit.";
+      setLauncherDiagnosticsError(message);
+      void refreshLauncherErrorReport();
+      return null;
+    }
+  }
+
   async function refreshLauncherStatus() {
     try {
       const status = await getLauncherStatus();
@@ -339,6 +355,11 @@ function App() {
         window.setTimeout(() => {
           void refreshLauncherLogInfo();
         }, 540),
+      );
+      timers.push(
+        window.setTimeout(() => {
+          void refreshLauncherErrorReport();
+        }, 620),
       );
       timers.push(
         window.setTimeout(() => {
@@ -511,6 +532,7 @@ function App() {
   const diagnosticLogPath = launchFailed
     ? (gameLaunch?.logPath ?? null)
     : (launcherLogInfo?.logFile ?? null);
+  const diagnosticErrorReportPath = launcherLogInfo?.errorReportFile ?? null;
   const launcherCheckStateLabel = {
     ready: "Připraveno",
     pending: "Čeká",
@@ -852,6 +874,7 @@ function App() {
             ? error.message
             : "Minecraft instalaci se nepodařilo připravit.",
       });
+      void refreshLauncherErrorReport();
     } finally {
       setInstallationProgress(null);
       setPreparingInstallation(false);
@@ -906,6 +929,7 @@ function App() {
           ? error.message
           : "Nastavení launcheru se nepodařilo uložit.";
       setLauncherSettingsState({ kind: "error", message });
+      void refreshLauncherErrorReport();
     } finally {
       setSavingSettings(false);
     }
@@ -984,6 +1008,7 @@ function App() {
     await Promise.allSettled([
       refreshGameLaunchStatus(),
       refreshLauncherLogInfo(),
+      refreshLauncherErrorReport(),
       refreshJavaRuntime(),
       installationNeedsAttention
         ? refreshInstallationStatus()
@@ -1003,6 +1028,7 @@ function App() {
           ? error.message
           : "Minecraft se nepodařilo spustit.";
       setGameLaunchState({ kind: "error", message });
+      void refreshLauncherErrorReport();
     } finally {
       setLaunchingGame(false);
     }
@@ -1740,11 +1766,17 @@ function App() {
                                 <dd>{diagnosticLogPath}</dd>
                               </div>
                             )}
+                            {diagnosticErrorReportPath && (
+                              <div>
+                                <dt>Error report</dt>
+                                <dd>{diagnosticErrorReportPath}</dd>
+                              </div>
+                            )}
                           </dl>
                         ) : (
                           <p className="settings-helper-text">
                             Zatím tu není žádná chyba. Pokud se něco pokazí,
-                            objeví se sem detail i cesta k logům.
+                            objeví se sem detail, cesta k logům i error report.
                           </p>
                         )}
 
@@ -1774,6 +1806,13 @@ function App() {
                     </div>
 
                     <div className="profile-card__actions">
+                      <button
+                        type="button"
+                        className="text-action"
+                        onClick={() => void refreshLauncherErrorReport()}
+                      >
+                        Vygenerovat error log
+                      </button>
                       <button
                         type="button"
                         className="text-action"

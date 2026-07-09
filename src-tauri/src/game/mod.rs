@@ -883,6 +883,10 @@ pub fn get_game_launch_status() -> Result<GameLaunchStatus, String> {
     read_game_status()
 }
 
+pub fn get_game_launch_log_path() -> Result<Option<String>, String> {
+    Ok(read_game_status()?.log_path)
+}
+
 #[tauri::command]
 pub async fn launch_minecraft() -> Result<GameLaunchStatus, String> {
     let current_status = read_game_status()?;

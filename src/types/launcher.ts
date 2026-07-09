@@ -202,4 +202,11 @@ export interface LauncherUpdateStatus {
 export interface LauncherLogInfo {
   logDir: string;
   logFile: string;
+  errorReportFile: string;
+}
+
+export interface LauncherErrorReportInfo {
+  reportDir: string;
+  reportFile: string;
+  message: string;
 }

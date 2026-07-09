@@ -7,6 +7,7 @@ import type {
   JavaRuntimeInstallProgress,
   LauncherSettings,
   LauncherLogInfo,
+  LauncherErrorReportInfo,
   LauncherStatus,
   MinecraftInstallationProgress,
   MinecraftInstallationPlan,
@@ -228,6 +229,7 @@ const browserPreviewLauncherSettings: LauncherSettings = {
 const browserPreviewLauncherLogInfo: LauncherLogInfo = {
   logDir: "Browser preview fallback",
   logFile: "Browser preview fallback",
+  errorReportFile: "Browser preview fallback",
 };
 
 export function getLauncherStatus() {
@@ -443,6 +445,19 @@ export function getLauncherLogInfo() {
   }
 
   return invoke<LauncherLogInfo>("get_launcher_log_info");
+}
+
+export function refreshLauncherErrorReport() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve({
+      reportDir: "Browser preview fallback",
+      reportFile: "Browser preview fallback",
+      message:
+        "Je aktivní náhradní režim pro prohlížeč. Error report se vytváří jen v Tauri režimu.",
+    } satisfies LauncherErrorReportInfo);
+  }
+
+  return invoke<LauncherErrorReportInfo>("refresh_launcher_error_report");
 }
 
 export function appendLauncherLogEntry(scope: string, message: string) {

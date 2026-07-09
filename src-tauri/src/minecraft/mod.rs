@@ -144,6 +144,19 @@ struct InstallationLock {
     path: PathBuf,
 }
 
+#[cfg(target_os = "windows")]
+unsafe extern "system" {
+    fn OpenProcess(
+        dw_desired_access: u32,
+        b_inherit_handle: i32,
+        dw_process_id: u32,
+    ) -> *mut std::ffi::c_void;
+    fn CloseHandle(handle: *mut std::ffi::c_void) -> i32;
+}
+
+#[cfg(target_os = "windows")]
+const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
+
 #[derive(Default)]
 struct InstallationProgressTracker {
     active: bool,
@@ -312,23 +325,89 @@ fn installation_lock_path() -> Result<PathBuf, String> {
     Ok(filesystem::ensure_launcher_subdirectory("locks")?.join(config::INSTALL_LOCK_FILE))
 }
 
+#[cfg(target_os = "windows")]
+fn windows_process_is_running(process_id: u32) -> bool {
+    // Query the PID directly so stale lock files from crashed launcher instances can be removed.
+    let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, process_id) };
+    if handle.is_null() {
+        return false;
+    }
+
+    let _ = unsafe { CloseHandle(handle) };
+    true
+}
+
+#[cfg(not(target_os = "windows"))]
+fn windows_process_is_running(_process_id: u32) -> bool {
+    false
+}
+
+fn stale_installation_lock_pid(lock_path: &Path) -> Result<Option<u32>, String> {
+    let pid_text = fs::read_to_string(lock_path).map_err(|error| {
+        format!(
+            "Unable to read installation lock at {}: {error}",
+            lock_path.display()
+        )
+    })?;
+    let process_id = pid_text.trim().parse::<u32>().map_err(|error| {
+        format!(
+            "Installation lock at {} does not contain a valid process id: {error}",
+            lock_path.display()
+        )
+    })?;
+
+    if windows_process_is_running(process_id) {
+        Ok(None)
+    } else {
+        Ok(Some(process_id))
+    }
+}
+
 fn acquire_installation_lock() -> Result<InstallationLock, String> {
     let lock_path = installation_lock_path()?;
-    let mut file = OpenOptions::new()
+    let mut file = match OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(&lock_path)
-        .map_err(|error| {
-            if error.kind() == std::io::ErrorKind::AlreadyExists {
-                "Another Minecraft preparation is already running for this launcher data directory."
-                    .to_string()
-            } else {
-                format!(
-                    "Unable to create installation lock at {}: {error}",
-                    lock_path.display()
-                )
+    {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+            match stale_installation_lock_pid(&lock_path)? {
+                Some(stale_process_id) => {
+                    fs::remove_file(&lock_path).map_err(|remove_error| {
+                        format!(
+                            "Unable to clear stale installation lock at {} after PID {} disappeared: {remove_error}",
+                            lock_path.display(),
+                            stale_process_id
+                        )
+                    })?;
+                    OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(&lock_path)
+                        .map_err(|retry_error| {
+                            format!(
+                                "Unable to recreate installation lock at {} after clearing stale PID {}: {retry_error}",
+                                lock_path.display(),
+                                stale_process_id
+                            )
+                        })?
+                }
+                None => {
+                    return Err(
+                        "Another Minecraft preparation is already running for this launcher data directory."
+                            .to_string(),
+                    )
+                }
             }
-        })?;
+        }
+        Err(error) => {
+            return Err(format!(
+                "Unable to create installation lock at {}: {error}",
+                lock_path.display()
+            ))
+        }
+    };
 
     use std::io::Write;
     writeln!(file, "{}", std::process::id()).map_err(|error| {
@@ -1198,6 +1277,62 @@ mod tests {
     }
 
     #[test]
+    fn ensure_preset_multiplayer_server_rewrites_legacy_payload() {
+        let root = std::env::temp_dir().join(format!(
+            "nekara-servers-dat-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("current time should be after epoch")
+                .as_millis()
+        ));
+        fs::create_dir_all(&root).expect("test minecraft dir should be creatable");
+
+        let servers_dat_path = root.join("servers.dat");
+        let legacy_payload = vec![
+            0x1F, 0x8B, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x01, 0x3E, 0x00, 0xC1,
+            0xFF, 0x0A, 0x00, 0x00, 0x09, 0x00, 0x07, b's', b'e', b'r', b'v', b'e', b'r', b's',
+            0x0A, 0x00, 0x00, 0x00,
+        ];
+        fs::write(&servers_dat_path, legacy_payload).expect("legacy servers.dat should write");
+
+        let changed =
+            ensure_preset_multiplayer_server(&root).expect("legacy servers.dat should repair");
+        let current_payload =
+            fs::read(&servers_dat_path).expect("rewritten servers.dat should be readable");
+
+        let _ = fs::remove_dir_all(&root);
+
+        assert!(changed);
+        assert_eq!(
+            current_payload,
+            build_servers_dat_bytes().expect("expected servers.dat should build")
+        );
+        assert!(!current_payload.starts_with(&[0x1F, 0x8B]));
+    }
+
+    #[test]
+    fn stale_installation_lock_pid_detects_missing_process() {
+        let root = std::env::temp_dir().join(format!(
+            "nekara-install-lock-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("current time should be after epoch")
+                .as_millis()
+        ));
+        fs::create_dir_all(&root).expect("test lock dir should be creatable");
+
+        let lock_path = root.join("minecraft-install.lock");
+        fs::write(&lock_path, "999999\n").expect("test lock file should be writable");
+
+        let stale_process_id =
+            stale_installation_lock_pid(&lock_path).expect("lock file should be readable");
+
+        let _ = fs::remove_dir_all(&root);
+
+        assert_eq!(stale_process_id, Some(999999));
+    }
+
+    #[test]
     #[ignore = "downloads the full Minecraft/Fabric client package for smoke verification"]
     fn smoke_prepares_installation_and_writes_server_preset() {
         let launcher_data_dir =
@@ -1346,6 +1481,7 @@ pub async fn get_minecraft_installation_status() -> Result<MinecraftInstallation
     let paths = installation_paths(&fabric_details.profile_id)?;
 
     let _ = filesystem::ensure_nekara_game_directory()?;
+    let _ = ensure_preset_multiplayer_server(&paths.minecraft_dir)?;
 
     let snapshot = collect_installation_snapshot(&paths, &base_details, &fabric_details).await?;
     let message = if matches!(

@@ -62,6 +62,7 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
 - Launcher už automaticky přesouvá starou výchozí instalaci z `AppData\Local` do nového izolovaného `AppData\Roaming\Nekara`, pokud uživatel nepoužívá vlastní cestu.
 - Launcher už skládá první skutečný offline Minecraft launch command z oficiálních metadat a startuje Minecraft proces, když je klient připravený.
 - Launcher už sleduje, jestli Minecraft startuje, běží nebo skončil, a ukládá launcher-side game log path pro diagnostiku.
+- Launcher už umí vygenerovat samostatný `launcher-error-report.txt` s JSON diagnostikou launcheru, hry, Javy, nastavení a posledních řádků logů.
 - Launcher už ukládá nakonfigurovaný Minecraft RAM limit a volitelnou vlastní cestu k Java executable do launcher settings.
 - Launcher už dokáže automaticky nainstalovat managed Java runtime do vlastních
   dat launcheru, když kompatibilní Java chybí.
@@ -69,7 +70,7 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
 - Launcher už preferuje nakonfigurovanou Java executable path před fallbackem na systémový `PATH`.
 - Launcher už obsahuje podepsaný updater plugin pro GitHub Releases a pracovní postup, který publikuje Windows artefakty z tagovaných buildů.
 - Launcher při startu automaticky kontroluje novější release a pokud je dostupný, nejdřív ho oznámí v popup okně, pak stáhne update, nainstaluje ho a restartuje se.
-- Nejnovější publikovaný release je `app-v0.1.25`.
+- Nejnovější publikovaný release je `app-v0.1.26`.
 - ADR 0003 definuje GitHub Releases jako zamýšlenou první cestu pro samoupdatování launcheru.
 - Launcher už ukládá lokální offline jméno hráče do launcher dat.
 - Microsoft přihlašovací flow bylo z launcheru odstraněné a podporovaná herní identita je nyní výhradně offline profil hráče.

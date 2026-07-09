@@ -35,6 +35,7 @@ pub fn run() {
             filesystem::ensure_nekara_game_directory,
             filesystem::open_directory_in_file_explorer,
             logging::append_launcher_log,
+            logging::refresh_launcher_error_report,
             logging::get_launcher_log_info,
             java::check_java_runtime,
             java::get_java_runtime_install_progress,
