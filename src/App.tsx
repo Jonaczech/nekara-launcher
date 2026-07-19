@@ -3,7 +3,7 @@ import {
   FolderOpen,
   House,
   LoaderCircle,
-  Minimize2,
+  Minus,
   Play,
   Settings2,
   UserRound,
@@ -12,6 +12,7 @@ import {
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import packageInfo from "../package.json";
 import launcherIcon from "../src-tauri/icons/64x64.png";
+import launcherLogo from "../brand/logos/logo.png";
 import launcherWallpaper from "../brand/wallpapers/pozadi.png";
 import "./App.css";
 import {
@@ -708,45 +709,18 @@ function App() {
         ? liveDownloadPercent
         : progressPanelPercent;
 
-  const homeStatusHeadline = gameRunning
-    ? "Hra právě běží"
-    : installingManagedJava
-      ? "Instaluji Java runtime"
-      : preparingInstallation
-        ? "Připravuji klienta"
-        : hasJavaRuntimeBlocker
-          ? "Chybí Java runtime"
-          : readinessCount === 5
-            ? "Všechno je připravené"
-            : identityReady
-              ? "Ještě dolaďujeme pár věcí"
-              : "Nejdřív ulož jméno hráče";
-  const homeStatusLead = gameRunning
-    ? "Minecraft už běží. Kdykoli můžeš přejít do nastavení nebo jen počkat na návrat hry."
-    : installingManagedJava
-      ? "Launcher právě stahuje a ověřuje kompatibilní Java runtime. Nech ho běžet a pak zkus hraní znovu."
-      : preparingInstallation
-        ? "Launcher dokončuje přípravu na pozadí. Podrobnosti a opravy najdeš v Nastavení."
-        : hasJavaRuntimeBlocker
-          ? "Launcher čeká na kompatibilní Java runtime. V Nastavení ji můžeš nainstalovat automaticky nebo vybrat vlastní cestu k `java.exe`."
-          : readinessCount === 5
-            ? "Můžeš spustit hru okamžitě. Všechno důležité už je připravené."
-            : identityReady
-              ? "Zbytek kontroly probíhá automaticky. Když budeš chtít víc detailů, otevři Nastavení."
-              : "Ulož herní jméno a launcher se postará o zbytek.";
-  const homeStatusBadge = gameRunning
+  const quickGameStatus = gameRunning
     ? "Hra běží"
-    : installingManagedJava
-      ? "Instaluji Javu"
-      : preparingInstallation
-        ? "Probíhá příprava"
-        : hasJavaRuntimeBlocker
-          ? "Chybí Java"
-          : readinessCount === 5
-            ? "Připraveno"
-            : identityReady
-              ? "Na cestě k hraní"
-              : "Chybí jméno";
+    : readinessCount === 5
+      ? "Připraveno"
+      : preparingInstallation || installingManagedJava
+        ? "Probíhá"
+        : "Čeká";
+  const quickPlayerStatus = identityReady ? "Uloženo" : "Chybí";
+  const quickSettingsStatus =
+    hasJavaRuntimeBlocker || launchBlockerItems.length > 0
+      ? "Zkontrolovat"
+      : "V pořádku";
 
   const primaryButtonLabel = !identityReady
     ? "Uložit jméno"
@@ -1112,35 +1086,52 @@ function App() {
               : "linear-gradient(135deg, rgba(10, 10, 12, 0.98) 0%, rgba(22, 18, 12, 0.92) 42%, rgba(10, 10, 12, 0.98) 100%)",
           }}
         >
-          <aside className="launcher-rail" aria-label="Navigace launcheru">
-            <div className="rail-logo">
-              <img src={launcherIcon} alt="Nekara icon" />
-            </div>
-            <button
-              type="button"
-              className={`rail-button ${currentView === "home" ? "rail-button--active" : ""}`}
-              aria-label="Domů"
-              onClick={() => setCurrentView("home")}
-            >
-              <House size={18} />
-            </button>
-            <button
-              type="button"
-              className={`rail-button ${currentView === "settings" ? "rail-button--active" : ""}`}
-              aria-label="Nastavení"
-              onClick={() => setCurrentView("settings")}
-            >
-              <Settings2 size={18} />
-            </button>
-          </aside>
-
           <div className="stage-main">
             <header
               className="stage-topbar"
               data-tauri-drag-region="true"
               onMouseDown={handleTitleBarMouseDown}
             >
-              <div className="stage-topbar__meta" />
+              <div
+                className="stage-topbar__meta"
+                data-tauri-drag-region="false"
+              >
+                <div className="topbar-brand">
+                  <img src={launcherIcon} alt="" />
+                  <span>Nekara Launcher</span>
+                </div>
+
+                <nav className="topbar-nav" aria-label="Navigace launcheru">
+                  <button
+                    type="button"
+                    className={`topbar-nav-button ${
+                      currentView === "home" ? "topbar-nav-button--active" : ""
+                    }`}
+                    aria-label="Domů"
+                    aria-current={currentView === "home" ? "page" : undefined}
+                    onClick={() => setCurrentView("home")}
+                  >
+                    <House size={17} />
+                    <span>Domů</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`topbar-nav-button ${
+                      currentView === "settings"
+                        ? "topbar-nav-button--active"
+                        : ""
+                    }`}
+                    aria-label="Nastavení"
+                    aria-current={
+                      currentView === "settings" ? "page" : undefined
+                    }
+                    onClick={() => setCurrentView("settings")}
+                  >
+                    <Settings2 size={17} />
+                    <span>Nastavení</span>
+                  </button>
+                </nav>
+              </div>
 
               <div
                 className="window-bar__controls"
@@ -1150,14 +1141,14 @@ function App() {
               >
                 <button
                   type="button"
-                  className="window-icon-button"
+                  className="window-icon-button window-icon-button--minimize"
                   aria-label="Minimalizovat okno"
                   data-tauri-drag-region="false"
                   onClick={() =>
                     runWindowAction((appWindow) => appWindow.minimize())
                   }
                 >
-                  <Minimize2 size={14} />
+                  <Minus size={18} strokeWidth={2.4} />
                 </button>
                 <button
                   type="button"
@@ -1177,7 +1168,14 @@ function App() {
               <>
                 <section className="hero-panel">
                   <div className="hero-copy">
-                    <h1 id="launcher-title">Nekara</h1>
+                    <h1 id="launcher-title" className="sr-only">
+                      Nekara
+                    </h1>
+                    <img
+                      className="hero-logo"
+                      src={launcherLogo}
+                      alt="Nekara"
+                    />
                   </div>
 
                   <div className="hero-actions hero-actions--stacked">
@@ -1232,27 +1230,6 @@ function App() {
                 </section>
 
                 <section className="home-grid">
-                  <section className="home-card home-card--summary">
-                    <div className="panel-heading">
-                      <Play size={18} />
-                      <span>Rychlý přehled</span>
-                    </div>
-                    <h2>{homeStatusHeadline}</h2>
-                    <p className="home-card__lead">{homeStatusLead}</p>
-                    <div className="home-summary__meta">
-                      <span className="settings-value-chip">
-                        {homeStatusBadge}
-                      </span>
-                      <button
-                        type="button"
-                        className="text-action"
-                        onClick={() => setCurrentView("settings")}
-                      >
-                        Otevřít nastavení
-                      </button>
-                    </div>
-                  </section>
-
                   <section className="home-card home-card--player">
                     <div className="panel-heading">
                       <UserRound size={18} />
@@ -1660,6 +1637,42 @@ function App() {
                     </p>
 
                     <div className="settings-diagnostics">
+                      <div
+                        className="settings-status-icons"
+                        aria-label="Rychlý stav launcheru"
+                      >
+                        <div
+                          className={`summary-icon-pill ${
+                            readinessCount === 5 || gameRunning
+                              ? "summary-icon-pill--ready"
+                              : "summary-icon-pill--pending"
+                          }`}
+                        >
+                          <Play size={17} />
+                          <span>{quickGameStatus}</span>
+                        </div>
+                        <div
+                          className={`summary-icon-pill ${
+                            identityReady
+                              ? "summary-icon-pill--ready"
+                              : "summary-icon-pill--blocked"
+                          }`}
+                        >
+                          <UserRound size={17} />
+                          <span>{quickPlayerStatus}</span>
+                        </div>
+                        <div
+                          className={`summary-icon-pill ${
+                            quickSettingsStatus === "V pořádku"
+                              ? "summary-icon-pill--ready"
+                              : "summary-icon-pill--blocked"
+                          }`}
+                        >
+                          <Settings2 size={17} />
+                          <span>{quickSettingsStatus}</span>
+                        </div>
+                      </div>
+
                       <div className="settings-diagnostics__section">
                         <p className="settings-checkline__label">
                           Rychlý stav launcheru
