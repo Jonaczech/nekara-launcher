@@ -785,7 +785,11 @@ function App() {
     }
 
     const target = event.target as HTMLElement | null;
-    if (target?.closest("[data-window-control='true']")) {
+    if (
+      target?.closest(
+        "[data-window-control='true'], [data-topbar-interactive='true']",
+      )
+    ) {
       return;
     }
 
@@ -1094,6 +1098,7 @@ function App() {
             >
               <div
                 className="stage-topbar__meta"
+                data-topbar-interactive="true"
                 data-tauri-drag-region="false"
               >
                 <div className="topbar-brand">
