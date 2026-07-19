@@ -9,6 +9,7 @@ mod launcher;
 mod logging;
 mod manifests;
 mod minecraft;
+mod server_status;
 mod settings;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -39,7 +40,8 @@ pub fn run() {
             logging::get_launcher_log_info,
             java::check_java_runtime,
             java::get_java_runtime_install_progress,
-            java::install_managed_java_runtime
+            java::install_managed_java_runtime,
+            server_status::get_server_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running Nekara Launcher");

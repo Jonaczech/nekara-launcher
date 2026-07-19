@@ -16,6 +16,16 @@ export interface LauncherStatus {
   checks: LauncherCheck[];
 }
 
+export type ServerStatusState = "online" | "offline";
+
+export interface ServerStatus {
+  state: ServerStatusState;
+  address: string;
+  latencyMs: number | null;
+  checkedAtUnixMs: number;
+  message: string;
+}
+
 export type MetadataCheckState = "ready" | "blocked";
 
 export interface MinecraftMetadataCheck {

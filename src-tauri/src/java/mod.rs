@@ -1,10 +1,16 @@
 use std::process::Command;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 use serde::Serialize;
 
 use crate::settings;
 
 mod managed;
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 #[derive(Clone)]
 pub struct ResolvedJavaRuntime {
@@ -37,7 +43,13 @@ pub struct JavaRuntimeCheck {
 
 fn locate_java_executable() -> Option<String> {
     let locator = if cfg!(windows) { "where" } else { "which" };
-    let output = Command::new(locator).arg("java").output().ok()?;
+    let mut command = Command::new(locator);
+    command.arg("java");
+
+    #[cfg(target_os = "windows")]
+    command.creation_flags(CREATE_NO_WINDOW);
+
+    let output = command.output().ok()?;
 
     if !output.status.success() {
         return None;
@@ -52,10 +64,13 @@ fn locate_java_executable() -> Option<String> {
 }
 
 fn capture_java_version_line(java_executable: &str) -> Option<String> {
-    let output = Command::new(java_executable)
-        .arg("-version")
-        .output()
-        .ok()?;
+    let mut command = Command::new(java_executable);
+    command.arg("-version");
+
+    #[cfg(target_os = "windows")]
+    command.creation_flags(CREATE_NO_WINDOW);
+
+    let output = command.output().ok()?;
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     let stdout = String::from_utf8_lossy(&output.stdout);

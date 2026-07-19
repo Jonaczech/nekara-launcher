@@ -53,8 +53,10 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
 - `pnpm tauri build` prochází, pokud se spouští z Visual Studio Developer prostředí s `~/.cargo/bin` v `PATH`.
 - Release artefakty byly dříve ověřené v `src-tauri/target/release/bundle/nsis/` a `src-tauri/target/release/`.
 - Launcher UI už zobrazuje stav launcheru, stav kontroly oficiálních metadat a brandované hlavní plátno.
-- Launcher už při startu připravuje izolovaný herní adresář Nekary.
-- Launcher už detekuje lokální Java runtime.
+- Launcher už umí připravit izolovaný herní adresář Nekary, ale těžší runtime kontroly
+  nespouští při startu aplikace.
+- Launcher už detekuje lokální Java runtime až při kliknutí na hlavní akci nebo při
+  otevření Nastavení/diagnostiky.
 - Launcher už vytváří počáteční instalační plán pro izolovaného klienta Nekary.
 - Launcher už kontroluje, zda jsou oficiální `version.json` a klientský `.jar` přítomné a validní uvnitř izolovaného herního adresáře.
 - Launcher už stahuje a opravuje oficiální knihovny, asset index a asset objekty potřebné pro Minecraft `26.1.2`.
@@ -70,7 +72,11 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
 - Launcher už preferuje nakonfigurovanou Java executable path před fallbackem na systémový `PATH`.
 - Launcher už obsahuje podepsaný updater plugin pro GitHub Releases a pracovní postup, který publikuje Windows artefakty z tagovaných buildů.
 - Launcher při startu automaticky kontroluje novější release a pokud je dostupný, nejdřív ho oznámí v popup okně, pak stáhne update, nainstaluje ho a restartuje se.
-- Nejnovější publikovaný release je `app-v0.1.28`.
+- Start aplikace má zůstat lehký: po otevření se automaticky řeší updater,
+  vizuální inicializace a krátký neblokující server ping, zatímco profil, Java,
+  instalace, logy a diagnostika se načítají až po kliknutí na hlavní tlačítko
+  nebo v Nastavení.
+- Nejnovější publikovaný release je `app-v0.1.29`.
 - ADR 0003 definuje GitHub Releases jako zamýšlenou první cestu pro samoupdatování launcheru.
 - Launcher už ukládá lokální offline jméno hráče do launcher dat.
 - Microsoft přihlašovací flow bylo z launcheru odstraněné a podporovaná herní identita je nyní výhradně offline profil hráče.
@@ -106,4 +112,6 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
 - Udržuj uživatelské chyby srozumitelné a diagnostické detaily strukturované.
 - Herní identita launcheru je nyní vědomě offline-only a bez Microsoft integrace.
 
-- Domovsk� obrazovka je zjednodu�en� na hr��sk� pr�chod; technick� checklisty, logy a detailn� diagnostika jsou p�esunut� do Nastaven�.
+- Domovská obrazovka je zjednodušená na hráčský průchod s progress barem,
+  offline jménem a malou zelenou/červenou tečkou stavu serveru; technické
+  checklisty, logy, Java a detailní diagnostika jsou schované v Nastavení.

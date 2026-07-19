@@ -9,6 +9,7 @@ import type {
   LauncherLogInfo,
   LauncherErrorReportInfo,
   LauncherStatus,
+  ServerStatus,
   MinecraftInstallationProgress,
   MinecraftInstallationPlan,
   MinecraftInstallationStatus,
@@ -232,12 +233,29 @@ const browserPreviewLauncherLogInfo: LauncherLogInfo = {
   errorReportFile: "Browser preview fallback",
 };
 
+const browserPreviewServerStatus: ServerStatus = {
+  state: "offline",
+  address: "nekara.mc.hostify.cz",
+  latencyMs: null,
+  checkedAtUnixMs: Date.now(),
+  message:
+    "Je aktivní náhradní režim pro prohlížeč. Skutečný stav serveru se kontroluje uvnitř Tauri.",
+};
+
 export function getLauncherStatus() {
   if (!isTauriRuntime()) {
     return Promise.resolve(browserPreviewLauncherStatus);
   }
 
   return invoke<LauncherStatus>("get_launcher_status");
+}
+
+export function getServerStatus() {
+  if (!isTauriRuntime()) {
+    return Promise.resolve(browserPreviewServerStatus);
+  }
+
+  return invoke<ServerStatus>("get_server_status");
 }
 
 export function checkMinecraftVersionMetadata() {

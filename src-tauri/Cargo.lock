@@ -1985,7 +1985,7 @@ dependencies = [
 
 [[package]]
 name = "nekara-launcher"
-version = "0.1.28"
+version = "0.1.29"
 dependencies = [
  "directories",
  "md-5",

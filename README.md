@@ -122,9 +122,13 @@ launcher-owned Temurin JRE z oficiálního Adoptium balíčku do vlastních dat.
 Ze settings jde navíc přímo otevřít skutečný herní adresář v
 Průzkumníku.
 
-Uživatelské rozhraní i diagnostika launcheru jsou lokalizované do češtiny a
-start aplikace nyní rozkládá těžší běhové kontroly, takže se první vykreslení
-okna na Windows méně zasekává.
+Uživatelské rozhraní i diagnostika launcheru jsou lokalizované do češtiny.
+Domovská obrazovka zůstává soustředěná na logo, hlavní akci `Hrát`, progress
+bar, offline jméno hráče a malý indikátor stavu serveru. Start aplikace nyní
+nechává běžet jen kontrolu aktualizace launcheru, vizuální inicializaci a krátký
+neblokující ping serveru. Těžší kontroly profilu, instalace klienta, Javy, logů a
+diagnostiky se spouští až po kliknutí na hlavní tlačítko nebo po otevření
+Nastavení, aby se okno na Windows méně zasekávalo.
 
 Diagnostické logy launcheru se zapisují pod uživatelský profil do datového
 adresáře Nekara Launcheru, do samostatné složky `logs`, aby bylo možné zpětně
@@ -206,7 +210,7 @@ Současný pnpm workspace výslovně schvaluje instalační skript `esbuild`, kt
 Vite potřebuje.
 Před spuštěním hry launcher znovu ověřuje integritu klíčových klientských
 souborů, aby se poškození zachytilo ještě před startem Minecraftu.
-Launcher ma domovskou obrazovku zamerou na hrace: hero, primarni akci, rychly
-prehled a profil hrace.
-Technicke checklisty, logy a detailni diagnostika jsou presunute do Nastaveni,
-aby hlavni plocha zustala jednoducha.
+Launcher má domovskou obrazovku zaměřenou na hráče: hero, primární akci,
+progress bar, indikátor stavu serveru a profil hráče. Technické checklisty,
+logy, Java a detailní diagnostika jsou schované v Nastavení, aby hlavní plocha
+zůstala jednoduchá.
