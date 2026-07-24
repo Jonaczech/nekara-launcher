@@ -100,6 +100,6 @@ mod tests {
 
         assert_eq!(package.game_configuration_id, config::GAME_CONFIGURATION_ID);
         assert_eq!(package.minecraft_version, config::MINECRAFT_VERSION);
-        assert_eq!(required_mods, 21);
+        assert_eq!(required_mods, 30);
     }
 }

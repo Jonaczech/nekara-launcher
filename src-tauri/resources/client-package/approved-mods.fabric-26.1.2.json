@@ -120,6 +120,34 @@
       }
     },
     {
+      "id": "cinematic-respawn",
+      "displayName": "Cinematic Respawn",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "CFJWaa89",
+        "version": "26.1.x-fabric-1.1.0",
+        "filename": "cinematic_respawn-26.1.x-fabric-1.1.0.jar",
+        "url": "https://cdn.modrinth.com/data/CFJWaa89/versions/hGTmvRMO/cinematic_respawn-26.1.x-fabric-1.1.0.jar",
+        "sha512": "1de6421e8c7d4e35ff20d5ea872f7e163a80f59ec2ecfdce2f47d275339ae96e8f00deff7af78cd08893e42a94635eab62c225402c8b789668d49623248f5242",
+        "size": 23061
+      }
+    },
+    {
+      "id": "continuity",
+      "displayName": "Continuity",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "1IjD5062",
+        "version": "3.0.1-beta.2+26.1",
+        "filename": "continuity-3.0.1-beta.2+26.1.jar",
+        "url": "https://cdn.modrinth.com/data/1IjD5062/versions/l1mM6Ov7/continuity-3.0.1-beta.2%2B26.1.jar",
+        "sha512": "759aa6443b37f7f85e04e3a4477180570ebe28b24adb95484e9236d065b68d35845b7eaeded3a97b9c8aae0bc69edf8ae3356640d62b71fe7a8789c615ade0e2",
+        "size": 1040001
+      }
+    },
+    {
       "id": "iceberg",
       "displayName": "Iceberg",
       "distribution": "required",
@@ -162,6 +190,20 @@
       }
     },
     {
+      "id": "enchantment-effects",
+      "displayName": "Enchantment Effects",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "pXo36Na4",
+        "version": "1.0.0+26.1.x",
+        "filename": "enchantment-effects-1.0.0+26.1.x.jar",
+        "url": "https://cdn.modrinth.com/data/pXo36Na4/versions/P74vR2Gl/enchantment-effects-1.0.0%2B26.1.x.jar",
+        "sha512": "af83ca157f087e5384b3a19026335182c2c563fdb3f46d562b4f832761268e6885dfa376116f974c3987586aaa10d1b734734f076c3abdb7a3cc5f526406699c",
+        "size": 118658
+      }
+    },
+    {
       "id": "iris",
       "displayName": "Iris Shaders",
       "distribution": "required",
@@ -173,6 +215,34 @@
         "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/MwcLS51S/iris-fabric-1.10.9%2Bmc26.1.1.jar",
         "sha512": "01714943b36e7b78618bf133a20da489197322e20ebc2d9858f15bb57ac198fdab23dac6c917d6239ad3fe2e7c47f53fb387d475805eb7269fbfc16e30664155",
         "size": 2803860
+      }
+    },
+    {
+      "id": "handful",
+      "displayName": "Handful",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "pOinkRyW",
+        "version": "mc26.1-fabric",
+        "filename": "Handful-1.0.0-fabric+mc26.1.jar",
+        "url": "https://cdn.modrinth.com/data/pOinkRyW/versions/yaFq5gpn/Handful-1.0.0-fabric%2Bmc26.1.jar",
+        "sha512": "5331a5b9ae6d50e5d69f42353e5ab341761a9a23ed2c83310e3db2ca87fbc9cbbea67522bb122fbc675e553aab2c526475f7964269b621ba9f638cfb5e9fa039",
+        "size": 69635
+      }
+    },
+    {
+      "id": "interactive-foliage",
+      "displayName": "Interactive Foliage",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "ba5MV2CF",
+        "version": "1.1.1-fabric+26.1.2",
+        "filename": "mc2_interactivefoliage-1.1.1-fabric+26.1.2.jar",
+        "url": "https://cdn.modrinth.com/data/ba5MV2CF/versions/vwQkWSFj/mc2_interactivefoliage-1.1.1-fabric%2B26.1.2.jar",
+        "sha512": "d05ffb66b50172d0c7e6955cc79d993647bb5ecfc7111b247e7e9efbe24d12f8aca1819968721ce5aaa08c2fba23fe87bee1d1d737e1c3b9fb8c7d41e8718646",
+        "size": 121992
       }
     },
     {
@@ -201,6 +271,48 @@
         "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/fQBdPR1m/lithium-fabric-0.24.6%2Bmc26.1.2.jar",
         "sha512": "fac351f5b6150889b9355a01889c35b5798147d4bedb291594a590a2d41909eb8dc494ef0051317bf55886f2fc7fe134abbe2e755098df38473edb2bf43357e9",
         "size": 911415
+      }
+    },
+    {
+      "id": "modmenu",
+      "displayName": "Mod Menu",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "mOgUt4GM",
+        "version": "18.0.0",
+        "filename": "modmenu-18.0.0.jar",
+        "url": "https://cdn.modrinth.com/data/mOgUt4GM/versions/3rsoV1bk/modmenu-18.0.0.jar",
+        "sha512": "97c565fb980fcf5d735e5d15361ff64d1f72efd7a66b8653da436a6e6135b904a8e859782f25d4462d9cfdc636e2ff67f428fe895ab9ee7c2de80da8012c04c5",
+        "size": 857151
+      }
+    },
+    {
+      "id": "not-enough-animations",
+      "displayName": "Not Enough Animations",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "MPCX6s5C",
+        "version": "1.12.4",
+        "filename": "notenoughanimations-fabric-1.12.4-mc26.1.jar",
+        "url": "https://cdn.modrinth.com/data/MPCX6s5C/versions/f7Jte8km/notenoughanimations-fabric-1.12.4-mc26.1.jar",
+        "sha512": "ac04481b90bf7b93ff9e70b76759d7d0bbb33d50c3bfe06711e62085b65179e7d8ba1b608d5f60bd3d0588e09648ac4552a3a01e3777c31deee8c3ce12adbe84",
+        "size": 1936117
+      }
+    },
+    {
+      "id": "placeholder-api",
+      "displayName": "Text Placeholder API",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "eXts2L7r",
+        "version": "3.0.0+26.1",
+        "filename": "placeholder-api-3.0.0+26.1.jar",
+        "url": "https://cdn.modrinth.com/data/eXts2L7r/versions/b3IPAHgB/placeholder-api-3.0.0%2B26.1.jar",
+        "sha512": "b559da0f13fef17967f2aff1d06b00995c7db21d9d5b7b580ab6eafdf2365e4ac86a7d094c2b481160a942f291bc2595f2cb8c91ce5e169f1c2f461782ecd2a8",
+        "size": 254376
       }
     },
     {
@@ -299,6 +411,20 @@
         "url": "https://cdn.modrinth.com/data/l6YH9Als/versions/iYFOl6lQ/spark-1.10.173-fabric.jar",
         "sha512": "1dcbf2b76ceacf07523afaeaf63d3625b0318077cc6ce588bb701aea4a494bc2a5179fd2ca5aeda9513c6a2248c2ec590387e8aec6ac9fd8e3d01760bbc3dbfb",
         "size": 3887184
+      }
+    },
+    {
+      "id": "sway",
+      "displayName": "SWAY",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "Gj6Yce3v",
+        "version": "1.1.2-fabric+26.1.2",
+        "filename": "sway-1.1.2-fabric+26.1.2.jar",
+        "url": "https://cdn.modrinth.com/data/Gj6Yce3v/versions/3XxplGnl/sway-1.1.2-fabric%2B26.1.2.jar",
+        "sha512": "ff303615a47e2c66a06860c1b3071f4f45e3d6d7e032334d1ed9b4fdda6ffbd74fd42565faa72ff7579adae412133858e5a53e605d29a77d1ff421013ecd6d9b",
+        "size": 27410
       }
     }
   ]
