@@ -76,7 +76,7 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
   vizuální inicializace a krátký neblokující server ping, zatímco profil, Java,
   instalace, logy a diagnostika se načítají až po kliknutí na hlavní tlačítko
   nebo v Nastavení.
-- Nejnovější publikovaný release je `app-v0.1.31`.
+- Nejnovější publikovaný release je `app-v0.1.32`.
 - ADR 0003 definuje GitHub Releases jako zamýšlenou první cestu pro samoupdatování launcheru.
 - Launcher už ukládá lokální offline jméno hráče do launcher dat.
 - Microsoft přihlašovací flow bylo z launcheru odstraněné a podporovaná herní identita je nyní výhradně offline profil hráče.

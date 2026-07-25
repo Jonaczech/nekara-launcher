@@ -101,5 +101,22 @@ mod tests {
         assert_eq!(package.game_configuration_id, config::GAME_CONFIGURATION_ID);
         assert_eq!(package.minecraft_version, config::MINECRAFT_VERSION);
         assert_eq!(required_mods, 44);
+
+        let better_block_entities = package
+            .mods
+            .iter()
+            .find(|approved_mod| approved_mod.id == "better-block-entities")
+            .expect("Better Block Entities should be approved");
+        let sodium = package
+            .mods
+            .iter()
+            .find(|approved_mod| approved_mod.id == "sodium")
+            .expect("Sodium should be approved");
+
+        assert_eq!(
+            better_block_entities.file_name,
+            "bbe-fabric-1.3.4+mc26.1.2.jar"
+        );
+        assert_eq!(sodium.file_name, "sodium-fabric-0.8.12+mc26.1.2.jar");
     }
 }
