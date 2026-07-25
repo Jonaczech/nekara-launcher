@@ -5,7 +5,7 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use reqwest::Client;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use zip::read::ZipArchive;
 
@@ -17,6 +17,24 @@ const MANAGED_RUNTIME_IMAGE_TYPE: &str = "jre";
 const MANAGED_RUNTIME_JVM_IMPL: &str = "hotspot";
 const MANAGED_RUNTIME_HEAP_SIZE: &str = "normal";
 const MANAGED_RUNTIME_VENDOR: &str = "eclipse";
+
+#[derive(Deserialize)]
+struct AdoptiumAsset {
+    binary: AdoptiumBinary,
+}
+
+#[derive(Deserialize)]
+struct AdoptiumBinary {
+    package: AdoptiumPackage,
+}
+
+#[derive(Deserialize)]
+struct AdoptiumPackage {
+    checksum: String,
+    link: String,
+    name: String,
+    size: u64,
+}
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -187,6 +205,18 @@ fn advance_java_runtime_download(downloaded_bytes_delta: u64) {
     }
 }
 
+fn finish_java_runtime_download() {
+    let mut tracker = java_runtime_install_tracker()
+        .lock()
+        .expect("Java runtime install tracker lock should not be poisoned");
+    if tracker.active {
+        tracker.current_download_label = None;
+        tracker.total_bytes = 0;
+        tracker.downloaded_bytes = 0;
+        tracker.started_at = None;
+    }
+}
+
 fn build_http_client() -> Result<Client, String> {
     Client::builder()
         .user_agent(config::PRODUCT_NAME)
@@ -215,20 +245,45 @@ fn current_arch_name() -> Result<&'static str, String> {
     }
 }
 
-fn download_api_url(required_java_major: u32) -> Result<String, String> {
+fn assets_api_url(required_java_major: u32) -> Result<String, String> {
     Ok(format!(
-        "{ADOPTIUM_API_BASE}/binary/latest/{required_java_major}/ga/{}/{}/{}/{}/{}/{}",
-        current_os_name()?,
+        "{ADOPTIUM_API_BASE}/assets/latest/{required_java_major}/hotspot?architecture={}&heap_size={}&image_type={}&jvm_impl={}&os={}&vendor={}",
         current_arch_name()?,
+        MANAGED_RUNTIME_HEAP_SIZE,
         MANAGED_RUNTIME_IMAGE_TYPE,
         MANAGED_RUNTIME_JVM_IMPL,
-        MANAGED_RUNTIME_HEAP_SIZE,
+        current_os_name()?,
         MANAGED_RUNTIME_VENDOR,
     ))
 }
 
-fn checksum_url(download_url: &str) -> String {
-    format!("{download_url}.sha256.txt")
+async fn resolve_download_package(
+    client: &Client,
+    required_java_major: u32,
+) -> Result<AdoptiumPackage, String> {
+    let api_url = assets_api_url(required_java_major)?;
+    let assets = client
+        .get(&api_url)
+        .send()
+        .await
+        .map_err(|error| format!("Unable to query Java runtime metadata at {api_url}: {error}"))?
+        .error_for_status()
+        .map_err(|error| format!("Unable to query Java runtime metadata at {api_url}: {error}"))?
+        .json::<Vec<AdoptiumAsset>>()
+        .await
+        .map_err(|error| {
+            format!("Unable to decode Java runtime metadata from {api_url}: {error}")
+        })?;
+
+    assets
+        .into_iter()
+        .next()
+        .map(|asset| asset.binary.package)
+        .ok_or_else(|| {
+            format!(
+                "Adoptium did not return a compatible Java {required_java_major} runtime package."
+            )
+        })
 }
 
 fn managed_runtime_download_path() -> Result<PathBuf, String> {
@@ -417,27 +472,31 @@ pub async fn install_managed_java_runtime(required_java_major: u32) -> Result<()
 
     let _progress_guard = JavaRuntimeInstallGuard::start(0, "Připravuji Java runtime");
     let client = build_http_client()?;
-    let api_url = download_api_url(required_java_major)?;
+    let package = resolve_download_package(&client, required_java_major).await?;
+    let expected_checksum = read_expected_sha256(&package.checksum)?;
+    let download_url = package.link;
     logging::append_launcher_log_entry(
         "java",
-        &format!("Downloading managed Java runtime from {api_url}."),
+        &format!(
+            "Downloading managed Java runtime package {} from {}.",
+            package.name, download_url
+        ),
     )
     .ok();
 
-    let response = client.get(&api_url).send().await.map_err(|error| {
-        format!("Unable to download managed Java runtime from {api_url}: {error}")
+    let response = client.get(&download_url).send().await.map_err(|error| {
+        format!("Unable to download managed Java runtime from {download_url}: {error}")
     })?;
     let response = response.error_for_status().map_err(|error| {
-        format!("Unable to download managed Java runtime from {api_url}: {error}")
+        format!("Unable to download managed Java runtime from {download_url}: {error}")
     })?;
 
-    let download_url = response.url().to_string();
     let download_path = managed_runtime_download_path()?;
     let staging_root = managed_runtime_staging_root()?;
     remove_path_if_exists(&download_path)?;
     remove_path_if_exists(&staging_root)?;
 
-    let total_bytes = response.content_length().unwrap_or(0);
+    let total_bytes = response.content_length().unwrap_or(package.size);
     set_java_runtime_install_step(&format!("Stahuji Java runtime {}", required_java_major));
     begin_java_runtime_download(&format!("Temurin JRE {}", required_java_major), total_bytes);
 
@@ -470,21 +529,8 @@ pub async fn install_managed_java_runtime(required_java_major: u32) -> Result<()
         })?;
     }
 
+    finish_java_runtime_download();
     set_java_runtime_install_step("Ověřuji kontrolní součet Java runtime");
-    let checksum_response = client
-        .get(checksum_url(&download_url))
-        .send()
-        .await
-        .map_err(|error| {
-            format!("Unable to download Java runtime checksum from {download_url}: {error}")
-        })?;
-    let checksum_response = checksum_response.error_for_status().map_err(|error| {
-        format!("Unable to download Java runtime checksum from {download_url}: {error}")
-    })?;
-    let checksum_text = checksum_response.text().await.map_err(|error| {
-        format!("Unable to read Java runtime checksum from {download_url}: {error}")
-    })?;
-    let expected_checksum = read_expected_sha256(&checksum_text)?;
     let actual_checksum = compute_sha256(&download_path)?;
 
     if expected_checksum != actual_checksum {
@@ -563,6 +609,40 @@ pub async fn install_managed_java_runtime(required_java_major: u32) -> Result<()
     set_java_runtime_install_step("Dokončuji Java runtime");
     finalize_runtime_root(&staging_root, &runtime_root)?;
     remove_path_if_exists(&download_path).ok();
+    let activated_java_executable =
+        find_java_executable_recursively(&runtime_root)?.ok_or_else(|| {
+            format!(
+                "Managed Java runtime was activated at {}, but java.exe could not be found.",
+                runtime_root.display()
+            )
+        })?;
+    let activated_version_line =
+        super::capture_java_version_line(&activated_java_executable.display().to_string())
+            .ok_or_else(|| {
+                format!(
+                    "Managed Java runtime was activated, but {} could not be executed.",
+                    activated_java_executable.display()
+                )
+            })?;
+    let activated_version =
+        super::extract_java_version(&activated_version_line).ok_or_else(|| {
+            format!(
+                "Managed Java runtime at {} did not report a Java version after activation.",
+                activated_java_executable.display()
+            )
+        })?;
+    let activated_major = super::extract_major_version(&activated_version).ok_or_else(|| {
+        format!(
+            "Managed Java runtime at {} reported an unrecognised Java version {} after activation.",
+            activated_java_executable.display(),
+            activated_version
+        )
+    })?;
+    if activated_major < required_java_major {
+        return Err(format!(
+            "Activated managed Java runtime is too old; expected Java {required_java_major}, got {activated_version}."
+        ));
+    }
     logging::append_launcher_log_entry(
         "java",
         &format!(
@@ -574,4 +654,45 @@ pub async fn install_managed_java_runtime(required_java_major: u32) -> Result<()
     .ok();
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{assets_api_url, read_expected_sha256, AdoptiumAsset};
+
+    #[test]
+    fn builds_filtered_adoptium_assets_url() {
+        let url = assets_api_url(25).expect("assets URL should be available");
+
+        assert!(url.starts_with("https://api.adoptium.net/v3/assets/latest/25/hotspot?"));
+        assert!(url.contains("architecture=x64") || url.contains("architecture=aarch64"));
+        assert!(url.contains("image_type=jre"));
+        assert!(url.contains("os=windows"));
+        assert!(url.contains("vendor=eclipse"));
+    }
+
+    #[test]
+    fn decodes_package_checksum_without_following_binary_redirects() {
+        let assets: Vec<AdoptiumAsset> = serde_json::from_str(
+            r#"[{
+                "binary": {
+                    "package": {
+                        "checksum": "a183e7280220ad5f6fe94ecbf025a5f10fc5797a0b18c600ed8f813c8158c530",
+                        "link": "https://example.invalid/runtime.zip",
+                        "name": "runtime.zip",
+                        "size": 58466005
+                    }
+                }
+            }]"#,
+        )
+        .expect("Adoptium package metadata should decode");
+        let package = &assets[0].binary.package;
+
+        assert_eq!(
+            read_expected_sha256(&package.checksum).expect("checksum should be valid"),
+            package.checksum
+        );
+        assert_eq!(package.link, "https://example.invalid/runtime.zip");
+        assert_eq!(package.size, 58_466_005);
+    }
 }

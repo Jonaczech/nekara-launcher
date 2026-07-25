@@ -452,6 +452,15 @@ code {
   width: 100%;
 }
 
+.primary-action-error {
+  width: 100%;
+  margin: 0;
+  color: #ffb3af;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .progress-panel__header {
   display: flex;
   align-items: center;

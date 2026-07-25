@@ -930,6 +930,7 @@ function App() {
           ? error.message
           : "Spravovaný Java runtime se nepodařilo nainstalovat.";
       setLauncherDiagnosticsError(message);
+      void refreshLauncherErrorReport();
       return null;
     } finally {
       setInstallingManagedJava(false);
@@ -1289,6 +1290,12 @@ function App() {
                         {primaryButtonLabel}
                       </span>
                     </button>
+
+                    {launcherDiagnosticsError && (
+                      <p className="primary-action-error" role="alert">
+                        {launcherDiagnosticsError}
+                      </p>
+                    )}
 
                     <button
                       type="button"

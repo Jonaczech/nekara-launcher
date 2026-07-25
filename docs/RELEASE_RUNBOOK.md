@@ -5,7 +5,7 @@ GitHub Releases.
 
 ## Výchozí údaje
 
-- Aktuální cílový release po popup update oznámení: `0.1.30`
+- Aktuální cílový release po popup update oznámení: `0.1.31`
 - Release workflow: `.github/workflows/release.yml`
 - Updater endpoint: GitHub Releases `latest.json`
 
@@ -27,8 +27,8 @@ GitHub Releases.
 3. Vytvoř release tag:
 
 ```bash
-git tag app-v0.1.30
-git push origin app-v0.1.30
+git tag app-v0.1.31
+git push origin app-v0.1.31
 ```
 
 4. Počkej, až doběhne `.github/workflows/release.yml`.

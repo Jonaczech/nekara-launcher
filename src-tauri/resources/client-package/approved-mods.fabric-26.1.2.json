@@ -8,6 +8,62 @@
   },
   "mods": [
     {
+      "id": "badoptimizations",
+      "displayName": "BadOptimizations",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "g96Z4WVZ",
+        "version": "2.4.1",
+        "filename": "BadOptimizations-2.4.1-26.1-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/g96Z4WVZ/versions/gjIvugXc/BadOptimizations-2.4.1-26.1-fabric.jar",
+        "sha512": "efba144dec306767da3aceb4b179e093daa60bc4c0ba6295d64c166092b8f62e4a4cc63a5bae76fb4c608f1dffa8ecd70c6884e48c804915e1b37ef042e31a99",
+        "size": 61928
+      }
+    },
+    {
+      "id": "better-block-entities",
+      "displayName": "Better Block Entities",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "ONZm0H7Y",
+        "version": "1.3.7-beta.1+mc26.1.2",
+        "filename": "bbe-fabric-1.3.7-beta.1+mc26.1.2.jar",
+        "url": "https://cdn.modrinth.com/data/ONZm0H7Y/versions/Kd9uKKlh/bbe-fabric-1.3.7-beta.1%2Bmc26.1.2.jar",
+        "sha512": "8c7ac258a75a331557bce67cfabed3d0bef369696855397d30bf79719bfc13e7e9edc56278b6f57e3faedd2351158e3c18a1a5993a5e8a3508ed3462530b653f",
+        "size": 250452
+      }
+    },
+    {
+      "id": "better-clouds",
+      "displayName": "Better Clouds",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "5srFLIaK",
+        "version": "1.13.6+26.1.2-fabric-release",
+        "filename": "better-clouds-1.13.6+26.1.2-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/5srFLIaK/versions/Jf0v8y9Y/better-clouds-1.13.6%2B26.1.2-fabric.jar",
+        "sha512": "579db9aaf9f135bbb60797a48ee29d1d0936e226c1805a6cf33e18270f10b0902432119129c037c27922094da7dca8e942314813aa9d428fb236c65fdcf53b27",
+        "size": 1445807
+      }
+    },
+    {
+      "id": "c2me-fabric",
+      "displayName": "Concurrent Chunk Management Engine (Fabric)",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "VSNURh3q",
+        "version": "0.4.0-alpha.0.44+26.1.2",
+        "filename": "c2me-fabric-mc26.1.2-0.4.0-alpha.0.44.jar",
+        "url": "https://cdn.modrinth.com/data/VSNURh3q/versions/P1edoXUI/c2me-fabric-mc26.1.2-0.4.0-alpha.0.44.jar",
+        "sha512": "9c2d75a0226fef6d0334453625c23615d0cced33cb42845202e35ff8415f5b9ca08002e14eb6540665a70f987932f5b74d5b33d92cdad3b3de8150f24da824cc",
+        "size": 3789739
+      }
+    },
+    {
       "id": "entity-model-features",
       "displayName": "Entity Model Features",
       "distribution": "required",
@@ -131,6 +187,20 @@
         "url": "https://cdn.modrinth.com/data/CFJWaa89/versions/hGTmvRMO/cinematic_respawn-26.1.x-fabric-1.1.0.jar",
         "sha512": "1de6421e8c7d4e35ff20d5ea872f7e163a80f59ec2ecfdce2f47d275339ae96e8f00deff7af78cd08893e42a94635eab62c225402c8b789668d49623248f5242",
         "size": 23061
+      }
+    },
+    {
+      "id": "dynamic-fps",
+      "displayName": "Dynamic FPS",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "LQ3K71Q1",
+        "version": "3.11.7",
+        "filename": "dynamic-fps-3.11.7+minecraft-26.1.0-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/LQ3K71Q1/versions/HV67Kt1R/dynamic-fps-3.11.7%2Bminecraft-26.1.0-fabric.jar",
+        "sha512": "5feb34934f1f20d0fe65546f65084e9c59ed0ec8e9e80e91dd3ed80dbfc70212bf8cf31f078dc9e7a429edbe5f63774b200c8bd50c8726c4bcd9c74d9b696ab5",
+        "size": 187418
       }
     },
     {
@@ -260,6 +330,20 @@
       }
     },
     {
+      "id": "krypton",
+      "displayName": "Krypton",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "fQEb0iXm",
+        "version": "0.3.0",
+        "filename": "krypton-0.3.0.jar",
+        "url": "https://cdn.modrinth.com/data/fQEb0iXm/versions/kYAGItyj/krypton-0.3.0.jar",
+        "sha512": "14233210283a76f3cf435a3b8ddbcbd65a858d2b1a10b88ff643c0a01486dfd2bf1843bd3456cd4fb86cbb3b06f2dea0c4e663b1976a48e96de16d3b5a707ec9",
+        "size": 268664
+      }
+    },
+    {
       "id": "lithium",
       "displayName": "Lithium",
       "distribution": "required",
@@ -271,6 +355,20 @@
         "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/fQBdPR1m/lithium-fabric-0.24.6%2Bmc26.1.2.jar",
         "sha512": "fac351f5b6150889b9355a01889c35b5798147d4bedb291594a590a2d41909eb8dc494ef0051317bf55886f2fc7fe134abbe2e755098df38473edb2bf43357e9",
         "size": 911415
+      }
+    },
+    {
+      "id": "make-bubbles-pop",
+      "displayName": "Make Bubbles Pop",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "gPCdW0Wr",
+        "version": "0.3.3-fabric",
+        "filename": "make_bubbles_pop-0.3.3-fabric-mc26.1.x.jar",
+        "url": "https://cdn.modrinth.com/data/gPCdW0Wr/versions/i2xetCBK/make_bubbles_pop-0.3.3-fabric-mc26.1.x.jar",
+        "sha512": "131fc824397c3dc98518d9d2809864b114c7b8e290609cbc9869ebdf8ab19be00d1818a115e0316b5097a50d66655514189cd7f7fd9da1f9f3a3ccd8603115f2",
+        "size": 31424
       }
     },
     {
@@ -288,6 +386,20 @@
       }
     },
     {
+      "id": "moreculling",
+      "displayName": "More Culling",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "51shyZVL",
+        "version": "1.7.2",
+        "filename": "moreculling-fabric-26.1.2-1.7.2.jar",
+        "url": "https://cdn.modrinth.com/data/51shyZVL/versions/IUqOgV5r/moreculling-fabric-26.1.2-1.7.2.jar",
+        "sha512": "f03f57a6097c3db78261156e289e2e5c207229f8583d901d28489baf32ccd78fde65cdbd19d7f703e72569c97e7af03dc6f7d600ca64f318373725188277374e",
+        "size": 361481
+      }
+    },
+    {
       "id": "not-enough-animations",
       "displayName": "Not Enough Animations",
       "distribution": "required",
@@ -299,6 +411,20 @@
         "url": "https://cdn.modrinth.com/data/MPCX6s5C/versions/f7Jte8km/notenoughanimations-fabric-1.12.4-mc26.1.jar",
         "sha512": "ac04481b90bf7b93ff9e70b76759d7d0bbb33d50c3bfe06711e62085b65179e7d8ba1b608d5f60bd3d0588e09648ac4552a3a01e3777c31deee8c3ce12adbe84",
         "size": 1936117
+      }
+    },
+    {
+      "id": "particle-rain",
+      "displayName": "Particle Rain",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "nrikgvxm",
+        "version": "v4-beta.10+26.1-fabric",
+        "filename": "particlerain-4.0.0-beta.10+26.1-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/nrikgvxm/versions/s4RPlVYL/particlerain-4.0.0-beta.10%2B26.1-fabric.jar",
+        "sha512": "a1ecc4363fdce59815cd458e4496fd054dd0e75b5d15c9cfb87e47523a62c0cf3bc55e61fe2d991c4f0b8bcea4e460373169d9bc8b887c26b6560aac4f857625",
+        "size": 608577
       }
     },
     {
@@ -327,6 +453,20 @@
         "url": "https://cdn.modrinth.com/data/ZX66K16c/versions/ls0tFt5C/PickUpNotifier-v26.1.1-mc26.1.x-Fabric.jar",
         "sha512": "19a9e6de247c961c6620e4f937c409c095e331289f073cc60619bc3cd48a39fbe3131bf7ecf5ea758dae156674d304c4f9382cfeb52f22b20060ed235fb852e8",
         "size": 76693
+      }
+    },
+    {
+      "id": "puddles-floods",
+      "displayName": "Puddles & Floods",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "xeRVd78z",
+        "version": "v1.1.5+26.1-fabric",
+        "filename": "puddleflood-1.1.5+26.1-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/xeRVd78z/versions/9HYzH9OJ/puddleflood-1.1.5%2B26.1-fabric.jar",
+        "sha512": "56e627ed47e7732c6a42502d6d0cf1d29fffa4286c751ab078068e4c2cb3c02d905761a1e87b8bce3baf06e3a8039ae7f116339ccc07dd7173b135d5697089ca",
+        "size": 207904
       }
     },
     {
@@ -425,6 +565,62 @@
         "url": "https://cdn.modrinth.com/data/Gj6Yce3v/versions/3XxplGnl/sway-1.1.2-fabric%2B26.1.2.jar",
         "sha512": "ff303615a47e2c66a06860c1b3071f4f45e3d6d7e032334d1ed9b4fdda6ffbd74fd42565faa72ff7579adae412133858e5a53e605d29a77d1ff421013ecd6d9b",
         "size": 27410
+      }
+    },
+    {
+      "id": "visuality",
+      "displayName": "Visuality",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "rI0hvYcd",
+        "version": "0.7.13+26.1",
+        "filename": "visuality-0.7.13+26.1.jar",
+        "url": "https://cdn.modrinth.com/data/rI0hvYcd/versions/rjaBaaYV/visuality-0.7.13%2B26.1.jar",
+        "sha512": "7483a87d8fd20b1be82dc339d1b7155ae354c736b55d8a6ce4966d2e5167e2a3f01cb135121001e86880bc999ca32f46fac8825bc1da686e0b208a01b50d80a9",
+        "size": 82146
+      }
+    },
+    {
+      "id": "wakes",
+      "displayName": "Wakes",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "dlNu0RQY",
+        "version": "0.6.0+26.1",
+        "filename": "wakes-0.6.0+26.1.jar",
+        "url": "https://cdn.modrinth.com/data/dlNu0RQY/versions/p2RaO0z1/wakes-0.6.0%2B26.1.jar",
+        "sha512": "8e7e68e0c84c092cd4fdc149f5f27828cce6febaee4cff915c6808bb375b3507fd8897bcd4b96343e94aa41ed9f32171e0f6d0895b15d7e6a36f2db6bfea6244",
+        "size": 282726
+      }
+    },
+    {
+      "id": "wavey-capes",
+      "displayName": "Wavey Capes",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "kYuIpRLv",
+        "version": "1.10.2",
+        "filename": "waveycapes-fabric-1.10.2-mc26.1.jar",
+        "url": "https://cdn.modrinth.com/data/kYuIpRLv/versions/ThliXvlR/waveycapes-fabric-1.10.2-mc26.1.jar",
+        "sha512": "7ac83ce7ee00e439249650cc55329557126f93424fbdf0fdcd4ee9d3a8a566d28364825b6992b29c9072625b6c23892e18935ee41a62b1892555be1dec4f6d26",
+        "size": 1837933
+      }
+    },
+    {
+      "id": "yet-another-config-lib",
+      "displayName": "YetAnotherConfigLib",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "1eAoo2KR",
+        "version": "3.9.6+26.1-fabric",
+        "filename": "yet_another_config_lib_v3-3.9.6+26.1-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/1eAoo2KR/versions/svTkvBec/yet_another_config_lib_v3-3.9.6%2B26.1-fabric.jar",
+        "sha512": "d1efe6c248d89477d707749d9e8eb4c555e892ad23cb3ac0ba45bbe59d5c166b8dde554e7de5d1cf95c185d749e58537b376a8128cfdc4deea60266418d5b122",
+        "size": 1121084
       }
     }
   ]
