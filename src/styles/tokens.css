@@ -1,0 +1,43 @@
+:root {
+  color-scheme: dark;
+
+  --color-void: #0d080f;
+  --color-background: #1c121f;
+  --color-panel: #362434;
+  --color-panel-secondary: #42364e;
+  --color-panel-deep: #160e19;
+  --color-text: #f8f7f6;
+  --color-text-secondary: #c7bfd5;
+  --color-text-muted: #92879e;
+  --color-bronze: #975747;
+  --color-bronze-light: #d37e4f;
+  --color-petrol: #365f70;
+  --color-arcane: #36c9d9;
+  --color-mystic: #6f46a6;
+  --color-danger: #a95845;
+  --color-success: #62d8c5;
+
+  --font-display: "Caudex", "Cormorant Garamond", Georgia, serif;
+  --font-body: Inter, "Segoe UI", sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --radius-small: 3px;
+  --radius-panel: 6px;
+  --border-subtle: rgba(199, 191, 213, 0.13);
+  --border-bronze: rgba(151, 87, 71, 0.76);
+  --border-bronze-bright: rgba(211, 126, 79, 0.78);
+  --shadow-panel: 0 18px 50px rgba(6, 3, 8, 0.46);
+  --shadow-inset: inset 0 1px 0 rgba(248, 247, 246, 0.045);
+  --glow-arcane: 0 0 20px rgba(54, 201, 217, 0.24);
+  --transition-fast: 140ms ease;
+  --transition-base: 220ms ease;
+  --transition-slow: 520ms ease;
+}

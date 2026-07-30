@@ -237,6 +237,8 @@ const browserPreviewServerStatus: ServerStatus = {
   state: "offline",
   address: "nekara.mc.hostify.cz",
   latencyMs: null,
+  playersOnline: null,
+  playersMax: null,
   checkedAtUnixMs: Date.now(),
   message:
     "Je aktivní náhradní režim pro prohlížeč. Skutečný stav serveru se kontroluje uvnitř Tauri.",

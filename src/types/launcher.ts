@@ -22,6 +22,8 @@ export interface ServerStatus {
   state: ServerStatusState;
   address: string;
   latencyMs: number | null;
+  playersOnline: number | null;
+  playersMax: number | null;
   checkedAtUnixMs: number;
   message: string;
 }

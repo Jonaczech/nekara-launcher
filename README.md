@@ -123,12 +123,16 @@ Ze settings jde navíc přímo otevřít skutečný herní adresář v
 Průzkumníku.
 
 Uživatelské rozhraní i diagnostika launcheru jsou lokalizované do češtiny.
-Domovská obrazovka zůstává soustředěná na logo, hlavní akci `Hrát`, progress
-bar, offline jméno hráče a malý indikátor stavu serveru. Start aplikace nyní
+Launcher používá jednotný dark-fantasy design systém s fialovo-černými panely,
+bronzovými rámečky, tyrkysovými aktivními stavy, fontem Caudex a aktuálním logem
+a wallpaperem z `brand/`. Shell je rozdělený na levou navigaci, centrální hero
+plochu, pravý sloupec s novinkami a komunitou a trvale dostupný spodní stavový
+panel. Samostatné pohledy zpřístupňují účet, nastavení, opravu a diagnostiku bez
+přesunu systémové logiky z Rust/Tauri vrstvy do Reactu. Start aplikace stále
 nechává běžet jen kontrolu aktualizace launcheru, vizuální inicializaci a krátký
 neblokující ping serveru. Těžší kontroly profilu, instalace klienta, Javy, logů a
-diagnostiky se spouští až po kliknutí na hlavní tlačítko nebo po otevření
-Nastavení, aby se okno na Windows méně zasekávalo.
+diagnostiky se spouští až po uživatelské akci, aby se okno na Windows méně
+zasekávalo.
 
 Diagnostické logy launcheru se zapisují pod uživatelský profil do datového
 adresáře Nekara Launcheru, do samostatné složky `logs`, aby bylo možné zpětně
@@ -210,7 +214,6 @@ Současný pnpm workspace výslovně schvaluje instalační skript `esbuild`, kt
 Vite potřebuje.
 Před spuštěním hry launcher znovu ověřuje integritu klíčových klientských
 souborů, aby se poškození zachytilo ještě před startem Minecraftu.
-Launcher má domovskou obrazovku zaměřenou na hráče: hero, primární akci,
-progress bar, indikátor stavu serveru a profil hráče. Technické checklisty,
-logy, Java a detailní diagnostika jsou schované v Nastavení, aby hlavní plocha
-zůstala jednoduchá.
+Launcher má domovskou obrazovku zaměřenou na hráče: výrazné logo, primární akci
+`Hrát`, informační panely a živý progress. RAM, herní cesta a Java jsou v
+Nastavení; ověření klienta je v Opravě a logy s error reportem v Podpoře.

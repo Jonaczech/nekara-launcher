@@ -6,12 +6,12 @@ užitečný navazující kontext.
 
 ## Poslední aktualizace
 
-2026-07-07
+2026-07-29
 
 ## Současné zaměření
 
 Projektový základ pro vlastní desktopový launcher určený pro Minecraft server
-Nekara, s hráčsky orientovaným brandovaným shellem, podepsanými aktualizacemi
+Nekara, s hráčsky orientovaným arkánně-gotickým shellem, podepsanými aktualizacemi
 přes GitHub Releases, kontrolou oficiálních metadat, detekcí Java runtime,
 přípravou oficiálních souborů pro základní Minecraft klient, knihovny a assety,
 launcher-owned Java runtime fallbackem, offline spouštěcím postupem, offline
@@ -76,7 +76,7 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
   vizuální inicializace a krátký neblokující server ping, zatímco profil, Java,
   instalace, logy a diagnostika se načítají až po kliknutí na hlavní tlačítko
   nebo v Nastavení.
-- Nejnovější publikovaný release je `app-v0.1.32`.
+- Nejnovější release je `app-v0.1.33`.
 - ADR 0003 definuje GitHub Releases jako zamýšlenou první cestu pro samoupdatování launcheru.
 - Launcher už ukládá lokální offline jméno hráče do launcher dat.
 - Microsoft přihlašovací flow bylo z launcheru odstraněné a podporovaná herní identita je nyní výhradně offline profil hráče.
@@ -85,7 +85,16 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
 - Brand source assets mají samostatný `brand/` workspace se složkami pro concepts, icons, logos a wallpapers.
 - Browser preview fallback je připravený, takže `pnpm dev` renderuje bez chyb Tauri runtime.
 - Desktopové i mobilní screenshoty byly úspěšně zachyceny z browser preview.
-- Launcher shell byl zjednodušen na kompozici inspirovanou REDlauncherem s Nekara brand wallpaper a ikonami z `brand/`.
+- Launcher shell používá vlastní `Arcane Gothic Fantasy UI`: levou navigaci,
+  centrální hero plochu, pravý sloupec a spodní stavový panel. Domů, Novinky,
+  Účet, Nastavení, Oprava a Podpora jsou samostatné interní pohledy.
+- Barvy, typografie, rozestupy, rámečky, stíny a animace jsou centralizované v
+  `src/styles/tokens.css`; opakované ornamentální prvky jsou v
+  `src/components/ArcaneUi.tsx`.
+- UI používá nové podklady `brand/logos/Logo3.png` a
+  `brand/wallpapers/wallpaper novy.png`.
+- Cílová velikost okna je 1280 × 720; v minimální velikosti 980 × 640 se pravý
+  informační sloupec skryje a všechny funkce zůstávají dostupné z navigace.
 - Tauri application icons byly regenerované z Nekara brand icon source.
 - Příprava a spouštění Fabric `26.1.2` teď umí aktuální strukturu Fabric metadat, řeší Maven-style loader knihovny a před spuštěním spojuje základní Minecraft manifest s Fabric profilem.
 - Launcher UI teď používá brand font `Caudex Regular` z `brand/`.
@@ -98,7 +107,8 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
 ## Doporučené další kroky
 
 1. Zlepšit diagnostiku pro blokovaná metadata, oprávnění filesystemu a rozbité lokální cesty.
-2. Zobrazit identitu hráče a stav profilu výrazněji v UI.
+2. Napojit skutečný feed novinek, bezpečně nakonfigurovaný Discord odkaz a počet
+   online hráčů, až budou dostupná odpovídající API.
 3. Rozhodnout, zda launcher někdy spravuje vlastní Java runtime.
 4. Pokračovat ve vrstvě synchronizace klientského balíčku Nekary pro další typy manifestů.
 5. Přidat robustnější reporting chyb pro updater a přípravu klienta, pokud se objeví nové reálné edge casy.
@@ -112,6 +122,6 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
 - Udržuj uživatelské chyby srozumitelné a diagnostické detaily strukturované.
 - Herní identita launcheru je nyní vědomě offline-only a bez Microsoft integrace.
 
-- Domovská obrazovka je zjednodušená na hráčský průchod s progress barem,
-  offline jménem a malou zelenou/červenou tečkou stavu serveru; technické
-  checklisty, logy, Java a detailní diagnostika jsou schované v Nastavení.
+- Domovská obrazovka je soustředěná na logo a tlačítko `Hrát`. Profil, nastavení,
+  oprava a diagnostika mají vlastní pohledy, ale používají stejné existující
+  Tauri handlery a nezavádějí duplicitní systémovou logiku do Reactu.
