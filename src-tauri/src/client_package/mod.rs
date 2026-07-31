@@ -100,7 +100,7 @@ mod tests {
 
         assert_eq!(package.game_configuration_id, config::GAME_CONFIGURATION_ID);
         assert_eq!(package.minecraft_version, config::MINECRAFT_VERSION);
-        assert_eq!(required_mods, 44);
+        assert_eq!(required_mods, 45);
 
         let better_block_entities = package
             .mods
@@ -118,5 +118,12 @@ mod tests {
             "bbe-fabric-1.3.4+mc26.1.2.jar"
         );
         assert_eq!(sodium.file_name, "sodium-fabric-0.8.12+mc26.1.2.jar");
+
+        let shine = package
+            .mods
+            .iter()
+            .find(|approved_mod| approved_mod.id == "shine")
+            .expect("Shine should be approved");
+        assert_eq!(shine.file_name, "shine-2.0.0+26.1.x.jar");
     }
 }

@@ -76,7 +76,7 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
   vizuální inicializace a krátký neblokující server ping, zatímco profil, Java,
   instalace, logy a diagnostika se načítají až po kliknutí na hlavní tlačítko
   nebo v Nastavení.
-- Nejnovější release je `app-v0.1.33`.
+- Nejnovější připravovaný release je `app-v0.1.34`; poslední ověřený release je `app-v0.1.33`.
 - ADR 0003 definuje GitHub Releases jako zamýšlenou první cestu pro samoupdatování launcheru.
 - Launcher už ukládá lokální offline jméno hráče do launcher dat.
 - Microsoft přihlašovací flow bylo z launcheru odstraněné a podporovaná herní identita je nyní výhradně offline profil hráče.
@@ -99,6 +99,7 @@ profilem hráče a izolovanou herní složkou `AppData\Roaming\Nekara`.
 - Příprava a spouštění Fabric `26.1.2` teď umí aktuální strukturu Fabric metadat, řeší Maven-style loader knihovny a před spuštěním spojuje základní Minecraft manifest s Fabric profilem.
 - Launcher UI teď používá brand font `Caudex Regular` z `brand/`.
 - První schválený manifest klientských modů pro Fabric `26.1.2` už existuje v `src-tauri/resources/client-package/`.
+- Schválený manifest klienta obsahuje 45 povinných modů včetně Shine `2.0.0+26.1.x`.
 
 ## Aktuální blokery
 

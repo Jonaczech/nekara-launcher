@@ -512,6 +512,20 @@
       }
     },
     {
+      "id": "shine",
+      "displayName": "Shine",
+      "distribution": "required",
+      "source": {
+        "provider": "modrinth",
+        "projectId": "uQgWIE6A",
+        "version": "2.0.0+26.1.x",
+        "filename": "shine-2.0.0+26.1.x.jar",
+        "url": "https://cdn.modrinth.com/data/uQgWIE6A/versions/qyRsxqKr/shine-2.0.0%2B26.1.x.jar",
+        "sha512": "ad91549574bc999173d87218b948e46aafe47b0164234a1c8440221a13e77332d1225b27999e2f5b6e7c91b085b2c49baa405ec9d8060548c9445946dd21450c",
+        "size": 422589
+      }
+    },
+    {
       "id": "sodium-extra",
       "displayName": "Sodium Extra",
       "distribution": "required",

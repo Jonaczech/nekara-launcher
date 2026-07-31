@@ -104,9 +104,9 @@ button:disabled {
 .launcher-frame {
   display: grid;
   grid-template-rows: 46px minmax(0, 1fr);
-  width: calc(100% - 16px);
-  height: calc(100% - 16px);
-  margin: 8px;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   overflow: hidden;
   border: 1px solid var(--border-bronze);
   background: rgba(18, 10, 21, 0.3);
