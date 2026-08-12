@@ -181,9 +181,7 @@ function App() {
   >({
     kind: "loading",
   });
-  const [serverStatusState, setServerStatusState] = useState<
-    LoadState<ServerStatus>
-  >({
+  const [, setServerStatusState] = useState<LoadState<ServerStatus>>({
     kind: "loading",
   });
   const [startupUpdateNotice, setStartupUpdateNotice] =
@@ -576,8 +574,6 @@ function App() {
     launcherLogState.kind === "ready" ? launcherLogState.value : null;
   const launcherStatus =
     launcherStatusState.kind === "ready" ? launcherStatusState.value : null;
-  const serverStatus =
-    serverStatusState.kind === "ready" ? serverStatusState.value : null;
   const offlinePlayer = playerState.kind === "ready" ? playerState.value : null;
   const offlinePlayerReady = offlinePlayer?.state === "ready";
   const identityReady = offlinePlayerReady;
@@ -854,26 +850,6 @@ function App() {
     ramSettingsDirty || javaSettingsDirty || gameDirectorySettingsDirty;
   const ramInputLabel = `${ramInputMb} MB`;
   const currentVersionLabel = `v${appVersion}`;
-  const serverStatusTone =
-    serverStatusState.kind === "loading"
-      ? "pending"
-      : serverStatus?.state === "online"
-        ? "online"
-        : "offline";
-  const serverStatusText =
-    serverStatusState.kind === "loading"
-      ? "Server"
-      : serverStatus?.state === "online"
-        ? "Server online"
-        : "Server offline";
-  const serverStatusTitle =
-    serverStatusState.kind === "loading"
-      ? "Zjišťuji stav serveru"
-      : serverStatusState.kind === "error"
-        ? serverStatusState.message
-        : serverStatus?.latencyMs != null
-          ? `${serverStatus.message} Odezva ${serverStatus.latencyMs} ms.`
-          : (serverStatus?.message ?? "Server teď není dostupný.");
   const resolvedGameDirectoryModeLabel =
     gameDirectoryPathNormalized.length > 0
       ? "Vlastní umístění"
@@ -1325,55 +1301,6 @@ function App() {
                 </button>
               ))}
             </nav>
-
-            <div className="side-rail__server">
-              <div className="side-rail__server-heading">
-                <span
-                  className={"status-orb status-orb--" + serverStatusTone}
-                  aria-hidden="true"
-                />
-                <div>
-                  <small>BRÁNA NEKARY</small>
-                  <strong>{serverStatusText}</strong>
-                </div>
-              </div>
-              <dl>
-                <div>
-                  <dt>Verze</dt>
-                  <dd>{installationStatus?.targetVersion ?? "26.1.2"}</dd>
-                </div>
-                <div>
-                  <dt>Ping</dt>
-                  <dd>
-                    {serverStatus?.latencyMs != null
-                      ? `${serverStatus.latencyMs} ms`
-                      : "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Hráči</dt>
-                  <dd>
-                    {serverStatus?.playersOnline != null
-                      ? `${serverStatus.playersOnline} / ${serverStatus.playersMax ?? "—"}`
-                      : "— / —"}
-                  </dd>
-                </div>
-              </dl>
-              <p className="side-rail__server-note">
-                {installationReady
-                  ? "Klient Nekary je připraven."
-                  : "Klient čeká na kontrolu."}
-              </p>
-              <button
-                type="button"
-                className="rail-refresh"
-                onClick={() => void refreshServerStatus()}
-                title={serverStatusTitle}
-              >
-                <RotateCcw size={13} />
-                Obnovit
-              </button>
-            </div>
           </aside>
 
           <section className="content-region">
@@ -1409,20 +1336,12 @@ function App() {
                       onClick={() => void handlePrimaryAction()}
                       disabled={isBusy}
                     >
-                      <span className="gate-button__wing gate-button__wing--left" />
-                      <span className="gate-button__crystal" aria-hidden="true">
-                        <Gem size={18} />
-                      </span>
                       {(launchingGame ||
                         preparingInstallation ||
                         installingManagedJava) && (
                         <LoaderCircle className="spin" size={22} />
                       )}
                       <strong>{primaryButtonLabel}</strong>
-                      <span className="gate-button__crystal" aria-hidden="true">
-                        <Gem size={18} />
-                      </span>
-                      <span className="gate-button__wing gate-button__wing--right" />
                     </button>
 
                     {gameLaunchState.kind === "error" && (
@@ -2142,10 +2061,7 @@ function App() {
           <aside className="right-rail" aria-label="Novinky a komunita">
             <section className="right-rail__section">
               <div className="right-rail__heading">
-                <div>
-                  <span>KRONIKA</span>
-                  <h2>Novinky</h2>
-                </div>
+                <h2>Novinky</h2>
                 <Newspaper size={18} />
               </div>
               <button
